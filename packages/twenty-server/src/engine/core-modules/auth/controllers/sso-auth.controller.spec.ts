@@ -1,3 +1,11 @@
+jest.mock('src/engine/core-modules/auth/services/auth.service', () => ({
+  AuthService: class AuthService {},
+}));
+
+jest.mock('src/engine/core-modules/user/services/user.service', () => ({
+  UserService: class UserService {},
+}));
+
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 

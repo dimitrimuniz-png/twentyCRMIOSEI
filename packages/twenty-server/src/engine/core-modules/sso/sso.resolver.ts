@@ -1,42 +1,130 @@
-/* @license Enterprise */
-
-import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Args, Mutation, Query } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { Args, Field, InputType, Mutation, ObjectType, Query } from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
+import { isDefined } from 'twenty-shared/utils';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
-import { EnterpriseFeaturesEnabledGuard } from 'src/engine/core-modules/auth/guards/enterprise-features-enabled.guard';
-import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
-import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
-import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
-import { DeleteSsoInput } from 'src/engine/core-modules/sso/dtos/delete-sso.input';
-import { DeleteSsoDTO } from 'src/engine/core-modules/sso/dtos/delete-sso.dto';
-import { EditSsoInput } from 'src/engine/core-modules/sso/dtos/edit-sso.input';
-import { EditSsoDTO } from 'src/engine/core-modules/sso/dtos/edit-sso.dto';
-import { FindAvailableSsoIdpDTO } from 'src/engine/core-modules/sso/dtos/find-available-sso-idp.dto';
-import {
-  SetupOidcSsoInput,
-  SetupSamlSsoInput,
-} from 'src/engine/core-modules/sso/dtos/setup-sso.input';
-import { SetupSsoDTO } from 'src/engine/core-modules/sso/dtos/setup-sso.dto';
-import { SsoGraphqlApiExceptionFilter } from 'src/engine/core-modules/sso/filters/sso-graphql-api-exception.filter';
-import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
-import { type SsoException } from 'src/engine/core-modules/sso/sso.exception';
-import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
-import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
+import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
+import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
+import {
+  IdentityProviderType,
+  SsoIdentityProviderStatus,
+  WorkspaceSsoIdentityProviderEntity,
+} from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+
+@InputType('SetupSAMLSsoInput')
+class SetupSamlSsoInput {
+  @Field()
+  id: string;
+
+  @Field()
+  name: string;
+
+  @Field()
+  issuer: string;
+
+  @Field()
+  certificate: string;
+
+  @Field()
+  ssoURL: string;
+
+  @Field({ nullable: true })
+  fingerprint?: string;
+}
+
+@InputType('SetupOIDCSsoInput')
+class SetupOidcSsoInput {
+  @Field()
+  name: string;
+
+  @Field()
+  issuer: string;
+
+  @Field()
+  clientID: string;
+
+  @Field()
+  clientSecret: string;
+}
+
+@InputType('EditSsoInput')
+class EditSsoInput {
+  @Field()
+  id: string;
+
+  @Field(() => SsoIdentityProviderStatus)
+  status: SsoIdentityProviderStatus;
+}
+
+@InputType('DeleteSsoInput')
+class DeleteSsoInput {
+  @Field()
+  identityProviderId: string;
+}
+
+@ObjectType('SetupSso')
+class SetupSso {
+  @Field()
+  id: string;
+
+  @Field(() => IdentityProviderType)
+  type: IdentityProviderType;
+
+  @Field()
+  issuer: string;
+
+  @Field()
+  name: string;
+
+  @Field(() => SsoIdentityProviderStatus)
+  status: SsoIdentityProviderStatus;
+}
+
+@ObjectType('WorkspaceNameAndId')
+class WorkspaceNameAndId {
+  @Field()
+  id: string;
+
+  @Field({ nullable: true })
+  displayName?: string;
+}
+
+@ObjectType('FindAvailableSSOIDP')
+class FindAvailableSsoIdp extends SetupSso {
+  @Field(() => WorkspaceNameAndId)
+  workspace: WorkspaceNameAndId;
+}
+
+@ObjectType('EditSso')
+class EditSso {
+  @Field()
+  id: string;
+
+  @Field(() => IdentityProviderType)
+  type: IdentityProviderType;
+
+  @Field()
+  issuer: string;
+
+  @Field()
+  name: string;
+
+  @Field(() => SsoIdentityProviderStatus)
+  status: SsoIdentityProviderStatus;
+}
+
+@ObjectType('DeleteSso')
+class DeleteSso {
+  @Field()
+  identityProviderId: string;
+}
 
 @MetadataResolver()
-@UseFilters(
-  PermissionsGraphqlApiExceptionFilter,
-  PreventNestToAutoLogGraphqlErrorsFilter,
-  AuthGraphqlApiExceptionFilter,
-  SsoGraphqlApiExceptionFilter,
-)
-@UsePipes(ResolverValidationPipe)
 @UseGuards(
   AuthPrincipalGuard({
     userSession: {
@@ -50,56 +138,105 @@ import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-module
     application: true,
   }),
   SettingsPermissionGuard(PermissionFlagType.SECURITY),
-  EnterpriseFeaturesEnabledGuard,
 )
 export class SsoResolver {
   constructor(private readonly ssoService: SsoService) {}
 
-  @Mutation(() => SetupSsoDTO)
-  async createOIDCIdentityProvider(
-    @Args('input') setupSsoInput: SetupOidcSsoInput,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ): Promise<SetupSsoDTO | SsoException> {
-    return this.ssoService.createOidcIdentityProvider(
-      setupSsoInput,
-      workspaceId,
-    );
-  }
-
-  @Query(() => [FindAvailableSsoIdpDTO])
+  @Query(() => [FindAvailableSsoIdp])
   async getSSOIdentityProviders(
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ) {
-    return this.ssoService.getSsoIdentityProviders(workspaceId);
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<FindAvailableSsoIdp[]> {
+    const identityProviders = await this.ssoService.listForWorkspace(workspace.id);
+
+    return identityProviders.map((identityProvider) =>
+      this.toAvailableProvider(identityProvider, workspace),
+    );
   }
 
-  @Mutation(() => SetupSsoDTO)
+  @Mutation(() => SetupSso)
   async createSAMLIdentityProvider(
-    @Args('input') setupSsoInput: SetupSamlSsoInput,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ): Promise<SetupSsoDTO | SsoException> {
-    return this.ssoService.createSamlIdentityProvider(
-      setupSsoInput,
-      workspaceId,
-    );
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('input') input: SetupSamlSsoInput,
+  ): Promise<SetupSso> {
+    const identityProvider = await this.ssoService.createSamlIdentityProvider({
+      workspaceId: workspace.id,
+      id: input.id,
+      name: input.name,
+      issuer: input.issuer,
+      certificate: input.certificate,
+      ssoUrl: input.ssoURL,
+    });
+
+    return this.toSetupSso(identityProvider);
   }
 
-  @Mutation(() => DeleteSsoDTO)
-  async deleteSSOIdentityProvider(
-    @Args('input') { identityProviderId }: DeleteSsoInput,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ) {
-    return this.ssoService.deleteSsoIdentityProvider(
-      identityProviderId,
-      workspaceId,
-    );
+  @Mutation(() => SetupSso)
+  async createOIDCIdentityProvider(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('input') input: SetupOidcSsoInput,
+  ): Promise<SetupSso> {
+    const identityProvider = await this.ssoService.createOidcIdentityProvider({
+      workspaceId: workspace.id,
+      name: input.name,
+      issuer: input.issuer,
+      clientId: input.clientID,
+      clientSecret: input.clientSecret,
+    });
+
+    return this.toSetupSso(identityProvider);
   }
 
-  @Mutation(() => EditSsoDTO)
+  @Mutation(() => EditSso)
   async editSSOIdentityProvider(
+    @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('input') input: EditSsoInput,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ) {
-    return this.ssoService.editSsoIdentityProvider(input, workspaceId);
+  ): Promise<EditSso> {
+    const identityProvider = await this.ssoService.editIdentityProvider({
+      workspaceId: workspace.id,
+      id: input.id,
+      status: input.status,
+    });
+
+    return this.toSetupSso(identityProvider);
+  }
+
+  @Mutation(() => DeleteSso)
+  async deleteSSOIdentityProvider(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('input') input: DeleteSsoInput,
+  ): Promise<DeleteSso> {
+    await this.ssoService.deleteIdentityProvider({
+      workspaceId: workspace.id,
+      id: input.identityProviderId,
+    });
+
+    return { identityProviderId: input.identityProviderId };
+  }
+
+  private toSetupSso(
+    identityProvider: WorkspaceSsoIdentityProviderEntity,
+  ): SetupSso {
+    return {
+      id: identityProvider.id,
+      type: identityProvider.type,
+      issuer: identityProvider.issuer,
+      name: identityProvider.name,
+      status: identityProvider.status,
+    };
+  }
+
+  private toAvailableProvider(
+    identityProvider: WorkspaceSsoIdentityProviderEntity,
+    workspace: WorkspaceEntity,
+  ): FindAvailableSsoIdp {
+    return {
+      ...this.toSetupSso(identityProvider),
+      workspace: {
+        id: workspace.id,
+        displayName: isDefined(identityProvider.workspace)
+          ? identityProvider.workspace.displayName
+          : workspace.displayName,
+      },
+    };
   }
 }

@@ -1,46 +1,36 @@
-/* @license Enterprise */
+import { useCallback } from 'react';
 
+import { GET_AUTHORIZATION_URL_FOR_SSO } from '@/auth/graphql/mutations/getAuthorizationUrlForSSO';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
-import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-
-import { useApolloClient } from '@apollo/client/react';
-import { useParams } from 'react-router-dom';
-
+import { useMutation } from '@apollo/client/react';
+import { t } from '@lingui/core/macro';
 import { useToast } from 'twenty-ui/components/feedback';
-import { GetAuthorizationUrlForSsoDocument } from '~/generated-metadata/graphql';
 
 export const useSso = () => {
-  const apolloClient = useApolloClient();
-  const workspaceInviteHash = useParams().workspaceInviteHash;
-
   const { enqueueToast } = useToast();
   const { redirect } = useRedirect();
-  const redirectToSsoLoginPage = async (identityProviderId: string) => {
-    let authorizationUrlForSsoResult;
-    try {
-      authorizationUrlForSsoResult = await apolloClient.mutate({
-        mutation: GetAuthorizationUrlForSsoDocument,
-        variables: {
-          input: {
-            identityProviderId,
-            workspaceInviteHash,
-          },
-        },
-      });
-    } catch (error: unknown) {
-      return enqueueToast(getToastOptionsFromError({ error }));
-    }
+  const [getAuthorizationUrl] = useMutation(GET_AUTHORIZATION_URL_FOR_SSO);
 
-    const authorizationURL =
-      authorizationUrlForSsoResult.data?.getAuthorizationUrlForSSO
-        ?.authorizationURL;
+  const redirectToSsoLoginPage = useCallback(
+    async (identityProviderId: string) => {
+      try {
+        const result = await getAuthorizationUrl({
+          variables: { input: { identityProviderId } },
+        });
+        const authorizationURL =
+          result.data?.getAuthorizationUrlForSSO?.authorizationURL;
 
-    if (authorizationURL) {
-      redirect(authorizationURL);
-    }
-  };
+        if (!authorizationURL) {
+          throw new Error('Missing SSO authorization URL');
+        }
 
-  return {
-    redirectToSsoLoginPage,
-  };
+        redirect(authorizationURL);
+      } catch {
+        enqueueToast({ status: 'error', children: t`An error occurred.` });
+      }
+    },
+    [enqueueToast, getAuthorizationUrl, redirect],
+  );
+
+  return { redirectToSsoLoginPage };
 };

@@ -1,53 +1,32 @@
-/* @license Enterprise */
-
-import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
-
-import { SettingsPath } from 'twenty-shared/types';
-
-import { SettingsCard } from '@/settings/components/SettingsCard';
-import { SettingsSsoIdentitiesProvidersListCardWrapper } from '@/settings/security/components/sso/SettingsSsoIdentitiesProvidersListCardWrapper';
-import { ssoIdentitiesProvidersState } from '@/settings/security/states/ssoIdentitiesProvidersState';
-import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
-import { useQuery } from '@apollo/client/react';
+import { SettingsSecuritySsoRowDropdownMenu } from '@/settings/security/components/sso/SettingsSecuritySsoRowDropdownMenu';
+import { useSsoIdentityProviders } from '@/settings/security/hooks/useSsoIdentityProviders';
 import { useLingui } from '@lingui/react/macro';
-import { useEffect } from 'react';
-import { getSettingsPath } from 'twenty-shared/utils';
-import { IconKey } from 'twenty-ui/icon';
-import { GetSsoIdentityProvidersDocument } from '~/generated-metadata/graphql';
+import { SettingsPath } from 'twenty-shared/types';
+import { Button } from 'twenty-ui/primitives/input';
+import { Card } from 'twenty-ui/primitives/surfaces';
+
+import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 
 export const SettingsSsoIdentitiesProvidersListCard = () => {
   const { t } = useLingui();
-
-  const [ssoIdentitiesProviders, setSsoIdentitiesProviders] = useAtomState(
-    ssoIdentitiesProvidersState,
-  );
-
-  const {
-    loading,
-    data: ssoData,
-    error: ssoError,
-  } = useQuery(GetSsoIdentityProvidersDocument, {
-    fetchPolicy: 'network-only',
-  });
-
-  useEffect(() => {
-    if (ssoData) {
-      setSsoIdentitiesProviders(ssoData?.getSSOIdentityProviders ?? []);
-    }
-  }, [ssoData, setSsoIdentitiesProviders]);
+  const navigateSettings = useNavigateSettings();
+  const { providers } = useSsoIdentityProviders();
 
   return (
-    <>
-      <ToastOnQueryErrorEffect error={ssoError} />
-      {loading || !ssoIdentitiesProviders.length ? (
-        <SettingsCard
-          to={getSettingsPath(SettingsPath.NewSsoIdentityProvider)}
-          title={t`Add SSO Identity Provider`}
-          Icon={<IconKey />}
-        />
-      ) : (
-        <SettingsSsoIdentitiesProvidersListCardWrapper />
-      )}
-    </>
+    <Card.Root>
+      <ul>
+        {providers.map((provider) => (
+          <li key={provider.id}>
+            {provider.name} ({provider.type}) — {provider.status}
+            <SettingsSecuritySsoRowDropdownMenu ssoIdp={provider} />
+          </li>
+        ))}
+      </ul>
+      <Button
+        onClick={() => navigateSettings(SettingsPath.NewSsoIdentityProvider)}
+      >
+        {t`Add provider`}
+      </Button>
+    </Card.Root>
   );
 };

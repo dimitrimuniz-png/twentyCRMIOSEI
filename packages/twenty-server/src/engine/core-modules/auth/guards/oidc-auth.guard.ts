@@ -1,18 +1,13 @@
-/* @license Enterprise */
-
-import { type ExecutionContext, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-import {
-  AuthException,
-  AuthExceptionCode,
-} from 'src/engine/core-modules/auth/auth.exception';
-import { OidcAuthStrategy } from 'src/engine/core-modules/auth/strategies/oidc.auth.strategy';
+import { type ExecutionContext } from '@nestjs/common';
+import { type Request } from 'express';
+import { isDefined } from 'twenty-shared/utils';
+
 import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
 import { GuardRedirectService } from 'src/engine/core-modules/guard-redirect/services/guard-redirect.service';
 import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
-import { type SsoConfiguration } from 'src/engine/core-modules/sso/types/sso-configurations.type';
-import { type WorkspaceSsoIdentityProviderEntity } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
 
 @Injectable()
 export class OidcAuthGuard extends AuthGuard('openidconnect') {
@@ -24,79 +19,44 @@ export class OidcAuthGuard extends AuthGuard('openidconnect') {
     super();
   }
 
-  // oxlint-disable-next-line typescript/no-explicit-any
-  private getStateByRequest(request: any): {
-    identityProviderId: string;
-  } {
-    if (request.params.identityProviderId) {
-      return {
-        identityProviderId: request.params.identityProviderId,
-      };
-    }
-
-    if (
-      request.query.state &&
-      typeof request.query.state === 'string' &&
-      request.query.state.startsWith('{') &&
-      request.query.state.endsWith('}')
-    ) {
-      const state = JSON.parse(request.query.state);
-
-      return {
-        identityProviderId: state.identityProviderId,
-      };
-    }
-
-    throw new Error('Invalid OIDC identity provider params');
-  }
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  override async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
+    const identityProviderId = request.params.identityProviderId;
 
-    let identityProvider:
-      | (SsoConfiguration & WorkspaceSsoIdentityProviderEntity)
-      | null = null;
-
-    try {
-      const state = this.getStateByRequest(request);
-
-      if (!state.identityProviderId) {
-        throw new AuthException(
-          'identityProviderId missing',
-          AuthExceptionCode.INVALID_DATA,
-        );
-      }
-
-      identityProvider = await this.ssoService.findSsoIdentityProviderById(
-        state.identityProviderId,
-      );
-
-      if (!identityProvider) {
-        throw new AuthException(
-          'Identity provider not found',
-          AuthExceptionCode.INVALID_DATA,
-        );
-      }
-      const issuer = await this.ssoService.discoverOidcIssuer(
-        identityProvider.issuer,
-      );
-
-      new OidcAuthStrategy(
-        this.ssoService.getOidcClient(identityProvider, issuer),
-        identityProvider.id,
-      );
-
-      return (await super.canActivate(context)) as boolean;
-    } catch (err) {
-      this.guardRedirectService.dispatchErrorFromGuard(
-        context,
-        err,
-        this.workspaceDomainsService.getSubdomainAndCustomDomainFromWorkspaceFallbackOnDefaultSubdomain(
-          identityProvider?.workspace,
-        ),
-      );
+    if (!isDefined(identityProviderId) || identityProviderId.length === 0) {
+      await this.reject(context, undefined);
 
       return false;
     }
+
+    const identityProvider =
+      await this.ssoService.findSsoIdentityProviderById(identityProviderId);
+
+    if (!isDefined(identityProvider)) {
+      await this.reject(context, undefined);
+
+      return false;
+    }
+
+    await this.ssoService.discoverOidcIssuer(identityProvider.issuer);
+
+    return (await super.canActivate(context)) as boolean;
+  }
+
+  private async reject(
+    context: ExecutionContext,
+    workspace: { id?: string } | undefined,
+  ): Promise<void> {
+    const domains = isDefined(workspace)
+      ? await this.workspaceDomainsService.getSubdomainAndCustomDomainFromWorkspaceFallbackOnDefaultSubdomain(
+          workspace as never,
+        )
+      : { id: undefined, subdomain: '', customDomain: null };
+
+    this.guardRedirectService.dispatchErrorFromGuard(
+      context,
+      new Error('SSO identity provider not found'),
+      domains,
+    );
   }
 }

@@ -27,6 +27,7 @@ import { MicrosoftAPIsService } from 'src/engine/core-modules/auth/services/micr
 import { ResetPasswordService } from 'src/engine/core-modules/auth/services/reset-password.service';
 import { SignInUpService } from 'src/engine/core-modules/auth/services/sign-in-up.service';
 import { UpdateConnectedAccountOnReconnectService } from 'src/engine/core-modules/auth/services/update-connected-account-on-reconnect.service';
+import { OidcAuthStrategy } from 'src/engine/core-modules/auth/strategies/oidc.auth.strategy';
 import { SamlAuthStrategy } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { TransientTokenService } from 'src/engine/core-modules/auth/token/services/transient-token.service';
 import { TokenModule } from 'src/engine/core-modules/auth/token/token.module';
@@ -136,6 +137,7 @@ import { AuthService } from './services/auth.service';
     SignInUpService,
     AuthService,
     SamlAuthStrategy,
+    OidcAuthStrategy,
     AuthResolver,
     GoogleAPIsService,
     GoogleApiScopesService,

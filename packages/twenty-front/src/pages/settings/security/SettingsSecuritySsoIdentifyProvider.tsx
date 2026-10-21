@@ -1,89 +1,141 @@
-/* @license Enterprise */
+import { useState } from 'react';
 
-import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
+import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
-import SettingsSsoIdentitiesProvidersForm from '@/settings/security/components/sso/SettingsSsoIdentitiesProvidersForm';
-import { useCreateSsoIdentityProvider } from '@/settings/security/hooks/useCreateSsoIdentityProvider';
-import { type SettingSecurityNewSsoIdentityFormValues } from '@/settings/security/types/SsoIdentityProvider';
-import { ssoIdentityProviderDefaultValues } from '@/settings/security/utils/ssoIdentityProviderDefaultValues';
-import { ssoIdentitiesProvidersParamsSchema } from '@/settings/security/validation-schemas/ssoIdentityProviderSchema';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { FormProvider, useForm } from 'react-hook-form';
-import { SettingsPath } from 'twenty-shared/types';
-import { getSettingsPath } from 'twenty-shared/utils';
+import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { v4 } from 'uuid';
+import { Button } from 'twenty-ui/primitives/input';
+import { Section } from 'twenty-ui/components/layout';
 import { useToast } from 'twenty-ui/components/feedback';
-import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import {
+  CreateOidcIdentityProviderDocument,
+  CreateSamlIdentityProviderDocument,
+  GetSsoIdentityProvidersDocument,
+  IdentityProviderType,
+} from '~/generated-metadata/graphql';
 
 export const SettingsSecuritySsoIdentifyProvider = () => {
-  const navigate = useNavigateSettings();
-
+  const { t } = useLingui();
   const { enqueueToast } = useToast();
-  const { createSsoIdentityProvider } = useCreateSsoIdentityProvider();
+  const providers = useQuery(GetSsoIdentityProvidersDocument);
+  const [createSaml] = useMutation(CreateSamlIdentityProviderDocument);
+  const [createOidc] = useMutation(CreateOidcIdentityProviderDocument);
+  const [protocol, setProtocol] = useState<'SAML' | 'OIDC'>('SAML');
+  const [name, setName] = useState('');
+  const [issuer, setIssuer] = useState('');
+  const [ssoUrl, setSsoUrl] = useState('');
+  const [certificate, setCertificate] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
 
-  const form = useForm<SettingSecurityNewSsoIdentityFormValues>({
-    mode: 'onSubmit',
-    resolver: zodResolver(ssoIdentitiesProvidersParamsSchema),
-    defaultValues: Object.values(ssoIdentityProviderDefaultValues).reduce(
-      (acc, fn) => ({ ...acc, ...fn() }),
-      {},
-    ),
-  });
-
-  const handleSave = async () => {
+  const save = async () => {
     try {
-      const type = form.getValues('type');
+      if (protocol === 'SAML') {
+        await createSaml({
+          variables: {
+            input: {
+              id: v4(),
+              name,
+              issuer,
+              ssoURL: ssoUrl,
+              certificate,
+            },
+          },
+          refetchQueries: [GetSsoIdentityProvidersDocument],
+        });
+      } else {
+        await createOidc({
+          variables: {
+            input: {
+              name,
+              issuer,
+              clientID: clientId,
+              clientSecret,
+            },
+          },
+          refetchQueries: [GetSsoIdentityProvidersDocument],
+        });
+      }
 
-      const values = form.getValues();
-      const providerKeys = Object.keys(
-        ssoIdentityProviderDefaultValues[type](),
-      );
-
-      const filteredValues = Object.fromEntries(
-        Object.entries(values).filter(([key]) => providerKeys.includes(key)),
-      );
-
-      await createSsoIdentityProvider(
-        ssoIdentitiesProvidersParamsSchema.parse(filteredValues),
-      );
-
-      navigate(SettingsPath.Security);
-    } catch (error) {
-      enqueueToast(getToastOptionsFromError({ error }));
+      enqueueToast({ status: 'success', children: t`Identity provider saved` });
+    } catch {
+      enqueueToast({ status: 'error', children: t`An error occurred.` });
     }
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSave)}>
-      <FormProvider
-        // oxlint-disable-next-line react/jsx-props-no-spreading
-        {...form}
-      >
-        <SettingsPageLayout
-          title={t`New SSO Configuration`}
-          actionButton={
-            <SaveAndCancelButtons
-              onCancel={() => navigate(SettingsPath.Security)}
-              isSaveDisabled={form.formState.isSubmitting}
-            />
-          }
-          links={[
-            {
-              children: <Trans>Workspace</Trans>,
-              href: getSettingsPath(SettingsPath.General),
-            },
-            {
-              children: <Trans>Security</Trans>,
-              href: getSettingsPath(SettingsPath.Security),
-            },
-            { children: <Trans>New SSO provider</Trans> },
-          ]}
-        >
-          <SettingsSsoIdentitiesProvidersForm />
-        </SettingsPageLayout>
-      </FormProvider>
-    </form>
+    <SettingsPageLayout>
+      <SettingsPageContainer>
+        <Section>
+          <Trans>Single sign-on</Trans>
+          <ul>
+            {providers.data?.getSSOIdentityProviders.map((provider) => (
+              <li key={provider.id}>
+                {provider.name} ({provider.type}) — {provider.status}
+              </li>
+            ))}
+          </ul>
+          <label>
+            <Trans>Protocol</Trans>
+            <select
+              value={protocol}
+              onChange={(event) =>
+                setProtocol(event.target.value as 'SAML' | 'OIDC')
+              }
+            >
+              <option value="SAML">SAML</option>
+              <option value="OIDC">OIDC</option>
+            </select>
+          </label>
+          <SettingsTextInput
+            instanceId="sso-name"
+            label={t`Name`}
+            value={name}
+            onChange={setName}
+          />
+          <SettingsTextInput
+            instanceId="sso-issuer"
+            label={t`Issuer`}
+            value={issuer}
+            onChange={setIssuer}
+          />
+          {protocol === IdentityProviderType.SAML ? (
+            <>
+              <SettingsTextInput
+                instanceId="sso-url"
+                label={t`SSO URL`}
+                value={ssoUrl}
+                onChange={setSsoUrl}
+              />
+              <SettingsTextInput
+                instanceId="sso-certificate"
+                label={t`Certificate`}
+                value={certificate}
+                onChange={setCertificate}
+              />
+            </>
+          ) : (
+            <>
+              <SettingsTextInput
+                instanceId="sso-client-id"
+                label={t`Client ID`}
+                value={clientId}
+                onChange={setClientId}
+              />
+              <SettingsTextInput
+                instanceId="sso-client-secret"
+                label={t`Client secret`}
+                value={clientSecret}
+                onChange={setClientSecret}
+                type="password"
+              />
+            </>
+          )}
+          <Button onClick={save}>{t`Save`}</Button>
+        </Section>
+      </SettingsPageContainer>
+    </SettingsPageLayout>
   );
 };
