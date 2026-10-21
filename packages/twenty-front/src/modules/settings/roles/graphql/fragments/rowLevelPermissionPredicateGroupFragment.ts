@@ -1,17 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { gql } from '@apollo/client';
 
-export class ROW_LEVEL_PERMISSION_PREDICATE_GROUP_FRAGMENT {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+export const ROW_LEVEL_PERMISSION_PREDICATE_GROUP_FRAGMENT = gql`
+  fragment RowLevelPermissionPredicateGroupFragment on RowLevelPermissionPredicateGroup {
+    id
+    roleId
+    objectMetadataId
+    parentRowLevelPermissionPredicateGroupId
+    logicalOperator
+    positionInRowLevelPermissionPredicateGroup
   }
-  [key: string]: RemovedCommercial;
-}
+`;
