@@ -72,6 +72,7 @@ import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-perm
 import { getRoleIdsFromRolePermissionConfig } from 'src/engine/twenty-orm/utils/get-role-ids-from-role-permission-config.util';
 import { resolveRowLevelPermissionRecordFilter } from 'src/engine/twenty-orm/utils/resolve-row-level-permission-record-filter.util';
 import { validateRLSPredicatesForRecords } from 'src/engine/twenty-orm/utils/validate-rls-predicates-for-records.util';
+import { buildValidationRuleFieldDescriptors } from 'src/engine/twenty-orm/utils/build-validation-rule-field-descriptors.util';
 import { getActiveValidationRules } from 'src/engine/twenty-orm/utils/get-active-validation-rules.util';
 import { validateRecordsAgainstValidationRulesOrThrow } from 'src/engine/twenty-orm/utils/validate-records-against-validation-rules.util';
 import {
@@ -802,6 +803,11 @@ export class WorkspaceRepository<TEntity extends ObjectLiteral = ObjectRecord> {
           validationRules,
           writtenRecords,
           inputRecordIds,
+          fields: buildValidationRuleFieldDescriptors({
+            fieldIds: this.options.flatObjectMetadata.fieldIds,
+            flatFieldMetadataMaps:
+              this.options.internalContext.flatFieldMetadataMaps,
+          }),
         }),
       ),
     );

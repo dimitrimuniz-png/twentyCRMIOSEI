@@ -1,12 +1,9 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
-
-import { MetadataFlatEntityMapsCacheProvider } from 'src/engine/workspace-cache/interfaces/metadata-flat-entity-maps-cache-provider.service';
 
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { type FlatValidationRuleMaps } from 'src/engine/metadata-modules/flat-validation-rule/types/flat-validation-rule-maps.type';
 import { fromValidationRuleEntityToFlatValidationRule } from 'src/engine/metadata-modules/flat-validation-rule/utils/from-validation-rule-entity-to-flat-validation-rule.util';
+import { MetadataFlatEntityMapsCacheProvider } from 'src/engine/workspace-cache/interfaces/metadata-flat-entity-maps-cache-provider.service';
 import { WorkspaceCache } from 'src/engine/workspace-cache/decorators/workspace-cache.decorator';
 import { type WorkspaceCacheProviderContext } from 'src/engine/workspace-cache/types/workspace-cache-provider-context.type';
 import { createIdToUniversalIdentifierMap } from 'src/engine/workspace-cache/utils/create-id-to-universal-identifier-map.util';
@@ -46,15 +43,13 @@ export class WorkspaceFlatValidationRuleMapCacheService extends MetadataFlatEnti
     const flatValidationRuleMaps = createEmptyFlatEntityMaps();
 
     for (const validationRuleEntity of validationRules) {
-      const flatValidationRule = fromValidationRuleEntityToFlatValidationRule({
-        entity: validationRuleEntity,
-        applicationIdToUniversalIdentifierMap,
-        objectMetadataIdToUniversalIdentifierMap,
-        fieldMetadataIdToUniversalIdentifierMap,
-      });
-
       addFlatEntityToFlatEntityMapsThroughMutationOrThrow({
-        flatEntity: flatValidationRule,
+        flatEntity: fromValidationRuleEntityToFlatValidationRule({
+          entity: validationRuleEntity,
+          applicationIdToUniversalIdentifierMap,
+          objectMetadataIdToUniversalIdentifierMap,
+          fieldMetadataIdToUniversalIdentifierMap,
+        }),
         flatEntityMapsToMutate: flatValidationRuleMaps,
       });
     }

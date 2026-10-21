@@ -1,6 +1,3 @@
-/* @license Enterprise */
-
-import { type ValidationRuleBindings } from 'twenty-shared/types';
 import {
   Column,
   CreateDateColumn,
@@ -9,21 +6,15 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  Relation,
+  type Relation,
   UpdateDateColumn,
 } from 'typeorm';
 
-import { ADD_VALIDATION_RULE_TABLE_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-44/add-validation-rule-table-upgrade-command-name.constant';
-import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
-import { JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
 
 @Entity({ name: 'validationRule', schema: 'core' })
-@WasIntroducedInUpgrade({
-  upgradeCommandName: ADD_VALIDATION_RULE_TABLE_UPGRADE_COMMAND_NAME,
-})
 @Index('IDX_VALIDATION_RULE_WORKSPACE_ID_OBJECT_METADATA_ID', [
   'workspaceId',
   'objectMetadataId',
@@ -46,11 +37,11 @@ export class ValidationRuleEntity
   @Column({ nullable: true, type: 'uuid' })
   errorFieldMetadataId: string | null;
 
-  @ManyToOne(() => FieldMetadataEntity, { onDelete: 'SET NULL' })
+  @ManyToOne(() => FieldMetadataEntity, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'errorFieldMetadataId' })
   errorFieldMetadata: Relation<FieldMetadataEntity> | null;
 
-  @Column({ nullable: false, type: 'varchar' })
+  @Column({ nullable: false })
   name: string;
 
   @Column({ nullable: true, type: 'text' })
@@ -63,12 +54,12 @@ export class ValidationRuleEntity
   expression: string;
 
   @Column({ nullable: false, type: 'jsonb', default: {} })
-  bindings: JsonbProperty<ValidationRuleBindings>;
+  bindings: Record<string, unknown>;
 
   @Column({ nullable: false, type: 'text' })
   message: string;
 
-  @Column({ nullable: false, type: 'boolean', default: true })
+  @Column({ nullable: false, default: true })
   isActive: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })

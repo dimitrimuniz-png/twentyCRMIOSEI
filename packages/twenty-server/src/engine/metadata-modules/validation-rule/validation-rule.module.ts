@@ -1,31 +1,18 @@
-/* @license Enterprise */
-
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
-import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
-import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
-import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.module';
-import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
-import { ValidationRuleToolsFactory } from 'src/engine/metadata-modules/validation-rule/tools/validation-rule-tools.factory';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { ValidationRuleEntity } from 'src/engine/metadata-modules/validation-rule/entities/validation-rule.entity';
 import { ValidationRuleResolver } from 'src/engine/metadata-modules/validation-rule/validation-rule.resolver';
 import { ValidationRuleService } from 'src/engine/metadata-modules/validation-rule/validation-rule.service';
-import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration.module';
+import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 
 @Module({
   imports: [
-    WorkspaceManyOrAllFlatEntityMapsCacheModule,
-    ApplicationModule,
-    BillingModule,
-    FeatureFlagModule,
-    PermissionsModule,
-    WorkspaceMigrationModule,
+    TypeOrmModule.forFeature([ValidationRuleEntity, WorkspaceEntity]),
+    WorkspaceCacheModule,
   ],
-  providers: [
-    ValidationRuleService,
-    ValidationRuleResolver,
-    ValidationRuleToolsFactory,
-  ],
-  exports: [ValidationRuleToolsFactory],
+  providers: [ValidationRuleService, ValidationRuleResolver],
+  exports: [ValidationRuleService],
 })
 export class ValidationRuleModule {}
