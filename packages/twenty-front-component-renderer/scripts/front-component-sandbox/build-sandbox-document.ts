@@ -87,7 +87,12 @@ const buildSandboxDocument = async (): Promise<void> => {
   fs.writeFileSync(generatedFile, generatedSource, 'utf8');
 };
 
-buildSandboxDocument().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+buildSandboxDocument()
+  .then(() => {
+    // Vite's worker threads keep the event loop open under Nx.
+    process.exit(0);
+  })
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });

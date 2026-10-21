@@ -20,7 +20,13 @@ services:
 
   server:
     container_name: twenty-server
-    image: twentycrm/twenty:latest
+    image: ghcr.io/dimitrimuniz-png/twentycrmiosei:${TAG:-local}
+    build:
+      context: ../../..
+      dockerfile: packages/twenty-docker/twenty/Dockerfile
+      target: twenty
+      args:
+        APP_VERSION: ${APP_VERSION:-local}
     environment:
       NODE_PORT: "3000"
       SERVER_URL: ${SERVER_URL}
@@ -36,7 +42,7 @@ services:
 
   worker:
     container_name: twenty-worker
-    image: twentycrm/twenty:latest
+    image: ghcr.io/dimitrimuniz-png/twentycrmiosei:${TAG:-local}
     command: yarn worker:prod
     environment:
       SERVER_URL: ${SERVER_URL}

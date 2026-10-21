@@ -500,3 +500,5 @@ const main = () => {
   moduleIndexFiles.forEach(createTypeScriptFile);
 };
 main();
+// tsx keeps the Node event loop open under Nx, so the task never finishes.
+process.exit(0);
