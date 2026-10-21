@@ -1,10 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
-import { BillingSubscriptionCollectionMethod } from 'src/engine/core-modules/billing/enums/billing-subscription-collection-method.enum';
-
-export const isSendInvoiceSubscription = (
-  subscription: Pick<BillingSubscriptionEntity, 'collectionMethod'>,
-): boolean =>
-  subscription.collectionMethod ===
-  BillingSubscriptionCollectionMethod.SEND_INVOICE;
+const removedisSendInvoiceSubscription: RemovedCommercial = new Proxy(
+  function isSendInvoiceSubscription(..._args: unknown[]) { return removedisSendInvoiceSubscription; },
+  {
+    get: () => removedisSendInvoiceSubscription,
+    apply: () => removedisSendInvoiceSubscription,
+  },
+);
+export const isSendInvoiceSubscription = removedisSendInvoiceSubscription;

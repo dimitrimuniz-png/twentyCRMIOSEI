@@ -1,38 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { formatDateTimeForClickHouse } from 'src/database/clickhouse/utils/format-date-time-for-clickhouse.util';
-import { type WorkspaceEventEnvelope } from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
-import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
-
-export const buildUsageEventEnvelopes = (
-  workspaceId: string,
-  usageEvents: UsageEvent[],
-): WorkspaceEventEnvelope[] => {
-  const now = formatDateTimeForClickHouse(new Date());
-
-  return usageEvents.map((usageEvent) => ({
-    table: 'usageEvent',
-    row: {
-      timestamp: now,
-      workspaceId,
-      periodStart: usageEvent.periodStart
-        ? formatDateTimeForClickHouse(usageEvent.periodStart)
-        : undefined,
-      userWorkspaceId: usageEvent.spenders?.userWorkspaceId ?? '',
-      apiKeyId: usageEvent.spenders?.apiKeyId ?? '',
-      applicationId: usageEvent.spenders?.applicationId ?? '',
-      agentId: usageEvent.spenders?.agentId ?? '',
-      workflowId: usageEvent.spenders?.workflowId ?? '',
-      logicFunctionId: usageEvent.spenders?.logicFunctionId ?? '',
-      resourceType: usageEvent.resourceType,
-      operationType: usageEvent.operationType,
-      quantity: usageEvent.quantity,
-      unit: usageEvent.unit,
-      creditsUsedMicro: usageEvent.creditsUsedMicro,
-      userCreditsUsedMicro: usageEvent.userCreditsUsedMicro ?? 0,
-      resourceId: usageEvent.resourceId ?? '',
-      resourceContext: usageEvent.resourceContext ?? '',
-      metadata: usageEvent.metadata ?? {},
-    },
-  }));
-};
+const removedbuildUsageEventEnvelopes: RemovedCommercial = new Proxy(
+  function buildUsageEventEnvelopes(..._args: unknown[]) { return removedbuildUsageEventEnvelopes; },
+  {
+    get: () => removedbuildUsageEventEnvelopes,
+    apply: () => removedbuildUsageEventEnvelopes,
+  },
+);
+export const buildUsageEventEnvelopes = removedbuildUsageEventEnvelopes;

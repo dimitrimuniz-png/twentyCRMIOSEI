@@ -1,15 +1,17 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { Injectable } from '@nestjs/common';
-
-import type Stripe from 'stripe';
-
-import { StripeSDKMock } from 'src/engine/core-modules/billing/stripe/stripe-sdk/mocks/stripe-sdk.mock';
-import { type StripeSDKService } from 'src/engine/core-modules/billing/stripe/stripe-sdk/services/stripe-sdk.service';
-
-@Injectable()
-export class StripeSDKMockService implements StripeSDKService {
-  getStripe(stripeApiKey: string) {
-    return new StripeSDKMock(stripeApiKey) as unknown as Stripe;
+export class StripeSDKMockService {
+  constructor(..._args: unknown[]) {
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (property === 'then') return undefined;
+        const own = Reflect.get(target, property, receiver);
+        if (own !== undefined) return own;
+        return (..._ignored: unknown[]) => undefined;
+      },
+    });
   }
+  [key: string]: RemovedCommercial;
 }

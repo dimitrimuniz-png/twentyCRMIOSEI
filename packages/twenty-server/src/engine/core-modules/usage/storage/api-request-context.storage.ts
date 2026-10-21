@@ -1,15 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { AsyncLocalStorage } from 'async_hooks';
-
-import { type ApiType } from 'src/engine/core-modules/usage/types/api-type.type';
-
-const apiRequestContextStorage = new AsyncLocalStorage<{ apiType: ApiType }>();
-
-export const withApiRequestContext = <T>(
-  apiType: ApiType,
-  fn: () => T | Promise<T>,
-): T | Promise<T> => apiRequestContextStorage.run({ apiType }, fn);
-
-export const getApiType = (): ApiType | undefined =>
-  apiRequestContextStorage.getStore()?.apiType;
+const removedgetApiType: RemovedCommercial = new Proxy(
+  function getApiType(..._args: unknown[]) { return removedgetApiType; },
+  {
+    get: () => removedgetApiType,
+    apply: () => removedgetApiType,
+  },
+);
+export const getApiType = removedgetApiType;

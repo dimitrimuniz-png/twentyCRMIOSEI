@@ -1,10 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-export type UsageSpenders = {
-  userWorkspaceId?: string | null;
-  apiKeyId?: string | null;
-  applicationId?: string | null;
-  agentId?: string | null;
-  workflowId?: string | null;
-  logicFunctionId?: string | null;
-};
+export type UsageSpenders = RemovedCommercial;

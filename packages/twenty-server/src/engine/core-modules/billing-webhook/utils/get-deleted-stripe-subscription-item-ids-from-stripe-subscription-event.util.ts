@@ -1,29 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { isDefined } from 'twenty-shared/utils';
-
-import type Stripe from 'stripe';
-
-export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = (
-  event:
-    | Stripe.CustomerSubscriptionUpdatedEvent
-    | Stripe.CustomerSubscriptionCreatedEvent
-    | Stripe.CustomerSubscriptionDeletedEvent,
-): string[] => {
-  const hasUpdatedSubscriptionItems = isDefined(
-    event.data.previous_attributes?.items?.data,
-  );
-
-  if (!hasUpdatedSubscriptionItems) {
-    return [];
-  }
-
-  const subscriptionItemIds =
-    event.data.object.items.data.map((item) => item.id) ?? [];
-
-  return (
-    event.data.previous_attributes?.items?.data
-      .filter((item) => !subscriptionItemIds.includes(item.id))
-      .map((item) => item.id) ?? []
-  );
-};
+const removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent: RemovedCommercial = new Proxy(
+  function getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent(..._args: unknown[]) { return removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent; },
+  {
+    get: () => removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent,
+    apply: () => removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent,
+  },
+);
+export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent;

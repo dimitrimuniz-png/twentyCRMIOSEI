@@ -1,9 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { Field, ObjectType } from '@nestjs/graphql';
-
-@ObjectType('BillingSession')
-export class BillingSessionDTO {
-  @Field(() => String, { nullable: true })
-  url: string;
-}
+export type BillingSessionDTO = RemovedCommercial;

@@ -1,29 +1,17 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { Catch, type ExceptionFilter } from '@nestjs/common';
-
-import { assertUnreachable } from 'twenty-shared/utils';
-
-import {
-  EmailGroupAccessException,
-  EmailGroupAccessExceptionCode,
-} from 'src/engine/core-modules/emailing-domain/exceptions/email-group-access.exception';
-import {
-  ForbiddenError,
-  InternalServerError,
-} from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
-
-@Catch(EmailGroupAccessException)
-export class EmailGroupAccessGraphqlApiExceptionFilter implements ExceptionFilter {
-  catch(exception: EmailGroupAccessException) {
-    switch (exception.code) {
-      case EmailGroupAccessExceptionCode.EMAIL_GROUP_ENTERPRISE_PLAN_REQUIRED:
-        throw new ForbiddenError(exception);
-      case EmailGroupAccessExceptionCode.INTERNAL_SERVER_ERROR:
-        throw new InternalServerError(exception);
-      default: {
-        assertUnreachable(exception.code);
-      }
-    }
+export class EmailGroupAccessGraphqlApiExceptionFilter {
+  constructor(..._args: unknown[]) {
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (property === 'then') return undefined;
+        const own = Reflect.get(target, property, receiver);
+        if (own !== undefined) return own;
+        return (..._ignored: unknown[]) => undefined;
+      },
+    });
   }
+  [key: string]: RemovedCommercial;
 }

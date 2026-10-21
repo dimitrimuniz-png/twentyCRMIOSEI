@@ -1,15 +1,10 @@
-/* @license Enterprise */
-
-import { registerEnumType } from '@nestjs/graphql';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
 export enum BillingPlanKey {
-  PRO = 'PRO',
   ENTERPRISE = 'ENTERPRISE',
-  PRO_V2 = 'PRO_V2',
   ORGANIZATION_V2 = 'ORGANIZATION_V2',
+  PRO = 'PRO',
+  PRO_V2 = 'PRO_V2',
 }
-
-registerEnumType(BillingPlanKey, {
-  name: 'BillingPlanKey',
-  description: 'The different billing plans available',
-});

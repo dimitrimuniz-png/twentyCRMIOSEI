@@ -1,27 +1,17 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import {
-  type ArgumentsHost,
-  Catch,
-  type ExceptionFilter,
-} from '@nestjs/common';
-import { type GqlContextType } from '@nestjs/graphql';
-
-import Stripe from 'stripe';
-
-import { BillingException } from 'src/engine/core-modules/billing/billing.exception';
-import { billingGraphqlApiExceptionHandler } from 'src/engine/core-modules/billing/utils/billing-graphql-api-exception-handler.util';
-
-@Catch(BillingException, Stripe.errors.StripeError)
-export class BillingGraphqlApiExceptionFilter implements ExceptionFilter {
-  catch(
-    exception: BillingException | Stripe.errors.StripeError,
-    host: ArgumentsHost,
-  ) {
-    if (host.getType<GqlContextType>() !== 'graphql') {
-      throw exception;
-    }
-
-    return billingGraphqlApiExceptionHandler(exception);
+export class BillingGraphqlApiExceptionFilter {
+  constructor(..._args: unknown[]) {
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (property === 'then') return undefined;
+        const own = Reflect.get(target, property, receiver);
+        if (own !== undefined) return own;
+        return (..._ignored: unknown[]) => undefined;
+      },
+    });
   }
+  [key: string]: RemovedCommercial;
 }

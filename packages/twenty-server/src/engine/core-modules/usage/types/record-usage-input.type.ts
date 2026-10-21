@@ -1,10 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
-
-export type RecordUsageInput = Omit<
-  UsageEvent,
-  'periodStart' | 'creditsUsedMicro'
-> & {
-  creditsUsedMicro?: number;
-};
+export type RecordUsageInput = RemovedCommercial;

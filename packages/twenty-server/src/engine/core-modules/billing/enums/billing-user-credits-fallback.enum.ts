@@ -1,12 +1,8 @@
-/* @license Enterprise */
-
-import { registerEnumType } from '@nestjs/graphql';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
 export enum UserCreditsFallback {
-  WORKSPACE_CREDITS = 'WORKSPACE_CREDITS',
   STOP = 'STOP',
+  WORKSPACE_CREDITS = 'WORKSPACE_CREDITS',
 }
-
-registerEnumType(UserCreditsFallback, {
-  name: 'UserCreditsFallback',
-});

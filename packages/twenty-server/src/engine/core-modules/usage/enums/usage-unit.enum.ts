@@ -1,22 +1,18 @@
-/* @license Enterprise */
-
-import { registerEnumType } from '@nestjs/graphql';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
 export enum UsageUnit {
-  CREDIT = 'CREDIT',
-  USER_CREDIT = 'USER_CREDIT',
-  TOKEN = 'TOKEN',
-  INVOCATION = 'INVOCATION',
-  MINUTE = 'MINUTE',
-  MILLISECOND = 'MILLISECOND',
   BYTE = 'BYTE',
+  COMPLEXITY = 'COMPLEXITY',
+  CREDIT = 'CREDIT',
   FILE = 'FILE',
+  INVOCATION = 'INVOCATION',
+  MILLISECOND = 'MILLISECOND',
+  MINUTE = 'MINUTE',
+  RECORD = 'RECORD',
   REQUEST = 'REQUEST',
   SEAT = 'SEAT',
-  RECORD = 'RECORD',
-  COMPLEXITY = 'COMPLEXITY',
+  TOKEN = 'TOKEN',
+  USER_CREDIT = 'USER_CREDIT',
 }
-
-registerEnumType(UsageUnit, {
-  name: 'UsageUnit',
-});
