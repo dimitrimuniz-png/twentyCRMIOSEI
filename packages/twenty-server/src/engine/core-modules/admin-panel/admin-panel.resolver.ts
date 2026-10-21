@@ -637,7 +637,7 @@ export class AdminPanelResolver {
 
     return items.map((item) => ({
       ...item,
-      label: nameMap.get(item.key),
+      label: nameMap.get(item.key) ?? item.label,
     }));
   }
 

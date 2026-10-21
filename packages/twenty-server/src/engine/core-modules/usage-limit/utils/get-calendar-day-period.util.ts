@@ -1,12 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-const removedgetCalendarDayPeriod: RemovedCommercial = new Proxy(
-  function getCalendarDayPeriod(..._args: unknown[]) { return removedgetCalendarDayPeriod; },
-  {
-    get: () => removedgetCalendarDayPeriod,
-    apply: () => removedgetCalendarDayPeriod,
-  },
-);
-export const getCalendarDayPeriod = removedgetCalendarDayPeriod;
+export const getCalendarDayPeriod = (
+  date: Date,
+): { periodStart: Date; periodEnd: Date } => {
+  const periodStart = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+
+  return {
+    periodStart,
+    periodEnd: new Date(periodStart.getTime() + MS_PER_DAY),
+  };
+};

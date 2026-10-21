@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { LessThan, Repository } from 'typeorm';
+import { LessThan, type Repository } from 'typeorm';
 import { type EventLogTable } from 'twenty-shared/types';
 
 import { WorkspaceAuditLogEntity } from 'src/engine/core-modules/event-logs/entities/workspace-audit-log.entity';
@@ -10,6 +10,8 @@ import { type EventLogQueryResult } from 'src/engine/core-modules/event-logs/dto
 import { getClickHouseTableName } from 'src/engine/core-modules/event-logs/registry/event-log-registry';
 import { isEventLogRowMatchingFieldFilters } from 'src/engine/core-modules/event-logs/utils/is-event-log-row-matching-field-filters.util';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { type WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
 const decodeOffset = (after?: string): number => {
   if (!after) {
@@ -24,8 +26,8 @@ const decodeOffset = (after?: string): number => {
 @Injectable()
 export class EventLogsService {
   constructor(
-    @InjectRepository(WorkspaceAuditLogEntity)
-    private readonly auditLogRepository: Repository<WorkspaceAuditLogEntity>,
+    @InjectWorkspaceScopedRepository(WorkspaceAuditLogEntity)
+    private readonly auditLogRepository: WorkspaceScopedRepository<WorkspaceAuditLogEntity>,
     @InjectRepository(WorkspaceEntity)
     private readonly workspaceRepository: Repository<WorkspaceEntity>,
   ) {}
@@ -49,8 +51,7 @@ export class EventLogsService {
     const offset = decodeOffset(input.after);
     const filters = input.filters;
     const queryBuilder = this.auditLogRepository
-      .createQueryBuilder('auditLog')
-      .where('auditLog.workspaceId = :workspaceId', { workspaceId })
+      .createScopedQueryBuilder(workspaceId, 'auditLog')
       .andWhere('auditLog.tableName = :tableName', {
         tableName: getClickHouseTableName(input.table),
       });
@@ -133,8 +134,7 @@ export class EventLogsService {
       const cutoff = new Date(
         Date.now() - workspace.eventLogRetentionDays * 24 * 60 * 60 * 1000,
       );
-      const result = await this.auditLogRepository.delete({
-        workspaceId: workspace.id,
+      const result = await this.auditLogRepository.delete(workspace.id, {
         occurredAt: LessThan(cutoff),
       });
 

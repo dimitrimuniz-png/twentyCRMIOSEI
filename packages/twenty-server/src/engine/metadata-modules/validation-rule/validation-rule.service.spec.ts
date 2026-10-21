@@ -2,9 +2,12 @@ import { ValidationRuleService } from 'src/engine/metadata-modules/validation-ru
 
 describe('ValidationRuleService', () => {
   it('stores an active rule and refreshes the metadata cache', async () => {
+    let inserted: unknown;
     const validationRuleRepository = {
-      create: jest.fn((value) => value),
-      save: jest.fn(async (value) => value),
+      insert: jest.fn(async (_workspaceId: string, value: unknown) => {
+        inserted = value;
+      }),
+      findOneOrFail: jest.fn(async () => inserted),
     };
     const workspaceRepository = {
       findOneByOrFail: jest

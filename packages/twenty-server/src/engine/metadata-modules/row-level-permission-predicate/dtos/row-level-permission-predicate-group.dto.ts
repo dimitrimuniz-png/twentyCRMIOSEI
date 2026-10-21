@@ -15,7 +15,7 @@ export class RowLevelPermissionPredicateGroupDTO {
   @Field()
   objectMetadataId: string;
 
-  @Field({ nullable: true })
+  @Field(() => ID, { nullable: true })
   parentRowLevelPermissionPredicateGroupId?: string | null;
 
   @Field(() => Float, { nullable: true })

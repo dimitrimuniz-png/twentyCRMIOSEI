@@ -11,7 +11,7 @@ describe('EventLogsService', () => {
     getMany: jest.fn(),
   };
   const auditLogRepository = {
-    createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+    createScopedQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     delete: jest.fn().mockResolvedValue({ affected: 2 }),
   };
   const workspaceRepository = {
@@ -24,7 +24,7 @@ describe('EventLogsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    auditLogRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    auditLogRepository.createScopedQueryBuilder.mockReturnValue(queryBuilder);
     queryBuilder.where.mockReturnThis();
     queryBuilder.andWhere.mockReturnThis();
     queryBuilder.orderBy.mockReturnThis();
@@ -89,7 +89,13 @@ describe('EventLogsService', () => {
 
     await expect(service.deleteExpired()).resolves.toBe(2);
     expect(auditLogRepository.delete).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: 'workspace-id' }),
+      'workspace-id',
+      expect.objectContaining({
+        occurredAt: expect.anything(),
+      }),
+    );
+    expect(auditLogRepository.delete.mock.calls[0]?.[1]).not.toHaveProperty(
+      'workspaceId',
     );
   });
 });

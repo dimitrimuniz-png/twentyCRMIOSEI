@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-import { type ExecutionContext } from '@nestjs/common';
 import { type Request } from 'express';
 import { isDefined } from 'twenty-shared/utils';
 

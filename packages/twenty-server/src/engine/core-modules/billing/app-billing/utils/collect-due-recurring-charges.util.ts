@@ -1,12 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type DeclaredRecurringCharge } from 'src/engine/core-modules/billing/app-billing/utils/collect-declared-recurring-charges.util';
+import { buildRecurringChargeKey } from 'src/engine/core-modules/usage/utils/build-recurring-charge-key.util';
 
-const removedcollectDueRecurringCharges: RemovedCommercial = new Proxy(
-  function collectDueRecurringCharges(..._args: unknown[]) { return removedcollectDueRecurringCharges; },
-  {
-    get: () => removedcollectDueRecurringCharges,
-    apply: () => removedcollectDueRecurringCharges,
-  },
-);
-export const collectDueRecurringCharges = removedcollectDueRecurringCharges;
+export const collectDueRecurringCharges = ({
+  declaredCharges,
+  alreadyChargedKeys,
+}: {
+  declaredCharges: DeclaredRecurringCharge[];
+  alreadyChargedKeys: ReadonlySet<string>;
+}): DeclaredRecurringCharge[] =>
+  declaredCharges.filter(
+    (declaredCharge) =>
+      !alreadyChargedKeys.has(
+        buildRecurringChargeKey({
+          applicationId: declaredCharge.applicationId,
+          chargeKey: declaredCharge.chargeKey,
+        }),
+      ),
+  );

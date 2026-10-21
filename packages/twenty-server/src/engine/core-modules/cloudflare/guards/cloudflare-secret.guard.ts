@@ -1,17 +1,41 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { timingSafeEqual } from 'node:crypto';
 
-export class CloudflareSecretMatchGuard {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+import {
+  type CanActivate,
+  type ExecutionContext,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+
+import { type Request } from 'express';
+
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+
+@Injectable()
+export class CloudflareSecretMatchGuard implements CanActivate {
+  constructor(private readonly twentyConfigService: TwentyConfigService) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const secret = this.twentyConfigService.get('CLOUDFLARE_WEBHOOK_SECRET');
+
+    if (!secret) {
+      throw new InternalServerErrorException(
+        'CLOUDFLARE_WEBHOOK_SECRET is not configured',
+      );
+    }
+
+    const header = context.switchToHttp().getRequest<Request>().headers[
+      'cf-webhook-auth'
+    ];
+
+    if (
+      typeof header !== 'string' ||
+      header.length === 0 ||
+      header.length !== secret.length
+    ) {
+      return false;
+    }
+
+    return timingSafeEqual(Buffer.from(header), Buffer.from(secret));
   }
-  [key: string]: RemovedCommercial;
 }

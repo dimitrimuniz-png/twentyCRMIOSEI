@@ -1,12 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { MetadataReadability } from 'twenty-shared/types';
 
-const removedresolveRecordShareGateKind: RemovedCommercial = new Proxy(
-  function resolveRecordShareGateKind(..._args: unknown[]) { return removedresolveRecordShareGateKind; },
-  {
-    get: () => removedresolveRecordShareGateKind,
-    apply: () => removedresolveRecordShareGateKind,
-  },
-);
-export const resolveRecordShareGateKind = removedresolveRecordShareGateKind;
+export type RecordShareGateKind = 'deny' | 'private' | 'open';
+
+// SYSTEM and APPLICATION rows stay invisible unless the caller owns them.
+// PRIVATE is a share gate, not a hard deny.
+export const resolveRecordShareGateKind = ({
+  readability,
+  isOwningApplication,
+}: {
+  readability: MetadataReadability | null | undefined;
+  isOwningApplication: boolean;
+}): RecordShareGateKind => {
+  if (
+    (readability === MetadataReadability.SYSTEM ||
+      readability === MetadataReadability.APPLICATION) &&
+    !isOwningApplication
+  ) {
+    return 'deny';
+  }
+
+  if (readability === MetadataReadability.PRIVATE) {
+    return 'private';
+  }
+
+  return 'open';
+};

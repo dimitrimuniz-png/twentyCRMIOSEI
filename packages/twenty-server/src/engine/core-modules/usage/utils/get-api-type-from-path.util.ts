@@ -1,12 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type ApiType } from 'src/engine/core-modules/usage/types/api-type.type';
 
-const removedgetApiTypeFromPath: RemovedCommercial = new Proxy(
-  function getApiTypeFromPath(..._args: unknown[]) { return removedgetApiTypeFromPath; },
-  {
-    get: () => removedgetApiTypeFromPath,
-    apply: () => removedgetApiTypeFromPath,
-  },
-);
-export const getApiTypeFromPath = removedgetApiTypeFromPath;
+export const getApiTypeFromPath = (path: string): ApiType | undefined => {
+  if (path === '/graphql' || path.startsWith('/graphql/')) {
+    return 'CORE_GQL';
+  }
+
+  if (path === '/mcp' || path.startsWith('/mcp/')) {
+    return 'MCP';
+  }
+
+  if (path === '/rest' || path.startsWith('/rest/')) {
+    return 'CORE_REST';
+  }
+
+  return undefined;
+};

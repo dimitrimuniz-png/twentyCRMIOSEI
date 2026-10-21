@@ -1,12 +1,25 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import type Stripe from 'stripe';
 
-const removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent: RemovedCommercial = new Proxy(
-  function getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent(..._args: unknown[]) { return removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent; },
-  {
-    get: () => removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent,
-    apply: () => removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent,
-  },
-);
-export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = removedgetDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent;
+type SubscriptionItemWithId = {
+  id?: string;
+};
+
+export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = (
+  event: Stripe.CustomerSubscriptionUpdatedEvent,
+): string[] => {
+  const previousItems = event.data.previous_attributes?.items?.data as
+    | SubscriptionItemWithId[]
+    | undefined;
+
+  if (!previousItems) {
+    return [];
+  }
+
+  const currentItemIds = new Set(
+    event.data.object.items.data.map((item) => item.id),
+  );
+
+  return previousItems.flatMap((item) =>
+    item.id && !currentItemIds.has(item.id) ? [item.id] : [],
+  );
+};

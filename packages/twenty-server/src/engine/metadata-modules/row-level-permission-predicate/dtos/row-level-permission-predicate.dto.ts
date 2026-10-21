@@ -43,19 +43,19 @@ export class RowLevelPermissionPredicateDTO {
   @Field()
   roleId: string;
 
-  @Field({ nullable: true })
+  @Field(() => ID, { nullable: true })
   rowLevelPermissionPredicateGroupId?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   subFieldName?: string | null;
 
   @Field(() => GraphQLJSON, { nullable: true })
   value?: unknown;
 
-  @Field({ nullable: true })
+  @Field(() => ID, { nullable: true })
   workspaceMemberFieldMetadataId?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   workspaceMemberSubFieldName?: string | null;
 }
 
@@ -76,15 +76,15 @@ export class RowLevelPermissionPredicateInput {
   @Field(() => UUIDScalarType, { nullable: true })
   rowLevelPermissionPredicateGroupId?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   subFieldName?: string | null;
 
   @Field(() => GraphQLJSON, { nullable: true })
   value?: unknown;
 
-  @Field({ nullable: true })
+  @Field(() => ID, { nullable: true })
   workspaceMemberFieldMetadataId?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   workspaceMemberSubFieldName?: string | null;
 }

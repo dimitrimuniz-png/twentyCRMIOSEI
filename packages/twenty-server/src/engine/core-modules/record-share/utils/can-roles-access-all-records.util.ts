@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
-
-const removedcanRolesAccessAllRecords: RemovedCommercial = new Proxy(
-  function canRolesAccessAllRecords(..._args: unknown[]) { return removedcanRolesAccessAllRecords; },
-  {
-    get: () => removedcanRolesAccessAllRecords,
-    apply: () => removedcanRolesAccessAllRecords,
-  },
-);
-export const canRolesAccessAllRecords = removedcanRolesAccessAllRecords;
+// Every role the caller holds must be allowed to see all records. One
+// narrower role keeps the caller on the row policy.
+export const canRolesAccessAllRecords = ({
+  roleIds,
+  roleIdsWithAllRecordsAccess,
+}: {
+  roleIds: string[];
+  roleIdsWithAllRecordsAccess: string[];
+}): boolean =>
+  roleIds.length > 0 &&
+  roleIds.every((roleId) => roleIdsWithAllRecordsAccess.includes(roleId));

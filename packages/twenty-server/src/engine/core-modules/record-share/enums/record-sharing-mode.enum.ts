@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { registerEnumType } from '@nestjs/graphql';
 
 export enum RecordSharingMode {
   INHERITED = 'INHERITED',
@@ -8,3 +6,5 @@ export enum RecordSharingMode {
   PRIVATE = 'PRIVATE',
   ROLE_ONLY = 'ROLE_ONLY',
 }
+
+registerEnumType(RecordSharingMode, { name: 'RecordSharingMode' });

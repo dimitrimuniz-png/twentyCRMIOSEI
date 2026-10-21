@@ -1,4 +1,5 @@
 import { RowLevelPermissionPredicateOperand } from 'twenty-shared/types';
+import { In } from 'typeorm';
 
 import { RowLevelPermissionPredicateService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate.service';
 
@@ -10,19 +11,27 @@ describe('RowLevelPermissionPredicateService', () => {
       applicationId: 'application-id',
     };
     const removedPredicate = { id: 'drop-me' };
+    const persistedPredicates: unknown[] = [];
+    let hasListedExistingPredicates = false;
     const predicateRepository = {
-      find: jest
-        .fn()
-        .mockResolvedValue([existingPredicate, removedPredicate]),
-      softRemove: jest.fn().mockResolvedValue(undefined),
-      create: jest.fn((value) => value),
-      save: jest.fn(async (value) => value),
+      find: jest.fn(async () => {
+        if (!hasListedExistingPredicates) {
+          hasListedExistingPredicates = true;
+
+          return [existingPredicate, removedPredicate];
+        }
+
+        return persistedPredicates;
+      }),
+      softDelete: jest.fn().mockResolvedValue(undefined),
+      upsert: jest.fn(async (_workspaceId: string, rows: unknown[]) => {
+        persistedPredicates.splice(0, persistedPredicates.length, ...rows);
+      }),
     };
     const predicateGroupRepository = {
       find: jest.fn().mockResolvedValue([]),
-      softRemove: jest.fn(),
-      create: jest.fn((value) => value),
-      save: jest.fn(async (value) => value),
+      softDelete: jest.fn(),
+      upsert: jest.fn(),
     };
     const workspaceRepository = {
       findOneByOrFail: jest
@@ -56,9 +65,10 @@ describe('RowLevelPermissionPredicateService', () => {
       },
     });
 
-    expect(predicateRepository.softRemove).toHaveBeenCalledWith([
-      removedPredicate,
-    ]);
+    expect(predicateRepository.softDelete).toHaveBeenCalledWith(
+      'workspace-id',
+      { id: In(['drop-me']) },
+    );
     expect(result.predicates).toEqual([
       expect.objectContaining({
         id: 'keep-me',

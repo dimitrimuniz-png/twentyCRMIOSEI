@@ -60,10 +60,10 @@ export class WorkspaceSsoIdentityProviderEntity {
   @Column({ nullable: true, type: 'text' })
   certificate: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   ssoUrl: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   clientId: string | null;
 
   @Column({ nullable: true, type: 'text' })
@@ -73,9 +73,13 @@ export class WorkspaceSsoIdentityProviderEntity {
   @Column({ type: 'uuid' })
   workspaceId: string;
 
-  @ManyToOne(() => WorkspaceEntity, (workspace) => workspace.workspaceSsoIdentityProviders, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => WorkspaceEntity,
+    (workspace) => workspace.workspaceSsoIdentityProviders,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'workspaceId' })
   workspace: Relation<WorkspaceEntity>;
 

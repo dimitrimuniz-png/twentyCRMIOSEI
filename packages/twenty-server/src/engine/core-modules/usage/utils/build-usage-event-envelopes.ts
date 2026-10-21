@@ -1,12 +1,39 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type UsageEventRow } from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
+import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
 
-const removedbuildUsageEventEnvelopes: RemovedCommercial = new Proxy(
-  function buildUsageEventEnvelopes(..._args: unknown[]) { return removedbuildUsageEventEnvelopes; },
-  {
-    get: () => removedbuildUsageEventEnvelopes,
-    apply: () => removedbuildUsageEventEnvelopes,
-  },
-);
-export const buildUsageEventEnvelopes = removedbuildUsageEventEnvelopes;
+const blank = (value: string | null | undefined): string => value ?? '';
+
+const formatPeriodStart = (periodStart: Date): string =>
+  periodStart.toISOString().replace('T', ' ').replace('Z', '');
+
+export const buildUsageEventEnvelopes = (
+  workspaceId: string,
+  events: UsageEvent[],
+): Array<{ table: 'usageEvent'; row: UsageEventRow }> =>
+  events.map((event) => {
+    const spenders = event.spenders ?? {};
+    const row = {
+      timestamp: new Date().toISOString(),
+      workspaceId,
+      userWorkspaceId: blank(spenders.userWorkspaceId),
+      apiKeyId: blank(spenders.apiKeyId),
+      applicationId: blank(spenders.applicationId),
+      agentId: blank(spenders.agentId),
+      workflowId: blank(spenders.workflowId),
+      logicFunctionId: blank(spenders.logicFunctionId),
+      resourceType: event.resourceType,
+      operationType: event.operationType,
+      quantity: event.quantity,
+      unit: event.unit,
+      creditsUsedMicro: event.creditsUsedMicro ?? 0,
+      userCreditsUsedMicro: event.userCreditsUsedMicro ?? 0,
+      resourceId: blank(event.resourceId),
+      resourceContext: blank(event.resourceContext),
+      metadata: {},
+      ...(event.periodStart
+        ? { periodStart: formatPeriodStart(event.periodStart) }
+        : {}),
+    };
+
+    return { table: 'usageEvent' as const, row: row as UsageEventRow };
+  });

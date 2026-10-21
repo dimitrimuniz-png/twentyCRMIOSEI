@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { registerEnumType } from '@nestjs/graphql';
 
 export enum UsageOperationType {
   AI_CHAT_TOKEN = 'AI_CHAT_TOKEN',
@@ -19,3 +17,5 @@ export enum UsageOperationType {
   WEB_SEARCH = 'WEB_SEARCH',
   WORKFLOW_EXECUTION = 'WORKFLOW_EXECUTION',
 }
+
+registerEnumType(UsageOperationType, { name: 'UsageOperationType' });

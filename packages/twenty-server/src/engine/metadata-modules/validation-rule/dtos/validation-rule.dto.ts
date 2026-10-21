@@ -7,7 +7,7 @@ export class ValidationRuleDTO {
   @Field(() => ID)
   id: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   description?: string | null;
 
   @Field(() => UUIDScalarType, { nullable: true })
@@ -16,7 +16,7 @@ export class ValidationRuleDTO {
   @Field()
   expression: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   icon?: string | null;
 
   @Field()

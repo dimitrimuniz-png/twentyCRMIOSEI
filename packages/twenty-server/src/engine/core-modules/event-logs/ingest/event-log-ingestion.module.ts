@@ -22,6 +22,7 @@ import { ForwardEventLogFromEntityEventsToDbQueue } from 'src/engine/core-module
 import { WorkspaceEventSinkService } from 'src/engine/core-modules/event-logs/ingest/workspace-event-sink.service';
 import { EventLogLiveModule } from 'src/engine/core-modules/event-logs/live/event-log-live.module';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 
 const eventSinksProvider = {
   provide: EVENT_SINKS,
@@ -72,6 +73,7 @@ const eventSinksProvider = {
     TypeOrmModule.forFeature([WorkspaceAuditLogEntity]),
   ],
   providers: [
+    provideWorkspaceScopedRepository(WorkspaceAuditLogEntity),
     ClickHouseEventSink,
     ConsoleEventSink,
     PostgresEventSink,
