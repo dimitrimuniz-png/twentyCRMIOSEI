@@ -2,5 +2,11 @@ import { type WorkspaceSsoIdentityProviderEntity } from 'src/engine/core-modules
 
 export type SsoConfiguration = Pick<
   WorkspaceSsoIdentityProviderEntity,
-  'id' | 'issuer' | 'type' | 'clientId' | 'clientSecret' | 'certificate' | 'ssoUrl'
+  | 'id'
+  | 'issuer'
+  | 'type'
+  | 'clientId'
+  | 'clientSecret'
+  | 'certificate'
+  | 'ssoUrl'
 >;

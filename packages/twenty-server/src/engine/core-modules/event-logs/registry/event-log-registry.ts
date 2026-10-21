@@ -84,31 +84,29 @@ export const EVENT_LOG_TYPES: Record<EventLogTable, EventLogTypeDefinition> = {
 export const getClickHouseTableName = (table: EventLogTable): string =>
   EVENT_LOG_TYPES[table].clickHouseTable;
 
-export const EVENT_LOG_FILTERABLE_FIELDS: Record<EventLogTable, ReadonlySet<string>> =
-  {
-    [EventLogTable.WORKSPACE_EVENT]: new Set([
-      'event',
-      'userId',
-      'workspaceId',
-    ]),
-    [EventLogTable.PAGEVIEW]: new Set(['name', 'userId', 'workspaceId']),
-    [EventLogTable.OBJECT_EVENT]: new Set([
-      'event',
-      'userId',
-      'recordId',
-      'objectMetadataId',
-      'workspaceId',
-    ]),
-    [EventLogTable.USAGE_EVENT]: new Set([
-      'resourceType',
-      'userWorkspaceId',
-      'userId',
-      'workspaceId',
-    ]),
-    [EventLogTable.APPLICATION_LOG]: new Set([
-      'level',
-      'message',
-      'logicFunctionName',
-      'workspaceId',
-    ]),
-  };
+export const EVENT_LOG_FILTERABLE_FIELDS: Record<
+  EventLogTable,
+  ReadonlySet<string>
+> = {
+  [EventLogTable.WORKSPACE_EVENT]: new Set(['event', 'userId', 'workspaceId']),
+  [EventLogTable.PAGEVIEW]: new Set(['name', 'userId', 'workspaceId']),
+  [EventLogTable.OBJECT_EVENT]: new Set([
+    'event',
+    'userId',
+    'recordId',
+    'objectMetadataId',
+    'workspaceId',
+  ]),
+  [EventLogTable.USAGE_EVENT]: new Set([
+    'resourceType',
+    'userWorkspaceId',
+    'userId',
+    'workspaceId',
+  ]),
+  [EventLogTable.APPLICATION_LOG]: new Set([
+    'level',
+    'message',
+    'logicFunctionName',
+    'workspaceId',
+  ]),
+};

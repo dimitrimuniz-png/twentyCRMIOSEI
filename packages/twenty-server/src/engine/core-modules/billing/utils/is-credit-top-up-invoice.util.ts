@@ -3,7 +3,9 @@
 type RemovedCommercial = any;
 
 const removedisCreditTopUpInvoice: RemovedCommercial = new Proxy(
-  function isCreditTopUpInvoice(..._args: unknown[]) { return removedisCreditTopUpInvoice; },
+  function isCreditTopUpInvoice(..._args: unknown[]) {
+    return removedisCreditTopUpInvoice;
+  },
   {
     get: () => removedisCreditTopUpInvoice,
     apply: () => removedisCreditTopUpInvoice,

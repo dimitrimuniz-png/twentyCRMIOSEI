@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedvalidateRLSPredicatesForRecords: RemovedCommercial = new Proxy(
-  function validateRLSPredicatesForRecords(..._args: unknown[]) { return removedvalidateRLSPredicatesForRecords; },
+  function validateRLSPredicatesForRecords(..._args: unknown[]) {
+    return removedvalidateRLSPredicatesForRecords;
+  },
   {
     get: () => removedvalidateRLSPredicatesForRecords,
     apply: () => removedvalidateRLSPredicatesForRecords,
   },
 );
-export const validateRLSPredicatesForRecords = removedvalidateRLSPredicatesForRecords;
+export const validateRLSPredicatesForRecords =
+  removedvalidateRLSPredicatesForRecords;

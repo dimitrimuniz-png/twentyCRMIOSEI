@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedresolveViewerRecordShareAccessLevel: RemovedCommercial = new Proxy(
-  function resolveViewerRecordShareAccessLevel(..._args: unknown[]) { return removedresolveViewerRecordShareAccessLevel; },
+  function resolveViewerRecordShareAccessLevel(..._args: unknown[]) {
+    return removedresolveViewerRecordShareAccessLevel;
+  },
   {
     get: () => removedresolveViewerRecordShareAccessLevel,
     apply: () => removedresolveViewerRecordShareAccessLevel,
   },
 );
-export const resolveViewerRecordShareAccessLevel = removedresolveViewerRecordShareAccessLevel;
+export const resolveViewerRecordShareAccessLevel =
+  removedresolveViewerRecordShareAccessLevel;

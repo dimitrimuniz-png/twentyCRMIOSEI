@@ -3,7 +3,9 @@
 type RemovedCommercial = any;
 
 const removedgetSubscriptionIdFromInvoice: RemovedCommercial = new Proxy(
-  function getSubscriptionIdFromInvoice(..._args: unknown[]) { return removedgetSubscriptionIdFromInvoice; },
+  function getSubscriptionIdFromInvoice(..._args: unknown[]) {
+    return removedgetSubscriptionIdFromInvoice;
+  },
   {
     get: () => removedgetSubscriptionIdFromInvoice,
     apply: () => removedgetSubscriptionIdFromInvoice,

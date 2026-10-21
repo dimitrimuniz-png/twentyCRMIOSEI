@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedresolveRecordGeneralAccessLevel: RemovedCommercial = new Proxy(
-  function resolveRecordGeneralAccessLevel(..._args: unknown[]) { return removedresolveRecordGeneralAccessLevel; },
+  function resolveRecordGeneralAccessLevel(..._args: unknown[]) {
+    return removedresolveRecordGeneralAccessLevel;
+  },
   {
     get: () => removedresolveRecordGeneralAccessLevel,
     apply: () => removedresolveRecordGeneralAccessLevel,
   },
 );
-export const resolveRecordGeneralAccessLevel = removedresolveRecordGeneralAccessLevel;
+export const resolveRecordGeneralAccessLevel =
+  removedresolveRecordGeneralAccessLevel;

@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedresolveRecordSharePrincipalOrThrow: RemovedCommercial = new Proxy(
-  function resolveRecordSharePrincipalOrThrow(..._args: unknown[]) { return removedresolveRecordSharePrincipalOrThrow; },
+  function resolveRecordSharePrincipalOrThrow(..._args: unknown[]) {
+    return removedresolveRecordSharePrincipalOrThrow;
+  },
   {
     get: () => removedresolveRecordSharePrincipalOrThrow,
     apply: () => removedresolveRecordSharePrincipalOrThrow,
   },
 );
-export const resolveRecordSharePrincipalOrThrow = removedresolveRecordSharePrincipalOrThrow;
+export const resolveRecordSharePrincipalOrThrow =
+  removedresolveRecordSharePrincipalOrThrow;

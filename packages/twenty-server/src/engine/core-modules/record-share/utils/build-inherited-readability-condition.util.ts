@@ -5,7 +5,10 @@ type CompiledColumnParent = {
   joinColumnName: string;
   parentTableAlias: string;
   parentTableExpression: string;
-  policy: { kind: 'open' } | { kind: 'denied' } | { kind: 'gated'; condition: SqlCondition };
+  policy:
+    | { kind: 'open' }
+    | { kind: 'denied' }
+    | { kind: 'gated'; condition: SqlCondition };
 };
 
 type CompiledChildrenParent = {
@@ -13,7 +16,10 @@ type CompiledChildrenParent = {
   childTableAlias: string;
   childJoinColumnName: string;
   childTableExpression: string;
-  policy: { kind: 'open' } | { kind: 'denied' } | { kind: 'gated'; condition: SqlCondition };
+  policy:
+    | { kind: 'open' }
+    | { kind: 'denied' }
+    | { kind: 'gated'; condition: SqlCondition };
 };
 
 export const buildInheritedReadabilityCondition = ({
@@ -35,7 +41,9 @@ export const buildInheritedReadabilityCondition = ({
 
     if (parent.kind === 'column') {
       const policySql =
-        parent.policy.kind === 'gated' ? ` AND ${parent.policy.condition.sql}` : '';
+        parent.policy.kind === 'gated'
+          ? ` AND ${parent.policy.condition.sql}`
+          : '';
 
       return [
         {
@@ -49,13 +57,17 @@ export const buildInheritedReadabilityCondition = ({
     }
 
     const policySql =
-      parent.policy.kind === 'gated' ? ` AND ${parent.policy.condition.sql}` : '';
+      parent.policy.kind === 'gated'
+        ? ` AND ${parent.policy.condition.sql}`
+        : '';
 
     return [
       {
         sql: `EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS "${parent.childTableAlias}" WHERE "${parent.childTableAlias}"."${parent.childJoinColumnName}" = "${tableAlias}"."id"${policySql})`,
         parameters:
-          parent.policy.kind === 'gated' ? parent.policy.condition.parameters : {},
+          parent.policy.kind === 'gated'
+            ? parent.policy.condition.parameters
+            : {},
       },
     ];
   });

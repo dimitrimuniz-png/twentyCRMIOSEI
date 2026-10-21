@@ -52,9 +52,7 @@ export const validateRecordsAgainstValidationRulesOrThrow = async ({
       }
 
       const message =
-        result.status === 'failed'
-          ? rule.message
-          : result.errorMessage;
+        result.status === 'failed' ? rule.message : result.errorMessage;
 
       throw new RecordValidationRuleException(
         message,

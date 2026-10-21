@@ -3,7 +3,9 @@
 type RemovedCommercial = any;
 
 const removedgetApiType: RemovedCommercial = new Proxy(
-  function getApiType(..._args: unknown[]) { return removedgetApiType; },
+  function getApiType(..._args: unknown[]) {
+    return removedgetApiType;
+  },
   {
     get: () => removedgetApiType,
     apply: () => removedgetApiType,

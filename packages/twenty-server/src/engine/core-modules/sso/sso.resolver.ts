@@ -1,5 +1,12 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Field, InputType, Mutation, ObjectType, Query } from '@nestjs/graphql';
+import {
+  Args,
+  Field,
+  InputType,
+  Mutation,
+  ObjectType,
+  Query,
+} from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
@@ -146,7 +153,9 @@ export class SsoResolver {
   async getSSOIdentityProviders(
     @AuthWorkspace() workspace: WorkspaceEntity,
   ): Promise<FindAvailableSsoIdp[]> {
-    const identityProviders = await this.ssoService.listForWorkspace(workspace.id);
+    const identityProviders = await this.ssoService.listForWorkspace(
+      workspace.id,
+    );
 
     return identityProviders.map((identityProvider) =>
       this.toAvailableProvider(identityProvider, workspace),

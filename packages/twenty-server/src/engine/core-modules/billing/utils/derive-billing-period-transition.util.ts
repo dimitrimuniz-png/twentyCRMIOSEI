@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedderiveBillingPeriodTransition: RemovedCommercial = new Proxy(
-  function deriveBillingPeriodTransition(..._args: unknown[]) { return removedderiveBillingPeriodTransition; },
+  function deriveBillingPeriodTransition(..._args: unknown[]) {
+    return removedderiveBillingPeriodTransition;
+  },
   {
     get: () => removedderiveBillingPeriodTransition,
     apply: () => removedderiveBillingPeriodTransition,
   },
 );
-export const deriveBillingPeriodTransition = removedderiveBillingPeriodTransition;
+export const deriveBillingPeriodTransition =
+  removedderiveBillingPeriodTransition;

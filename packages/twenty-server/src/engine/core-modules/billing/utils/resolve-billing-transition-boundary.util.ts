@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedresolveBillingTransitionBoundary: RemovedCommercial = new Proxy(
-  function resolveBillingTransitionBoundary(..._args: unknown[]) { return removedresolveBillingTransitionBoundary; },
+  function resolveBillingTransitionBoundary(..._args: unknown[]) {
+    return removedresolveBillingTransitionBoundary;
+  },
   {
     get: () => removedresolveBillingTransitionBoundary,
     apply: () => removedresolveBillingTransitionBoundary,
   },
 );
-export const resolveBillingTransitionBoundary = removedresolveBillingTransitionBoundary;
+export const resolveBillingTransitionBoundary =
+  removedresolveBillingTransitionBoundary;

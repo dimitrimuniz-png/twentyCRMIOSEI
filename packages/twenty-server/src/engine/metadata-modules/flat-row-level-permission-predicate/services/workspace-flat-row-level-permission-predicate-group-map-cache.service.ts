@@ -53,7 +53,8 @@ export class WorkspaceFlatRowLevelPermissionPredicateGroupMapCacheService extend
       createIdToUniversalIdentifierMap(applications);
     const objectMetadataIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(objectMetadatas);
-    const roleIdToUniversalIdentifierMap = createIdToUniversalIdentifierMap(roles);
+    const roleIdToUniversalIdentifierMap =
+      createIdToUniversalIdentifierMap(roles);
     const rowLevelPermissionPredicateGroupIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(predicateGroups.rows);
 

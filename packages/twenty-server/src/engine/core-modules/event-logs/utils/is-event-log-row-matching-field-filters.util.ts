@@ -13,7 +13,8 @@ export const isEventLogRowMatchingFieldFilters = ({
 }): boolean =>
   fieldFilters.every((fieldFilter) => {
     const value = row[fieldFilter.field];
-    const comparable = value === undefined || value === null ? '' : String(value);
+    const comparable =
+      value === undefined || value === null ? '' : String(value);
     const listed = fieldFilter.values.includes(comparable);
 
     return fieldFilter.operand === 'IS_NOT' ? !listed : listed;

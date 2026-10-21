@@ -37,7 +37,10 @@ export class ValidationRuleEntity
   @Column({ nullable: true, type: 'uuid' })
   errorFieldMetadataId: string | null;
 
-  @ManyToOne(() => FieldMetadataEntity, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => FieldMetadataEntity, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'errorFieldMetadataId' })
   errorFieldMetadata: Relation<FieldMetadataEntity> | null;
 

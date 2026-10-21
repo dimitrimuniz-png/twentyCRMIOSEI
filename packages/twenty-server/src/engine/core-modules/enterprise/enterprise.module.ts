@@ -4,13 +4,7 @@ import { CustomAiProviderAccessService } from 'src/engine/core-modules/enterpris
 import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/services/enterprise-plan.service';
 
 @Module({
-  providers: [
-    CustomAiProviderAccessService,
-    EnterprisePlanService,
-  ],
-  exports: [
-    CustomAiProviderAccessService,
-    EnterprisePlanService,
-  ],
+  providers: [CustomAiProviderAccessService, EnterprisePlanService],
+  exports: [CustomAiProviderAccessService, EnterprisePlanService],
 })
 export class EnterpriseModule {}

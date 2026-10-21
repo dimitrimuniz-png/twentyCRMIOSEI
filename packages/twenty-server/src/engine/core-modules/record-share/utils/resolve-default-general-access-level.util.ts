@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedresolveDefaultGeneralAccessLevel: RemovedCommercial = new Proxy(
-  function resolveDefaultGeneralAccessLevel(..._args: unknown[]) { return removedresolveDefaultGeneralAccessLevel; },
+  function resolveDefaultGeneralAccessLevel(..._args: unknown[]) {
+    return removedresolveDefaultGeneralAccessLevel;
+  },
   {
     get: () => removedresolveDefaultGeneralAccessLevel,
     apply: () => removedresolveDefaultGeneralAccessLevel,
   },
 );
-export const resolveDefaultGeneralAccessLevel = removedresolveDefaultGeneralAccessLevel;
+export const resolveDefaultGeneralAccessLevel =
+  removedresolveDefaultGeneralAccessLevel;

@@ -3,10 +3,13 @@
 type RemovedCommercial = any;
 
 const removedvalidateShareWithPrincipalsOrThrow: RemovedCommercial = new Proxy(
-  function validateShareWithPrincipalsOrThrow(..._args: unknown[]) { return removedvalidateShareWithPrincipalsOrThrow; },
+  function validateShareWithPrincipalsOrThrow(..._args: unknown[]) {
+    return removedvalidateShareWithPrincipalsOrThrow;
+  },
   {
     get: () => removedvalidateShareWithPrincipalsOrThrow,
     apply: () => removedvalidateShareWithPrincipalsOrThrow,
   },
 );
-export const validateShareWithPrincipalsOrThrow = removedvalidateShareWithPrincipalsOrThrow;
+export const validateShareWithPrincipalsOrThrow =
+  removedvalidateShareWithPrincipalsOrThrow;

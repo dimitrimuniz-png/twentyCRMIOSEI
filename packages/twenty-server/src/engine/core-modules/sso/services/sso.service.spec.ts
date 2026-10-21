@@ -29,13 +29,13 @@ describe('SsoService', () => {
       type: IdentityProviderType.SAML,
     });
 
-    await expect(service.getAuthorizationUrlForSSO('idp-id', {})).resolves.toEqual(
-      {
-        id: 'idp-id',
-        type: IdentityProviderType.SAML,
-        authorizationURL: 'http://localhost:3000/auth/saml/login/idp-id',
-      },
-    );
+    await expect(
+      service.getAuthorizationUrlForSSO('idp-id', {}),
+    ).resolves.toEqual({
+      id: 'idp-id',
+      type: IdentityProviderType.SAML,
+      authorizationURL: 'http://localhost:3000/auth/saml/login/idp-id',
+    });
   });
 
   it('builds an OIDC login URL for an OIDC provider', async () => {
@@ -55,8 +55,8 @@ describe('SsoService', () => {
   it('rejects an unknown identity provider', async () => {
     identityProviderRepository.findOne.mockResolvedValue(null);
 
-    await expect(service.getAuthorizationUrlForSSO('missing', {})).rejects.toThrow(
-      'SSO identity provider not found',
-    );
+    await expect(
+      service.getAuthorizationUrlForSSO('missing', {}),
+    ).rejects.toThrow('SSO identity provider not found');
   });
 });

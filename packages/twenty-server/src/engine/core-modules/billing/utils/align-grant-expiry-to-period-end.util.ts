@@ -3,7 +3,9 @@
 type RemovedCommercial = any;
 
 const removedalignGrantExpiryToPeriodEnd: RemovedCommercial = new Proxy(
-  function alignGrantExpiryToPeriodEnd(..._args: unknown[]) { return removedalignGrantExpiryToPeriodEnd; },
+  function alignGrantExpiryToPeriodEnd(..._args: unknown[]) {
+    return removedalignGrantExpiryToPeriodEnd;
+  },
   {
     get: () => removedalignGrantExpiryToPeriodEnd,
     apply: () => removedalignGrantExpiryToPeriodEnd,

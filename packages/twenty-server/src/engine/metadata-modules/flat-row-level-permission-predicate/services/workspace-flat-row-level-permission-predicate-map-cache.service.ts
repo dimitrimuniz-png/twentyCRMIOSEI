@@ -48,7 +48,8 @@ export class WorkspaceFlatRowLevelPermissionPredicateMapCacheService extends Met
     const flatMaps = createEmptyFlatEntityMaps();
     const applicationIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(applications);
-    const roleIdToUniversalIdentifierMap = createIdToUniversalIdentifierMap(roles);
+    const roleIdToUniversalIdentifierMap =
+      createIdToUniversalIdentifierMap(roles);
     const fieldMetadataIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(fieldMetadatas);
     const objectMetadataIdToUniversalIdentifierMap =

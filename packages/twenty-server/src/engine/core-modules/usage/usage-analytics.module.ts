@@ -4,13 +4,7 @@ import { UsageAnalyticsService } from 'src/engine/core-modules/usage/services/us
 import { UsageRecorderService } from 'src/engine/core-modules/usage/services/usage-recorder.service';
 
 @Module({
-  providers: [
-    UsageAnalyticsService,
-    UsageRecorderService,
-  ],
-  exports: [
-    UsageAnalyticsService,
-    UsageRecorderService,
-  ],
+  providers: [UsageAnalyticsService, UsageRecorderService],
+  exports: [UsageAnalyticsService, UsageRecorderService],
 })
 export class UsageAnalyticsModule {}
