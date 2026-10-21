@@ -2,9 +2,13 @@ import { Logger, Module } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
 
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { ClickHouseModule } from 'src/database/clickhouse/clickhouse.module';
+import { WorkspaceAuditLogEntity } from 'src/engine/core-modules/event-logs/entities/workspace-audit-log.entity';
 import { ClickHouseEventSink } from 'src/engine/core-modules/event-logs/ingest/clickhouse-event.sink';
 import { ConsoleEventSink } from 'src/engine/core-modules/event-logs/ingest/console-event.sink';
+import { PostgresEventSink } from 'src/engine/core-modules/event-logs/ingest/postgres-event.sink';
 import { CreateEventLogFromInternalEvent } from 'src/engine/core-modules/event-logs/ingest/create-event-log-from-internal-event';
 import {
   getAvailableSinkNames,
@@ -25,6 +29,7 @@ const eventSinksProvider = {
     twentyConfigService: TwentyConfigService,
     clickHouseEventSink: ClickHouseEventSink,
     consoleEventSink: ConsoleEventSink,
+    postgresEventSink: PostgresEventSink,
   ): EventSink[] => {
     const sinkByName: Record<string, EventSink> = {
       clickhouse: clickHouseEventSink,
@@ -43,20 +48,33 @@ const eventSinksProvider = {
       );
     }
 
-    return getAvailableSinkNames(configuredSinkNames, {
+    const configuredSinks = getAvailableSinkNames(configuredSinkNames, {
       hasClickhouseUrl: Boolean(twentyConfigService.get('CLICKHOUSE_URL')),
     })
       .map((name) => sinkByName[name.toLowerCase()])
       .filter(isDefined);
+
+    // Postgres is the self-hosted store. It stays available when ClickHouse is absent.
+    return [...configuredSinks, postgresEventSink];
   },
-  inject: [TwentyConfigService, ClickHouseEventSink, ConsoleEventSink],
+  inject: [
+    TwentyConfigService,
+    ClickHouseEventSink,
+    ConsoleEventSink,
+    PostgresEventSink,
+  ],
 };
 
 @Module({
-  imports: [ClickHouseModule, EventLogLiveModule],
+  imports: [
+    ClickHouseModule,
+    EventLogLiveModule,
+    TypeOrmModule.forFeature([WorkspaceAuditLogEntity]),
+  ],
   providers: [
     ClickHouseEventSink,
     ConsoleEventSink,
+    PostgresEventSink,
     eventSinksProvider,
     WorkspaceEventSinkService,
     CreateEventLogFromInternalEvent,
