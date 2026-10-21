@@ -1,8 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type RecordShare } from 'src/engine/core-modules/record-share/types/record-share.type';
-
-export type RecordShareGrant = Pick<
-  RecordShare,
-  'recordId' | 'principalId' | 'accessLevel'
->;
+export type RecordShareGrant = RemovedCommercial;

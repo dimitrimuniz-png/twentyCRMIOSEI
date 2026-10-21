@@ -1,16 +1,10 @@
-/* @license Enterprise */
-
-import { registerEnumType } from '@nestjs/graphql';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
 export enum RecordSharingMode {
-  ROLE_ONLY = 'ROLE_ONLY',
-  PRIVATE = 'PRIVATE',
   INHERITED = 'INHERITED',
   OPEN_BY_DEFAULT = 'OPEN_BY_DEFAULT',
+  PRIVATE = 'PRIVATE',
+  ROLE_ONLY = 'ROLE_ONLY',
 }
-
-registerEnumType(RecordSharingMode, {
-  name: 'RecordSharingMode',
-  description:
-    'How records of an object are shared: only through roles, private until shared, readable through linked records, or open by default with per-record exceptions',
-});

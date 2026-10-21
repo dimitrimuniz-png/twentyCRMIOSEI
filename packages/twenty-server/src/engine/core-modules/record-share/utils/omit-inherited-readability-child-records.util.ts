@@ -1,20 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type ObjectRecordEvent } from 'twenty-shared/database-events';
-import { isDefined } from 'twenty-shared/utils';
-
-import { type InheritedReadabilityChildRecordsCarrier } from 'src/engine/core-modules/record-share/types/inherited-readability-child-records.type';
-
-export const omitInheritedReadabilityChildRecords = <
-  TEvent extends ObjectRecordEvent,
->(
-  event: TEvent,
-): TEvent => {
-  const { inheritedReadabilityChildRecords, ...properties } =
-    event.properties as TEvent['properties'] &
-      InheritedReadabilityChildRecordsCarrier;
-
-  return isDefined(inheritedReadabilityChildRecords)
-    ? ({ ...event, properties } as TEvent)
-    : event;
-};
+const removedomitInheritedReadabilityChildRecords: RemovedCommercial = new Proxy(
+  function omitInheritedReadabilityChildRecords(..._args: unknown[]) { return removedomitInheritedReadabilityChildRecords; },
+  {
+    get: () => removedomitInheritedReadabilityChildRecords,
+    apply: () => removedomitInheritedReadabilityChildRecords,
+  },
+);
+export const omitInheritedReadabilityChildRecords = removedomitInheritedReadabilityChildRecords;

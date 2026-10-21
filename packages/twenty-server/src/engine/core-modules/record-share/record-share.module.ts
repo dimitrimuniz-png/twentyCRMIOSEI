@@ -1,34 +1,28 @@
-/* @license Enterprise */
-
-import { RecordSharingResolver } from 'src/engine/core-modules/record-share/resolvers/record-sharing.resolver';
-import { RecordSharingService } from 'src/engine/core-modules/record-share/services/record-sharing.service';
 import { Module } from '@nestjs/common';
 
-import { RecordAccessPolicyService } from 'src/engine/core-modules/record-share/services/record-access-policy.service';
 import { RecordSharePrincipalService } from 'src/engine/core-modules/record-share/services/record-share-principal.service';
-import { RecordShareStorageModule } from 'src/engine/core-modules/record-share/record-share-storage.module';
+import { RecordAccessPolicyService } from 'src/engine/core-modules/record-share/services/record-access-policy.service';
+import { RecordSharingService } from 'src/engine/core-modules/record-share/services/record-sharing.service';
 import { ShareWithService } from 'src/engine/core-modules/record-share/services/share-with.service';
-import { RecordPermissionsModule } from 'src/engine/metadata-modules/record-permissions/record-permissions.module';
-import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
+import { RecordShareOwnershipTransferService } from 'src/engine/core-modules/record-share/services/record-share-ownership-transfer.service';
+import { RecordShareStorageService } from 'src/engine/core-modules/record-share/services/record-share-storage.service';
 
 @Module({
-  imports: [
-    WorkspaceCacheModule,
-    RecordShareStorageModule,
-    RecordPermissionsModule,
-  ],
   providers: [
-    ShareWithService,
-    RecordAccessPolicyService,
     RecordSharePrincipalService,
+    RecordAccessPolicyService,
     RecordSharingService,
-    RecordSharingResolver,
+    ShareWithService,
+    RecordShareOwnershipTransferService,
+    RecordShareStorageService,
   ],
   exports: [
-    RecordShareStorageModule,
-    ShareWithService,
+    RecordSharePrincipalService,
     RecordAccessPolicyService,
     RecordSharingService,
+    ShareWithService,
+    RecordShareOwnershipTransferService,
+    RecordShareStorageService,
   ],
 })
 export class RecordShareModule {}

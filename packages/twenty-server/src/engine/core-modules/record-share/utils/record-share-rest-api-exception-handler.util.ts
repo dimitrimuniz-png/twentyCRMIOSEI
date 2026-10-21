@@ -1,27 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import {
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-
-import { assertUnreachable } from 'twenty-shared/utils';
-
-import {
-  type RecordShareException,
-  RecordShareExceptionCode,
-} from 'src/engine/core-modules/record-share/record-share.exception';
-
-export const recordShareRestApiExceptionHandler = (
-  error: RecordShareException,
-): never => {
-  switch (error.code) {
-    case RecordShareExceptionCode.INVALID_SHARE_WITH:
-      throw new BadRequestException(error.message);
-    case RecordShareExceptionCode.TRANSACTION_SCOPE_WORKSPACE_MISMATCH:
-      throw new InternalServerErrorException(error.message);
-    default: {
-      return assertUnreachable(error.code);
-    }
-  }
-};
+const removedrecordShareRestApiExceptionHandler: RemovedCommercial = new Proxy(
+  function recordShareRestApiExceptionHandler(..._args: unknown[]) { return removedrecordShareRestApiExceptionHandler; },
+  {
+    get: () => removedrecordShareRestApiExceptionHandler,
+    apply: () => removedrecordShareRestApiExceptionHandler,
+  },
+);
+export const recordShareRestApiExceptionHandler = removedrecordShareRestApiExceptionHandler;

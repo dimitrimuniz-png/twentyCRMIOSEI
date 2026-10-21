@@ -1,10 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
-
-export type InheritedReadabilityColumnParent = {
-  kind: 'column';
-  fieldMetadataId: string;
-  joinColumnName: string;
-  parentFlatObjectMetadata: FlatObjectMetadata;
-};
+export type InheritedReadabilityColumnParent = RemovedCommercial;

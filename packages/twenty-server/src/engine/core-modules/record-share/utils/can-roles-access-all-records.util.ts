@@ -1,15 +1,12 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { isNonEmptyArray } from 'twenty-shared/utils';
-
-// Several roles combine as an intersection, so every one of them needs the
-// permission for the restrictions to be lifted
-export const canRolesAccessAllRecords = ({
-  roleIds,
-  roleIdsWithAllRecordsAccess,
-}: {
-  roleIds: string[];
-  roleIdsWithAllRecordsAccess: string[];
-}): boolean =>
-  isNonEmptyArray(roleIds) &&
-  roleIds.every((roleId) => roleIdsWithAllRecordsAccess.includes(roleId));
+const removedcanRolesAccessAllRecords: RemovedCommercial = new Proxy(
+  function canRolesAccessAllRecords(..._args: unknown[]) { return removedcanRolesAccessAllRecords; },
+  {
+    get: () => removedcanRolesAccessAllRecords,
+    apply: () => removedcanRolesAccessAllRecords,
+  },
+);
+export const canRolesAccessAllRecords = removedcanRolesAccessAllRecords;

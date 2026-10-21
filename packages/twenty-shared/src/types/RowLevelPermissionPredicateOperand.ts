@@ -1,20 +1,22 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
 export enum RowLevelPermissionPredicateOperand {
-  IS = 'IS',
-  IS_NOT_NULL = 'IS_NOT_NULL',
-  IS_NOT = 'IS_NOT',
-  LESS_THAN_OR_EQUAL = 'LESS_THAN_OR_EQUAL',
-  GREATER_THAN_OR_EQUAL = 'GREATER_THAN_OR_EQUAL',
-  IS_BEFORE = 'IS_BEFORE',
-  IS_AFTER = 'IS_AFTER',
   CONTAINS = 'CONTAINS',
   DOES_NOT_CONTAIN = 'DOES_NOT_CONTAIN',
+  GREATER_THAN_OR_EQUAL = 'GREATER_THAN_OR_EQUAL',
+  IS = 'IS',
+  IS_AFTER = 'IS_AFTER',
+  IS_BEFORE = 'IS_BEFORE',
   IS_EMPTY = 'IS_EMPTY',
-  IS_NOT_EMPTY = 'IS_NOT_EMPTY',
-  IS_RELATIVE = 'IS_RELATIVE',
-  IS_IN_PAST = 'IS_IN_PAST',
   IS_IN_FUTURE = 'IS_IN_FUTURE',
+  IS_IN_PAST = 'IS_IN_PAST',
+  IS_NOT = 'IS_NOT',
+  IS_NOT_EMPTY = 'IS_NOT_EMPTY',
+  IS_NOT_NULL = 'IS_NOT_NULL',
+  IS_RELATIVE = 'IS_RELATIVE',
   IS_TODAY = 'IS_TODAY',
+  LESS_THAN_OR_EQUAL = 'LESS_THAN_OR_EQUAL',
   VECTOR_SEARCH = 'VECTOR_SEARCH',
 }

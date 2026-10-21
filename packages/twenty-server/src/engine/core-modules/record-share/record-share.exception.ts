@@ -1,23 +1,22 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type MessageDescriptor } from '@lingui/core';
-
-import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
-import { CustomException } from 'src/utils/custom-exception';
+export class RecordShareException {
+  constructor(..._args: unknown[]) {
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (property === 'then') return undefined;
+        const own = Reflect.get(target, property, receiver);
+        if (own !== undefined) return own;
+        return (..._ignored: unknown[]) => undefined;
+      },
+    });
+  }
+  [key: string]: RemovedCommercial;
+}
 
 export enum RecordShareExceptionCode {
   INVALID_SHARE_WITH = 'INVALID_SHARE_WITH',
   TRANSACTION_SCOPE_WORKSPACE_MISMATCH = 'TRANSACTION_SCOPE_WORKSPACE_MISMATCH',
-}
-
-export class RecordShareException extends CustomException<RecordShareExceptionCode> {
-  constructor(
-    message: string,
-    code: RecordShareExceptionCode,
-    { userFriendlyMessage }: { userFriendlyMessage?: MessageDescriptor } = {},
-  ) {
-    super(message, code, {
-      userFriendlyMessage: userFriendlyMessage ?? STANDARD_ERROR_MESSAGE,
-    });
-  }
 }

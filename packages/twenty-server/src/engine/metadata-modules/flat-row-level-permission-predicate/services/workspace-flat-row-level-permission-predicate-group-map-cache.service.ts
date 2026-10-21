@@ -1,12 +1,11 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
 
-import { MetadataFlatEntityMapsCacheProvider } from 'src/engine/workspace-cache/interfaces/metadata-flat-entity-maps-cache-provider.service';
+import { IsNull } from 'typeorm';
 
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
-import { fromRowLevelPermissionPredicateGroupEntityToFlatRowLevelPermissionPredicateGroup } from 'src/engine/metadata-modules/flat-row-level-permission-predicate/utils/from-row-level-permission-predicate-group-entity-to-flat-row-level-permission-predicate-group.util';
 import { type FlatRowLevelPermissionPredicateGroupMaps } from 'src/engine/metadata-modules/row-level-permission-predicate/types/flat-row-level-permission-predicate-group-maps.type';
+import { fromRowLevelPermissionPredicateGroupEntityToFlat } from 'src/engine/metadata-modules/row-level-permission-predicate/utils/from-row-level-permission-predicate-group-entity-to-flat.util';
+import { MetadataFlatEntityMapsCacheProvider } from 'src/engine/workspace-cache/interfaces/metadata-flat-entity-maps-cache-provider.service';
 import { WorkspaceCache } from 'src/engine/workspace-cache/decorators/workspace-cache.decorator';
 import { type WorkspaceCacheProviderContext } from 'src/engine/workspace-cache/types/workspace-cache-provider-context.type';
 import { createIdToUniversalIdentifierMap } from 'src/engine/workspace-cache/utils/create-id-to-universal-identifier-map.util';
@@ -16,6 +15,7 @@ const FLAT_ROW_LEVEL_PERMISSION_PREDICATE_GROUP_ROWS_REQUIREMENT = {
   rowLevelPermissionPredicateGroup: {
     columns: true,
     groupBy: ['parentRowLevelPermissionPredicateGroupId'],
+    where: { deletedAt: IsNull() },
   },
   application: ['id', 'universalIdentifier'],
   objectMetadata: ['id', 'universalIdentifier'],
@@ -23,6 +23,7 @@ const FLAT_ROW_LEVEL_PERMISSION_PREDICATE_GROUP_ROWS_REQUIREMENT = {
   rowLevelPermissionPredicate: {
     columns: ['id', 'universalIdentifier'],
     groupBy: ['rowLevelPermissionPredicateGroupId'],
+    where: { deletedAt: IsNull() },
   },
 } as const;
 
@@ -40,53 +41,45 @@ export class WorkspaceFlatRowLevelPermissionPredicateGroupMapCacheService extend
     typeof FLAT_ROW_LEVEL_PERMISSION_PREDICATE_GROUP_ROWS_REQUIREMENT
   >): FlatRowLevelPermissionPredicateGroupMaps {
     const {
-      rowLevelPermissionPredicateGroup: rowLevelPermissionPredicateGroups,
+      rowLevelPermissionPredicateGroup: predicateGroups,
       application: applications,
       objectMetadata: objectMetadatas,
       role: roles,
-      rowLevelPermissionPredicate: rowLevelPermissionPredicates,
+      rowLevelPermissionPredicate: predicates,
     } = rows;
 
+    const flatMaps = createEmptyFlatEntityMaps();
     const applicationIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(applications);
     const objectMetadataIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(objectMetadatas);
-    const roleIdToUniversalIdentifierMap =
-      createIdToUniversalIdentifierMap(roles);
+    const roleIdToUniversalIdentifierMap = createIdToUniversalIdentifierMap(roles);
     const rowLevelPermissionPredicateGroupIdToUniversalIdentifierMap =
-      createIdToUniversalIdentifierMap(rowLevelPermissionPredicateGroups.rows);
+      createIdToUniversalIdentifierMap(predicateGroups.rows);
 
-    const flatRowLevelPermissionPredicateGroupMaps =
-      createEmptyFlatEntityMaps();
-
-    for (const rowLevelPermissionPredicateGroupEntity of rowLevelPermissionPredicateGroups.rows) {
-      const flatRowLevelPermissionPredicateGroup =
-        fromRowLevelPermissionPredicateGroupEntityToFlatRowLevelPermissionPredicateGroup(
-          {
-            entity: {
-              ...rowLevelPermissionPredicateGroupEntity,
-              childRowLevelPermissionPredicateGroups:
-                rowLevelPermissionPredicateGroups.byParentRowLevelPermissionPredicateGroupId.get(
-                  rowLevelPermissionPredicateGroupEntity.id,
-                ) || [],
-              rowLevelPermissionPredicates:
-                rowLevelPermissionPredicates.byRowLevelPermissionPredicateGroupId.get(
-                  rowLevelPermissionPredicateGroupEntity.id,
-                ) || [],
-            },
-            applicationIdToUniversalIdentifierMap,
-            objectMetadataIdToUniversalIdentifierMap,
-            roleIdToUniversalIdentifierMap,
-            rowLevelPermissionPredicateGroupIdToUniversalIdentifierMap,
-          },
-        );
-
+    for (const predicateGroup of predicateGroups.rows) {
       addFlatEntityToFlatEntityMapsThroughMutationOrThrow({
-        flatEntity: flatRowLevelPermissionPredicateGroup,
-        flatEntityMapsToMutate: flatRowLevelPermissionPredicateGroupMaps,
+        flatEntity: fromRowLevelPermissionPredicateGroupEntityToFlat({
+          entity: {
+            ...predicateGroup,
+            rowLevelPermissionPredicates:
+              predicates.byRowLevelPermissionPredicateGroupId.get(
+                predicateGroup.id,
+              ) ?? [],
+            childRowLevelPermissionPredicateGroups:
+              predicateGroups.byParentRowLevelPermissionPredicateGroupId.get(
+                predicateGroup.id,
+              ) ?? [],
+          },
+          applicationIdToUniversalIdentifierMap,
+          objectMetadataIdToUniversalIdentifierMap,
+          roleIdToUniversalIdentifierMap,
+          rowLevelPermissionPredicateGroupIdToUniversalIdentifierMap,
+        }),
+        flatEntityMapsToMutate: flatMaps,
       });
     }
 
-    return flatRowLevelPermissionPredicateGroupMaps;
+    return flatMaps;
   }
 }

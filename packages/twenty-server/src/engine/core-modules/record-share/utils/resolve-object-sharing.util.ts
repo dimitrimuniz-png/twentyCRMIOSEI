@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 import {
   FeatureFlagKey,
   MetadataReadability,
@@ -7,42 +5,12 @@ import {
 } from 'twenty-shared/types';
 
 import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
-import { isRecordShareExceptionObject } from 'src/engine/core-modules/record-share/utils/is-record-share-exception-object.util';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { type OperationType } from 'src/engine/twenty-orm/repository/permissions.utils';
 
-// A record shared by name reaches people whose role cannot otherwise access
-// its object, but only to view or edit it: deleting it, creating siblings or
-// managing its access stay with the roles that can access the object
-const OPERATION_TYPES_GRANTABLE_BEYOND_ROLE: OperationType[] = [
-  'select',
-  'update',
-];
-
 export type ObjectSharing = {
   sharingMode: RecordSharingMode;
-  canShareBeyondRole: boolean;
   operationTypesGrantedBeyondRole: OperationType[];
-};
-
-const resolveSharingMode = ({
-  flatObjectMetadata,
-  isRecordSharingEnabled,
-}: {
-  flatObjectMetadata: Pick<FlatObjectMetadata, 'readability' | 'isSystem'>;
-  isRecordSharingEnabled: boolean;
-}): RecordSharingMode => {
-  switch (flatObjectMetadata.readability) {
-    case MetadataReadability.PRIVATE:
-      return RecordSharingMode.PRIVATE;
-    case MetadataReadability.INHERITED:
-      return RecordSharingMode.INHERITED;
-    default:
-      return isRecordSharingEnabled &&
-        isRecordShareExceptionObject(flatObjectMetadata)
-        ? RecordSharingMode.OPEN_BY_DEFAULT
-        : RecordSharingMode.ROLE_ONLY;
-  }
 };
 
 export const resolveObjectSharing = ({
@@ -53,25 +21,60 @@ export const resolveObjectSharing = ({
     FlatObjectMetadata,
     'readability' | 'isSystem' | 'sharingReach'
   >;
-  featureFlagsMap: Partial<Record<FeatureFlagKey, boolean>>;
+  featureFlagsMap?: Partial<Record<FeatureFlagKey, boolean>>;
 }): ObjectSharing => {
-  const isRecordSharingEnabled =
-    featureFlagsMap[FeatureFlagKey.IS_RECORD_LEVEL_SHARING_ENABLED] ?? false;
+  const sharingEnabled =
+    featureFlagsMap?.[FeatureFlagKey.IS_RECORD_LEVEL_SHARING_ENABLED] === true;
+  const sharingReach =
+    flatObjectMetadata.sharingReach ?? ObjectSharingReach.WORKSPACE;
+
   const sharingMode = resolveSharingMode({
-    flatObjectMetadata,
-    isRecordSharingEnabled,
+    readability: flatObjectMetadata.readability,
+    isSystem: flatObjectMetadata.isSystem,
+    sharingEnabled,
+    sharingReach,
   });
-  const canShareBeyondRole =
-    isRecordSharingEnabled &&
-    sharingMode !== RecordSharingMode.ROLE_ONLY &&
-    !flatObjectMetadata.isSystem &&
-    flatObjectMetadata.sharingReach === ObjectSharingReach.WORKSPACE;
+
+  const grantsNamedRecords =
+    sharingMode === RecordSharingMode.OPEN_BY_DEFAULT &&
+    sharingReach === ObjectSharingReach.WORKSPACE;
 
   return {
     sharingMode,
-    canShareBeyondRole,
-    operationTypesGrantedBeyondRole: canShareBeyondRole
-      ? OPERATION_TYPES_GRANTABLE_BEYOND_ROLE
+    operationTypesGrantedBeyondRole: grantsNamedRecords
+      ? ['select', 'update']
       : [],
   };
+};
+
+const resolveSharingMode = ({
+  readability,
+  isSystem,
+  sharingEnabled,
+  sharingReach,
+}: {
+  readability: MetadataReadability | undefined;
+  isSystem: boolean | undefined;
+  sharingEnabled: boolean;
+  sharingReach: ObjectSharingReach;
+}): RecordSharingMode => {
+  if (readability === MetadataReadability.PRIVATE) {
+    return RecordSharingMode.PRIVATE;
+  }
+
+  if (readability === MetadataReadability.INHERITED) {
+    return RecordSharingMode.INHERITED;
+  }
+
+  if (
+    readability === MetadataReadability.APPLICATION ||
+    readability === MetadataReadability.SYSTEM ||
+    isSystem === true ||
+    !sharingEnabled ||
+    sharingReach === ObjectSharingReach.ROLE_ACCESS
+  ) {
+    return RecordSharingMode.ROLE_ONLY;
+  }
+
+  return RecordSharingMode.OPEN_BY_DEFAULT;
 };
