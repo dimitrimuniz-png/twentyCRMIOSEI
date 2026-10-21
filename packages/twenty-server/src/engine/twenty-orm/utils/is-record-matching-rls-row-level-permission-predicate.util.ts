@@ -9,6 +9,7 @@ import { isDefined } from 'twenty-shared/utils';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { type AccessibleFlatFieldMetadataMaps } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 type FieldLike = {
@@ -22,13 +23,18 @@ export const isRecordMatchingRLSRowLevelPermissionPredicate = ({
   filter,
   flatObjectMetadata,
   flatFieldMetadataMaps,
+  shouldIgnoreSoftDeleteDefaultFilter = false,
 }: {
   record: ObjectRecord;
   filter: RecordGqlOperationFilter;
   flatObjectMetadata: Pick<FlatObjectMetadata, 'fieldIds'>;
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps;
+  shouldIgnoreSoftDeleteDefaultFilter?: boolean;
 }): boolean => {
-  if (isDeletedAndNotExplicitlyFiltered(record, filter)) {
+  if (
+    !shouldIgnoreSoftDeleteDefaultFilter &&
+    isDeletedAndNotExplicitlyFiltered(record, filter)
+  ) {
     return false;
   }
 
@@ -53,29 +59,32 @@ const matchesFilter = ({
   }
 
   const checks: boolean[] = [];
+  const logical = asLogicalFilter(filter);
 
-  if (isDefined(filter.and)) {
-    const nodes = asFilterList(filter.and);
+  if (isDefined(logical.and)) {
+    const nodes = asFilterList(logical.and);
 
     checks.push(
       nodes.every((node) => matchesFilter({ record, filter: node, fields })),
     );
   }
 
-  if (isDefined(filter.or)) {
+  if (isDefined(logical.or)) {
     // A bare object is one filter whose keys are combined, which is an AND.
     // An array is a real disjunction.
-    if (Array.isArray(filter.or)) {
+    if (Array.isArray(logical.or)) {
       checks.push(
-        filter.or.some((node) => matchesFilter({ record, filter: node, fields })),
+        logical.or.some((node) =>
+          matchesFilter({ record, filter: node, fields }),
+        ),
       );
     } else {
-      checks.push(matchesFilter({ record, filter: filter.or, fields }));
+      checks.push(matchesFilter({ record, filter: logical.or, fields }));
     }
   }
 
-  if (isDefined(filter.not)) {
-    checks.push(!matchesFilter({ record, filter: filter.not, fields }));
+  if (isDefined(logical.not)) {
+    checks.push(!matchesFilter({ record, filter: logical.not, fields }));
   }
 
   for (const [fieldName, expression] of Object.entries(filter)) {
@@ -106,7 +115,9 @@ const matchesField = ({
 
   const field =
     fields.find((candidate) => candidate.name === fieldName) ??
-    fields.find((candidate) => candidate.settings?.joinColumnName === fieldName);
+    fields.find(
+      (candidate) => candidate.settings?.joinColumnName === fieldName,
+    );
 
   if (
     isDefined(field) &&
@@ -127,7 +138,10 @@ const matchesField = ({
     const compositeRecord = isRecord(recordValue) ? recordValue : null;
 
     return Object.entries(expression).every(([subFieldName, subFilter]) => {
-      if (!isDefined(subFilter) || (isRecord(subFilter) && isEmpty(subFilter))) {
+      if (
+        !isDefined(subFilter) ||
+        (isRecord(subFilter) && isEmpty(subFilter))
+      ) {
         return true;
       }
 
@@ -256,9 +270,7 @@ const matchesLike = (
     return value.some((item) => matchesLike(item, pattern, caseInsensitive));
   }
 
-  const source = caseInsensitive
-    ? String(value).toLowerCase()
-    : String(value);
+  const source = caseInsensitive ? String(value).toLowerCase() : String(value);
   const expression = likeToRegExp(String(pattern), caseInsensitive);
 
   return expression.test(source);
@@ -276,7 +288,8 @@ const likeToRegExp = (pattern: string, caseInsensitive: boolean): RegExp => {
 const isDeletedAndNotExplicitlyFiltered = (
   record: ObjectRecord,
   filter: RecordGqlOperationFilter,
-): boolean => isDefined(record.deletedAt) && !filterMentions(filter, 'deletedAt');
+): boolean =>
+  isDefined(record.deletedAt) && !filterMentions(filter, 'deletedAt');
 
 const filterMentions = (
   filter: RecordGqlOperationFilter | undefined,
@@ -290,7 +303,9 @@ const filterMentions = (
     return true;
   }
 
-  return [filter.and, filter.or, filter.not].some((child) => {
+  const logical = asLogicalFilter(filter);
+
+  return [logical.and, logical.or, logical.not].some((child) => {
     if (!isDefined(child)) {
       return false;
     }
@@ -303,16 +318,42 @@ const filterMentions = (
 
 const listFields = (
   flatObjectMetadata: Pick<FlatObjectMetadata, 'fieldIds'>,
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>,
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps,
 ): FieldLike[] =>
   flatObjectMetadata.fieldIds.flatMap((fieldId) => {
     const field = findFlatEntityByIdInFlatEntityMaps({
       flatEntityId: fieldId,
-      flatEntityMaps: flatFieldMetadataMaps,
+      flatEntityMaps:
+        flatFieldMetadataMaps as FlatEntityMaps<FlatFieldMetadata>,
     });
 
-    return isDefined(field) ? [field] : [];
+    return isDefined(field) ? [toFieldLike(field)] : [];
   });
+
+const toFieldLike = (field: FlatFieldMetadata): FieldLike => {
+  const joinColumnName =
+    field.settings !== null &&
+    typeof field.settings === 'object' &&
+    'joinColumnName' in field.settings &&
+    typeof field.settings.joinColumnName === 'string'
+      ? field.settings.joinColumnName
+      : undefined;
+
+  return {
+    name: field.name,
+    type: field.type,
+    settings: isDefined(joinColumnName) ? { joinColumnName } : null,
+  };
+};
+
+type LogicalFilter = {
+  and?: RecordGqlOperationFilter[];
+  or?: RecordGqlOperationFilter[] | RecordGqlOperationFilter;
+  not?: RecordGqlOperationFilter;
+};
+
+const asLogicalFilter = (filter: RecordGqlOperationFilter): LogicalFilter =>
+  filter as LogicalFilter;
 
 const asFilterList = (
   value: RecordGqlOperationFilter | RecordGqlOperationFilter[],

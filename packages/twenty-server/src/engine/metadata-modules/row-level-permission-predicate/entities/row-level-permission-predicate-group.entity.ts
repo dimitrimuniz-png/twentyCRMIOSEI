@@ -14,6 +14,7 @@ import {
 
 import { RowLevelPermissionPredicateGroupLogicalOperator } from 'twenty-shared/types';
 
+import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RowLevelPermissionPredicateEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate.entity';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
@@ -24,7 +25,9 @@ import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-enti
   'roleId',
   'objectMetadataId',
 ])
-@Index('IDX_RLPPG_PARENT_GROUP_ID', ['parentRowLevelPermissionPredicateGroupId'])
+@Index('IDX_RLPPG_PARENT_GROUP_ID', [
+  'parentRowLevelPermissionPredicateGroupId',
+])
 export class RowLevelPermissionPredicateGroupEntity
   extends SyncableEntity
   implements Required<RowLevelPermissionPredicateGroupEntity>
@@ -34,6 +37,10 @@ export class RowLevelPermissionPredicateGroupEntity
 
   @Column({ nullable: false, type: 'uuid' })
   objectMetadataId: string;
+
+  @ManyToOne(() => ObjectMetadataEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'objectMetadataId' })
+  objectMetadata: Relation<ObjectMetadataEntity>;
 
   @Column({
     type: 'enum',

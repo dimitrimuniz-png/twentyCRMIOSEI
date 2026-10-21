@@ -4,6 +4,7 @@ import { isDefined } from 'twenty-shared/utils';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { type AccessibleFlatFieldMetadataMaps } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 type RelationSettings = {
@@ -27,20 +28,23 @@ type InheritedReadabilityParent =
 
 export const resolveInheritedReadabilityParents = ({
   flatObjectMetadata,
-  flatFieldMetadataMaps,
+  flatFieldMetadataMaps: flatFieldMetadataMapsInput,
   flatObjectMetadataMaps,
 }: {
   flatObjectMetadata: FlatObjectMetadata;
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps;
   flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
 }): InheritedReadabilityParent[] => {
+  const flatFieldMetadataMaps =
+    flatFieldMetadataMapsInput as FlatEntityMaps<FlatFieldMetadata>;
   const objectFields = listFields(flatObjectMetadata, flatFieldMetadataMaps);
   const parents: InheritedReadabilityParent[] = [];
   const seenJoinColumns = new Set<string>();
 
   for (const universalIdentifier of flatObjectMetadata.readabilityParentFieldUniversalIdentifiers ??
     []) {
-    const field = flatFieldMetadataMaps.byUniversalIdentifier[universalIdentifier];
+    const field =
+      flatFieldMetadataMaps.byUniversalIdentifier[universalIdentifier];
 
     if (!isDefined(field)) {
       continue;
@@ -57,7 +61,10 @@ export const resolveInheritedReadabilityParents = ({
           flatObjectMetadataMaps,
         });
 
-        if (!isDefined(columnParent) || seenJoinColumns.has(columnParent.joinColumnName)) {
+        if (
+          !isDefined(columnParent) ||
+          seenJoinColumns.has(columnParent.joinColumnName)
+        ) {
           continue;
         }
 
@@ -86,7 +93,10 @@ export const resolveInheritedReadabilityParents = ({
 
     const columnParent = toColumnParent({ field, flatObjectMetadataMaps });
 
-    if (isDefined(columnParent) && !seenJoinColumns.has(columnParent.joinColumnName)) {
+    if (
+      isDefined(columnParent) &&
+      !seenJoinColumns.has(columnParent.joinColumnName)
+    ) {
       seenJoinColumns.add(columnParent.joinColumnName);
       parents.push(columnParent);
     }
@@ -169,7 +179,8 @@ const toChildrenParent = ({
   return {
     kind: 'children',
     fieldMetadataId: field.id,
-    childJoinColumnName: inverseSettings?.joinColumnName ?? `${inverseField.name}Id`,
+    childJoinColumnName:
+      inverseSettings?.joinColumnName ?? `${inverseField.name}Id`,
     childFlatObjectMetadata,
   };
 };

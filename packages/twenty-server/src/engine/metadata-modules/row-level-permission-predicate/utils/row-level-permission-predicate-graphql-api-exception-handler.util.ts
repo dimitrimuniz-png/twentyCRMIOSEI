@@ -1,12 +1,30 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { assertUnreachable } from 'twenty-shared/utils';
 
-const removedrowLevelPermissionPredicateGraphqlApiExceptionHandler: RemovedCommercial = new Proxy(
-  function rowLevelPermissionPredicateGraphqlApiExceptionHandler(..._args: unknown[]) { return removedrowLevelPermissionPredicateGraphqlApiExceptionHandler; },
-  {
-    get: () => removedrowLevelPermissionPredicateGraphqlApiExceptionHandler,
-    apply: () => removedrowLevelPermissionPredicateGraphqlApiExceptionHandler,
-  },
-);
-export const rowLevelPermissionPredicateGraphqlApiExceptionHandler = removedrowLevelPermissionPredicateGraphqlApiExceptionHandler;
+import {
+  ForbiddenError,
+  InternalServerError,
+  NotFoundError,
+  UserInputError,
+} from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
+import {
+  type RowLevelPermissionPredicateException,
+  RowLevelPermissionPredicateExceptionCode,
+} from 'src/engine/metadata-modules/row-level-permission-predicate/exceptions/row-level-permission-predicate.exception';
+
+export const rowLevelPermissionPredicateGraphqlApiExceptionHandler = (
+  error: RowLevelPermissionPredicateException,
+): never => {
+  switch (error.code) {
+    case RowLevelPermissionPredicateExceptionCode.ROW_LEVEL_PERMISSION_FEATURE_DISABLED:
+    case RowLevelPermissionPredicateExceptionCode.UNAUTHORIZED_ROLE_MODIFICATION:
+      throw new ForbiddenError(error);
+    case RowLevelPermissionPredicateExceptionCode.ROW_LEVEL_PERMISSION_PREDICATE_NOT_FOUND:
+      throw new NotFoundError(error);
+    case RowLevelPermissionPredicateExceptionCode.INVALID_ROW_LEVEL_PERMISSION_PREDICATE_DATA:
+      throw new UserInputError(error);
+    case RowLevelPermissionPredicateExceptionCode.INTERNAL_SERVER_ERROR:
+      throw new InternalServerError(error);
+    default:
+      assertUnreachable(error.code);
+  }
+};

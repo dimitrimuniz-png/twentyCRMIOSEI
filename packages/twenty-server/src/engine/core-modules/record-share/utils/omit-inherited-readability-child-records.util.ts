@@ -1,12 +1,30 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+type EventWithProperties = {
+  properties?: object;
+};
 
-const removedomitInheritedReadabilityChildRecords: RemovedCommercial = new Proxy(
-  function omitInheritedReadabilityChildRecords(..._args: unknown[]) { return removedomitInheritedReadabilityChildRecords; },
-  {
-    get: () => removedomitInheritedReadabilityChildRecords,
-    apply: () => removedomitInheritedReadabilityChildRecords,
-  },
-);
-export const omitInheritedReadabilityChildRecords = removedomitInheritedReadabilityChildRecords;
+// Child rows travel with the deletion so parents can be rechecked. Subscribers
+// only see the record that was deleted.
+export const omitInheritedReadabilityChildRecords = <
+  TEvent extends EventWithProperties,
+>(
+  event: TEvent,
+): TEvent => {
+  const properties = event.properties;
+
+  if (
+    properties === undefined ||
+    !('inheritedReadabilityChildRecords' in properties)
+  ) {
+    return event;
+  }
+
+  const {
+    inheritedReadabilityChildRecords: _childRecords,
+    ...visibleProperties
+  } = properties as { inheritedReadabilityChildRecords?: unknown };
+
+  return {
+    ...event,
+    properties: visibleProperties,
+  };
+};

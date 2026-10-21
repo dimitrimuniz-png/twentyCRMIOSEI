@@ -13,7 +13,9 @@ concurrency:
 
 jobs:
   dispatch:
+    # Forwards reviews to twentyhq/twenty-factory.
     if: >
+      github.repository == 'twentyhq/twenty' &&
       github.event.pull_request.draft == false &&
       (github.event.action != 'labeled' || startsWith(github.event.label.name, 'pr-review-'))
     runs-on: ubuntu-latest

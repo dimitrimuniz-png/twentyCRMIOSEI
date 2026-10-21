@@ -1,5 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type RowLevelPermissionPredicateOperand } from '@/types/RowLevelPermissionPredicateOperand';
+import { type RowLevelPermissionPredicateValue } from '@/types/RowLevelPermissionPredicateValue';
 
-export type RowLevelPermissionPredicate = RemovedCommercial;
+export type RowLevelPermissionPredicate = {
+  id: string;
+  fieldMetadataId: string;
+  objectMetadataId: string;
+  operand: RowLevelPermissionPredicateOperand;
+  value: RowLevelPermissionPredicateValue;
+  subFieldName: string | null;
+  workspaceMemberFieldMetadataId: string | null;
+  workspaceMemberSubFieldName: string | null;
+  rowLevelPermissionPredicateGroupId: string | null;
+  positionInRowLevelPermissionPredicateGroup: number | null;
+  roleId: string;
+};

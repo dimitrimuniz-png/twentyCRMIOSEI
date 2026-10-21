@@ -62,6 +62,7 @@ type RecordSharingArgs = RecordTargetInput & {
 
 type RecordSharingObject = ObjectSharing & {
   flatObjectMetadata: FlatObjectMetadata;
+  canShareBeyondRole: boolean;
 };
 
 type RecordSharingChange = {
@@ -667,9 +668,16 @@ export class RecordSharingService {
       throw new NotFoundError('Record not found');
     }
 
+    const sharing = resolveObjectSharing({
+      flatObjectMetadata,
+      featureFlagsMap,
+    });
+
     return {
       flatObjectMetadata,
-      ...resolveObjectSharing({ flatObjectMetadata, featureFlagsMap }),
+      ...sharing,
+      canShareBeyondRole:
+        sharing.operationTypesGrantedBeyondRole.includes('select'),
     };
   }
 }

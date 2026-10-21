@@ -116,7 +116,7 @@ COPY ./packages/twenty-docker/twenty/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 WORKDIR /app/packages/twenty-server
 
-ARG APP_VERSION
+ARG APP_VERSION=0.0.0
 ENV APP_VERSION=$APP_VERSION
 ENV NODE_ENV=production
 

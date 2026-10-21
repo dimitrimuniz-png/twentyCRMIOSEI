@@ -5,6 +5,8 @@ import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLay
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { SettingsPath } from 'twenty-shared/types';
+import { getSettingsPath } from 'twenty-shared/utils';
 import { v4 } from 'uuid';
 import { Button } from 'twenty-ui/primitives/input';
 import { Section } from 'twenty-ui/components/layout';
@@ -66,10 +68,23 @@ export const SettingsSecuritySsoIdentifyProvider = () => {
   };
 
   return (
-    <SettingsPageLayout>
+    <SettingsPageLayout
+      title={t`Single sign-on`}
+      links={[
+        {
+          children: t`Workspace`,
+          href: getSettingsPath(SettingsPath.General),
+        },
+        {
+          children: t`Security`,
+          href: getSettingsPath(SettingsPath.Security),
+        },
+        { children: t`New identity provider` },
+      ]}
+    >
       <SettingsPageContainer>
-        <Section>
-          <Trans>Single sign-on</Trans>
+        <Section.Root>
+          <Section.Header title={t`Identity providers`} />
           <ul>
             {providers.data?.getSSOIdentityProviders.map((provider) => (
               <li key={provider.id}>
@@ -134,7 +149,7 @@ export const SettingsSecuritySsoIdentifyProvider = () => {
             </>
           )}
           <Button onClick={save}>{t`Save`}</Button>
-        </Section>
+        </Section.Root>
       </SettingsPageContainer>
     </SettingsPageLayout>
   );

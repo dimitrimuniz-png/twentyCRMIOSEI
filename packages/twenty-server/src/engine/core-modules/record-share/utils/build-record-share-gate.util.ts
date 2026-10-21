@@ -144,50 +144,52 @@ const buildInheritedGate = ({
     flatObjectMetadataMaps: context.environment.flatObjectMetadataMaps,
   });
 
-  const parentExpressions = parents.flatMap((parent) => {
-    const parentObject =
-      parent.kind === 'column'
-        ? parent.parentFlatObjectMetadata
-        : parent.childFlatObjectMetadata;
+  const parentExpressions = parents.flatMap(
+    (parent): InheritedReadabilityParentExpression[] => {
+      const parentObject =
+        parent.kind === 'column'
+          ? parent.parentFlatObjectMetadata
+          : parent.childFlatObjectMetadata;
 
-    if (!isParentAdmitted({ context, target, parentObject })) {
-      return [];
-    }
+      if (!isParentAdmitted({ context, target, parentObject })) {
+        return [];
+      }
 
-    if (parent.kind === 'column') {
-      const parentTableAlias = `${target.tableAlias}_${parent.joinColumnName}`;
+      if (parent.kind === 'column') {
+        const parentTableAlias = `${target.tableAlias}_${parent.joinColumnName}`;
+        const expression: InheritedReadabilityParentExpression = {
+          kind: 'column',
+          joinColumnName: parent.joinColumnName,
+          parentTableAlias,
+          parentFlatObjectMetadata: parent.parentFlatObjectMetadata,
+          policy: buildParentPolicy({
+            tableAlias: parentTableAlias,
+            flatObjectMetadata: parent.parentFlatObjectMetadata,
+            operationType: target.operationType,
+            depth: target.depth + 1,
+          }),
+        };
+
+        return expression.policy.kind === 'denied' ? [] : [expression];
+      }
+
+      const childTableAlias = `${target.tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`;
       const expression: InheritedReadabilityParentExpression = {
-        kind: 'column',
-        joinColumnName: parent.joinColumnName,
-        parentTableAlias,
-        parentFlatObjectMetadata: parent.parentFlatObjectMetadata,
+        kind: 'children',
+        childTableAlias,
+        childJoinColumnName: parent.childJoinColumnName,
+        childFlatObjectMetadata: parent.childFlatObjectMetadata,
         policy: buildParentPolicy({
-          tableAlias: parentTableAlias,
-          flatObjectMetadata: parent.parentFlatObjectMetadata,
+          tableAlias: childTableAlias,
+          flatObjectMetadata: parent.childFlatObjectMetadata,
           operationType: target.operationType,
           depth: target.depth + 1,
         }),
       };
 
       return expression.policy.kind === 'denied' ? [] : [expression];
-    }
-
-    const childTableAlias = `${target.tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`;
-    const expression: InheritedReadabilityParentExpression = {
-      kind: 'children',
-      childTableAlias,
-      childJoinColumnName: parent.childJoinColumnName,
-      childFlatObjectMetadata: parent.childFlatObjectMetadata,
-      policy: buildParentPolicy({
-        tableAlias: childTableAlias,
-        flatObjectMetadata: parent.childFlatObjectMetadata,
-        operationType: target.operationType,
-        depth: target.depth + 1,
-      }),
-    };
-
-    return expression.policy.kind === 'denied' ? [] : [expression];
-  });
+    },
+  );
 
   if (parentExpressions.length === 0) {
     return buildPrivateGate(context, target);

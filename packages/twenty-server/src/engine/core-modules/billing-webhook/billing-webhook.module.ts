@@ -16,17 +16,10 @@ import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
 import { CacheLockModule } from 'src/engine/core-modules/cache-lock/cache-lock.module';
 import { UsageLimitModule } from 'src/engine/core-modules/usage-limit/usage-limit.module';
 import { WorkspaceIteratorModule } from 'src/database/commands/command-runners/workspace-iterator.module';
-import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
-import { BillingEntitlementEntity } from 'src/engine/core-modules/billing/entities/billing-entitlement.entity';
-import { BillingPriceEntity } from 'src/engine/core-modules/billing/entities/billing-price.entity';
-import { BillingProductEntity } from 'src/engine/core-modules/billing/entities/billing-product.entity';
-import { BillingSubscriptionItemEntity } from 'src/engine/core-modules/billing/entities/billing-subscription-item.entity';
-import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { StripeModule } from 'src/engine/core-modules/billing/stripe/stripe.module';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { WorkspaceModule } from 'src/engine/core-modules/workspace/workspace.module';
 import { RowLevelPermissionModule } from 'src/engine/metadata-modules/row-level-permission-predicate/row-level-permission.module';
-import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 
 @Module({
@@ -39,15 +32,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     CacheLockModule,
     WorkspaceIteratorModule,
     WorkspaceCacheModule,
-    TypeOrmModule.forFeature([
-      BillingSubscriptionEntity,
-      BillingSubscriptionItemEntity,
-      BillingCustomerEntity,
-      BillingProductEntity,
-      BillingPriceEntity,
-      BillingEntitlementEntity,
-      WorkspaceEntity,
-    ]),
+    TypeOrmModule.forFeature([WorkspaceEntity]),
     RowLevelPermissionModule,
   ],
   controllers: [BillingWebhookController],
@@ -61,8 +46,6 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     BillingEntitlementSyncService,
     BillingSyncEntitlementsCommand,
     BillingWebhookEntitlementService,
-    provideWorkspaceScopedRepository(BillingEntitlementEntity),
-    provideWorkspaceScopedRepository(BillingCustomerEntity),
   ],
 })
 export class BillingWebhookModule {}

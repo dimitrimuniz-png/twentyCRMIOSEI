@@ -481,7 +481,7 @@ export class WorkspaceService {
       if (payload.customDomain && customDomainRegistered) {
         this.dnsManagerService
           .deleteHostnameSilently(payload.customDomain)
-          .catch((err) => {
+          .catch((err: unknown) => {
             this.exceptionHandlerService.captureExceptions([err]);
           });
       }

@@ -8,7 +8,9 @@ permissions: {}
 
 jobs:
   dispatch:
+    # Converts external PRs to draft via twentyhq/twenty-factory.
     if: |
+      github.repository == 'twentyhq/twenty' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.author_association != 'MEMBER' &&
       github.event.pull_request.author_association != 'OWNER' &&

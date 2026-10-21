@@ -1,17 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { RecordShareAccessLevel } from 'twenty-shared/types';
 
-export class GENERAL_RECORD_SHARE_ACCESS_LEVELS {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
-  }
-  [key: string]: RemovedCommercial;
-}
+export const GENERAL_RECORD_SHARE_ACCESS_LEVELS: RecordShareAccessLevel[] = [
+  RecordShareAccessLevel.NONE,
+  RecordShareAccessLevel.READ,
+  RecordShareAccessLevel.READ_WRITE,
+  RecordShareAccessLevel.FULL,
+];

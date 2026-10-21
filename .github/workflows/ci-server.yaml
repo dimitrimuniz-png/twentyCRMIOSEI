@@ -94,7 +94,7 @@ jobs:
           tasks: lingui:compile
 
   server-upgrade-mutation-guard:
-    if: github.event_name != 'merge_group'
+    if: github.event_name != 'merge_group' && github.repository == 'twentyhq/twenty'
     timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:

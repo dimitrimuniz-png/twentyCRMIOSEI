@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type ValidationRuleEntity } from 'src/engine/metadata-modules/validation-rule/entities/validation-rule.entity';
+import { type UniversalFlatEntityFrom } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-entity-from.type';
 
-export type UniversalFlatValidationRule = RemovedCommercial;
+export type UniversalFlatValidationRule = UniversalFlatEntityFrom<
+  ValidationRuleEntity,
+  'validationRule'
+>;

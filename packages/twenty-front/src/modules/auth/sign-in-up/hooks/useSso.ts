@@ -5,11 +5,18 @@ import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { useMutation } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
 import { useToast } from 'twenty-ui/components/feedback';
+import {
+  type GetAuthorizationUrlForSsoMutation,
+  type GetAuthorizationUrlForSsoMutationVariables,
+} from '~/generated-metadata/graphql';
 
 export const useSso = () => {
   const { enqueueToast } = useToast();
   const { redirect } = useRedirect();
-  const [getAuthorizationUrl] = useMutation(GET_AUTHORIZATION_URL_FOR_SSO);
+  const [getAuthorizationUrl] = useMutation<
+    GetAuthorizationUrlForSsoMutation,
+    GetAuthorizationUrlForSsoMutationVariables
+  >(GET_AUTHORIZATION_URL_FOR_SSO);
 
   const redirectToSsoLoginPage = useCallback(
     async (identityProviderId: string) => {

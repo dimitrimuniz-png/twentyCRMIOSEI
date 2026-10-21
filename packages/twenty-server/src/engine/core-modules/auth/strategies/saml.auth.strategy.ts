@@ -18,7 +18,10 @@ export type SamlRequest = Request & {
 };
 
 @Injectable()
-export class SamlAuthStrategy extends PassportStrategy(MultiSamlStrategy, 'saml') {
+export class SamlAuthStrategy extends PassportStrategy(
+  MultiSamlStrategy,
+  'saml',
+) {
   constructor(
     @InjectRepository(WorkspaceSsoIdentityProviderEntity)
     identityProviderRepository: Repository<WorkspaceSsoIdentityProviderEntity>,
@@ -33,13 +36,18 @@ export class SamlAuthStrategy extends PassportStrategy(MultiSamlStrategy, 'saml'
           void identityProviderRepository
             .findOne({ where: { id: identityProviderId } })
             .then((identityProvider) => {
-              if (!isDefined(identityProvider?.ssoUrl) || !isDefined(identityProvider.certificate)) {
+              if (
+                !isDefined(identityProvider?.ssoUrl) ||
+                !isDefined(identityProvider.certificate)
+              ) {
                 done(new Error('SAML identity provider is not configured'));
 
                 return;
               }
 
-              const serverUrl = twentyConfigService.get('SERVER_URL').replace(/\/$/, '');
+              const serverUrl = twentyConfigService
+                .get('SERVER_URL')
+                .replace(/\/$/, '');
 
               done(null, {
                 entryPoint: identityProvider.ssoUrl,
@@ -66,7 +74,11 @@ export class SamlAuthStrategy extends PassportStrategy(MultiSamlStrategy, 'saml'
           identityProviderId: request.params.identityProviderId,
         });
       },
-      (_request, _profile, done) => done(null),
     );
+  }
+
+  // PassportStrategy appends this as the logout verifier.
+  validate(): null {
+    return null;
   }
 }

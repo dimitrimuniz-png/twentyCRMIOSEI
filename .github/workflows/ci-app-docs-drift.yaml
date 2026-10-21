@@ -30,7 +30,9 @@ jobs:
   docs-drift-check:
     needs: changed-files-check
     # Secrets are unavailable on fork PRs; skip there and on bot PRs.
+    # Claude drift agent and its bot allowlist belong to twentyhq/twenty.
     if: >-
+      github.repository == 'twentyhq/twenty' &&
       needs.changed-files-check.outputs.any_changed == 'true' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.type != 'Bot'

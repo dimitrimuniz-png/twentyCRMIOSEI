@@ -1,5 +1,6 @@
 import { type FieldMetadataType } from 'twenty-shared/types';
 
+import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 
 export const ORM_FLAT_FIELD_METADATA_KEYS = [
@@ -36,3 +37,9 @@ export type OrmFlatFieldMetadata<
   FlatFieldMetadata<T>,
   Extract<keyof FlatFieldMetadata<T>, OrmFlatFieldMetadataKey>
 >;
+
+// FlatEntityMaps is invariant, so ORM maps and full field maps are not
+// assignable to each other even though every reader here only uses ORM keys.
+export type AccessibleFlatFieldMetadataMaps =
+  | FlatEntityMaps<FlatFieldMetadata>
+  | FlatEntityMaps<OrmFlatFieldMetadata>;

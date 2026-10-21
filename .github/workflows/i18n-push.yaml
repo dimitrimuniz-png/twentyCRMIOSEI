@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   extract_translations:
+    # Crowdin sync for twentyhq/twenty.
+    if: github.repository == 'twentyhq/twenty'
     name: Extract and upload translations
     runs-on: ubuntu-latest
     steps:

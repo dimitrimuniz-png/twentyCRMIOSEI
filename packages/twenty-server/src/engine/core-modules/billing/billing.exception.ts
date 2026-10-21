@@ -1,20 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type MessageDescriptor } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
 
-export class BillingException {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
-  }
-  [key: string]: RemovedCommercial;
-}
+import { CustomException } from 'src/utils/custom-exception';
 
 export enum BillingExceptionCode {
   BILLING_CREDIT_AMOUNT_INVALID = 'BILLING_CREDIT_AMOUNT_INVALID',
@@ -26,4 +13,17 @@ export enum BillingExceptionCode {
   BILLING_STRIPE_ERROR = 'BILLING_STRIPE_ERROR',
   BILLING_SUBSCRIPTION_INACTIVE = 'BILLING_SUBSCRIPTION_INACTIVE',
   BILLING_SUBSCRIPTION_NOT_FOUND = 'BILLING_SUBSCRIPTION_NOT_FOUND',
+}
+
+export class BillingException extends CustomException<BillingExceptionCode> {
+  constructor(
+    message: string,
+    code: BillingExceptionCode,
+    { userFriendlyMessage }: { userFriendlyMessage?: MessageDescriptor } = {},
+  ) {
+    super(message, code, {
+      userFriendlyMessage:
+        userFriendlyMessage ?? msg`Billing is not available on this build.`,
+    });
+  }
 }

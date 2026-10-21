@@ -1,5 +1,6 @@
 import { type EventLogTable } from 'twenty-shared/types';
 
+import { type EventLogFilterOperand } from 'src/engine/core-modules/event-logs/dtos/event-log-filter-operand.enum';
 import { buildEventLogFieldFilterCondition } from 'src/engine/core-modules/event-logs/utils/build-event-log-field-filter-condition.util';
 
 export const validateEventLogFieldFilterOrThrow = ({
@@ -8,7 +9,7 @@ export const validateEventLogFieldFilterOrThrow = ({
 }: {
   fieldFilter: {
     field: string;
-    operand: 'IS' | 'IS_NOT';
+    operand: EventLogFilterOperand;
     values: string[];
   };
   table: EventLogTable;

@@ -4,6 +4,7 @@ import { resolveEntityRelationUniversalIdentifiers } from 'src/engine/metadata-m
 import { type RowLevelPermissionPredicateInput } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/inputs/upsert-row-level-permission-predicates.input';
 import { type FlatRowLevelPermissionPredicateGroup } from 'src/engine/metadata-modules/row-level-permission-predicate/types/flat-row-level-permission-predicate-group.type';
 import { type FlatRowLevelPermissionPredicate } from 'src/engine/metadata-modules/row-level-permission-predicate/types/flat-row-level-permission-predicate.type';
+import { toRowLevelPermissionPredicateValue } from 'src/engine/metadata-modules/flat-row-level-permission-predicate/utils/to-row-level-permission-predicate-value.util';
 
 export const fromUpdateRowLevelPermissionPredicateInputToFlatRowLevelPermissionPredicate =
   ({
@@ -40,7 +41,7 @@ export const fromUpdateRowLevelPermissionPredicateInputToFlatRowLevelPermissionP
       fieldMetadataId: input.fieldMetadataId,
       fieldMetadataUniversalIdentifier,
       operand: input.operand,
-      value: input.value ?? null,
+      value: toRowLevelPermissionPredicateValue(input.value),
       subFieldName: input.subFieldName ?? null,
       workspaceMemberFieldMetadataId:
         input.workspaceMemberFieldMetadataId ?? null,

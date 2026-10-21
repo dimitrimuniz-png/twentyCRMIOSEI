@@ -11,6 +11,7 @@ import { computeCompositeColumnName } from 'src/engine/metadata-modules/field-me
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { type AccessibleFlatFieldMetadataMaps } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 export type RowLevelPermissionSqlFragment = {
@@ -51,7 +52,7 @@ export const renderRowLevelPermissionFilterToSql = ({
 }: {
   recordFilter: RecordGqlOperationFilter;
   objectMetadata: Pick<FlatObjectMetadata, 'fieldIds' | 'nameSingular'>;
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps;
   tableAlias: string;
 }): RowLevelPermissionSqlFragment | null => {
   if (!isDefined(recordFilter) || Object.keys(recordFilter).length === 0) {
@@ -75,31 +76,32 @@ const renderNode = ({
   alias: string;
 }): RowLevelPermissionSqlFragment => {
   const parts: RowLevelPermissionSqlFragment[] = [];
+  const logical = asLogicalFilter(filter);
 
-  if (isDefined(filter.and)) {
+  if (isDefined(logical.and)) {
     parts.push(
       renderLogical({
         operator: 'AND',
-        nodes: asFilterList(filter.and),
+        nodes: asFilterList(logical.and),
         fields,
         alias,
       }),
     );
   }
 
-  if (isDefined(filter.or)) {
+  if (isDefined(logical.or)) {
     parts.push(
       renderLogical({
         operator: 'OR',
-        nodes: asFilterList(filter.or),
+        nodes: asFilterList(logical.or),
         fields,
         alias,
       }),
     );
   }
 
-  if (isDefined(filter.not)) {
-    const inner = renderNode({ filter: filter.not, fields, alias });
+  if (isDefined(logical.not)) {
+    const inner = renderNode({ filter: logical.not, fields, alias });
 
     parts.push({ sql: `NOT (${inner.sql})`, parameters: inner.parameters });
   }
@@ -141,7 +143,9 @@ const renderLogical = ({
     return { sql: '1=1', parameters: {} };
   }
 
-  const rendered = nodes.map((node) => renderNode({ filter: node, fields, alias }));
+  const rendered = nodes.map((node) =>
+    renderNode({ filter: node, fields, alias }),
+  );
 
   return {
     sql: `(${rendered.map((part) => part.sql).join(` ${operator} `)})`,
@@ -180,7 +184,10 @@ const renderField = ({
     const keys = Object.keys(expression);
     const mentionsSubField = keys.some((key) => propertyNames.has(key));
 
-    if (mentionsSubField || keys.some((key) => !COMPARISON_OPERATORS.has(key))) {
+    if (
+      mentionsSubField ||
+      keys.some((key) => !COMPARISON_OPERATORS.has(key))
+    ) {
       const parts = keys.map((subFieldName) => {
         const property = composite.properties.find(
           (candidate) => candidate.name === subFieldName,
@@ -332,7 +339,9 @@ const renderOperator = ({
             parameters: {},
           };
     default:
-      throw new Error(`Unsupported row-level permission operator "${operator}"`);
+      throw new Error(
+        `Unsupported row-level permission operator "${operator}"`,
+      );
   }
 };
 
@@ -370,16 +379,26 @@ const resolveField = (fieldName: string, fields: FieldLike[]): FieldLike => {
 
 const listObjectFields = (
   objectMetadata: Pick<FlatObjectMetadata, 'fieldIds'>,
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>,
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps,
 ): FieldLike[] =>
   objectMetadata.fieldIds.flatMap((fieldId) => {
     const field = findFlatEntityByIdInFlatEntityMaps({
       flatEntityId: fieldId,
-      flatEntityMaps: flatFieldMetadataMaps,
+      flatEntityMaps:
+        flatFieldMetadataMaps as FlatEntityMaps<FlatFieldMetadata>,
     });
 
     return isDefined(field) ? [field as FieldLike] : [];
   });
+
+type LogicalFilter = {
+  and?: RecordGqlOperationFilter[];
+  or?: RecordGqlOperationFilter[] | RecordGqlOperationFilter;
+  not?: RecordGqlOperationFilter;
+};
+
+const asLogicalFilter = (filter: RecordGqlOperationFilter): LogicalFilter =>
+  filter as LogicalFilter;
 
 const asFilterList = (
   value: RecordGqlOperationFilter | RecordGqlOperationFilter[],

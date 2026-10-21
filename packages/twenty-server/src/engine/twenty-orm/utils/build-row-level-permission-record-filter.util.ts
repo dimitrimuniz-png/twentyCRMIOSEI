@@ -9,6 +9,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { type UserWorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
+import { type SyncableFlatEntity } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-from.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -16,6 +17,9 @@ import { UNSATISFIABLE_RECORD_FILTER } from 'src/engine/twenty-orm/constants/uns
 
 type PredicateRecord = {
   id: string;
+  universalIdentifier: string;
+  applicationId: string;
+  workspaceId: string;
   roleId: string;
   objectMetadataId: string;
   fieldMetadataId: string;
@@ -31,6 +35,9 @@ type PredicateRecord = {
 
 type PredicateGroupRecord = {
   id: string;
+  universalIdentifier: string;
+  applicationId: string;
+  workspaceId: string;
   roleId: string;
   logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
   parentRowLevelPermissionPredicateGroupId: string | null;
@@ -85,7 +92,9 @@ const buildRoleFilter = ({
   flatRowLevelPermissionPredicateGroupMaps,
   flatFieldMetadataMaps,
   workspaceMember,
-}: BuildArgs & { roleId: string }): RecordGqlOperationFilter | null => {
+}: Omit<BuildArgs, 'roleIds'> & {
+  roleId: string;
+}): RecordGqlOperationFilter | null => {
   const predicates = listEntities(flatRowLevelPermissionPredicateMaps).filter(
     (predicate) =>
       predicate.roleId === roleId &&
@@ -121,7 +130,6 @@ const collectChildFilters = ({
   groups,
   flatFieldMetadataMaps,
   workspaceMember,
-  wrapSingleGroup,
 }: {
   parentGroupId: string | null;
   predicates: PredicateRecord[];
@@ -132,16 +140,23 @@ const collectChildFilters = ({
   const predicateFilters = predicates
     .filter(
       (predicate) =>
-        (predicate.rowLevelPermissionPredicateGroupId ?? null) === parentGroupId,
+        (predicate.rowLevelPermissionPredicateGroupId ?? null) ===
+        parentGroupId,
     )
     .sort(byPosition)
     .map((predicate) =>
-      predicateToFilter({ predicate, predicates, flatFieldMetadataMaps, workspaceMember }),
+      predicateToFilter({
+        predicate,
+        predicates,
+        flatFieldMetadataMaps,
+        workspaceMember,
+      }),
     );
   const groupFilters = groups
     .filter(
       (group) =>
-        (group.parentRowLevelPermissionPredicateGroupId ?? null) === parentGroupId,
+        (group.parentRowLevelPermissionPredicateGroupId ?? null) ===
+        parentGroupId,
     )
     .flatMap((group) => {
       const combined = combineNodes({
@@ -159,7 +174,9 @@ const collectChildFilters = ({
       return isDefined(combined) ? [combined] : [];
     });
 
-  return [...predicateFilters, ...groupFilters];
+  return [...predicateFilters, ...groupFilters] as Array<
+    RecordGqlOperationFilter | typeof UNSATISFIABLE
+  >;
 };
 
 const UNSATISFIABLE = Symbol('unsatisfiable-row-level-permission');
@@ -423,7 +440,7 @@ const findField = (
     flatEntityMaps: flatFieldMetadataMaps,
   }) as FieldLike | undefined;
 
-const listEntities = <T extends { universalIdentifier?: string }>(
+const listEntities = <T extends SyncableFlatEntity>(
   maps: FlatEntityMaps<T>,
 ): T[] =>
   Object.values(maps.byUniversalIdentifier).filter((entity): entity is T =>
@@ -437,10 +454,7 @@ const relationSettings = (
     ? (field.settings as { relationType?: string; joinColumnName?: string })
     : undefined;
 
-const byPosition = (
-  left: PredicateRecord,
-  right: PredicateRecord,
-): number =>
+const byPosition = (left: PredicateRecord, right: PredicateRecord): number =>
   (left.positionInRowLevelPermissionPredicateGroup ?? 0) -
   (right.positionInRowLevelPermissionPredicateGroup ?? 0);
 

@@ -1,17 +1,73 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Injectable } from '@nestjs/common';
 
-export class WorkspaceMigrationRowLevelPermissionPredicateGroupActionsBuilderService {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
+
+import { WorkspaceEntityMigrationBuilderService } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/services/workspace-entity-migration-builder.service';
+import { type FlatEntityCreationValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-creation-validation-args.type';
+import { type FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
+import { type UniversalFlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-args.type';
+import { type UniversalFlatEntityValidationReturnType } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-result.type';
+
+@Injectable()
+export class WorkspaceMigrationRowLevelPermissionPredicateGroupActionsBuilderService extends WorkspaceEntityMigrationBuilderService<
+  typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup
+> {
+  constructor() {
+    super(ALL_METADATA_NAME.rowLevelPermissionPredicateGroup);
   }
-  [key: string]: RemovedCommercial;
+
+  protected validateFlatEntityCreation(
+    args: FlatEntityCreationValidationArgs<
+      typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup
+    >,
+  ): UniversalFlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup,
+    'create'
+  > {
+    return {
+      status: 'success',
+      action: {
+        type: 'create',
+        metadataName: 'rowLevelPermissionPredicateGroup',
+        flatEntity: args.flatEntityToValidate,
+      },
+    };
+  }
+
+  protected validateFlatEntityDeletion(
+    args: UniversalFlatEntityValidationArgs<
+      typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup
+    >,
+  ): UniversalFlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup,
+    'delete'
+  > {
+    return {
+      status: 'success',
+      action: {
+        type: 'delete',
+        metadataName: 'rowLevelPermissionPredicateGroup',
+        universalIdentifier: args.flatEntityToValidate.universalIdentifier,
+      },
+    };
+  }
+
+  protected validateFlatEntityUpdate(
+    args: FlatEntityUpdateValidationArgs<
+      typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup
+    >,
+  ): UniversalFlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.rowLevelPermissionPredicateGroup,
+    'update'
+  > {
+    return {
+      status: 'success',
+      action: {
+        type: 'update',
+        metadataName: 'rowLevelPermissionPredicateGroup',
+        universalIdentifier: args.universalIdentifier,
+        update: args.flatEntityUpdate,
+      },
+    };
+  }
 }
