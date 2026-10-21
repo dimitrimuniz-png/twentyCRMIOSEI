@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
 
-export type BillingEntitlements = RemovedCommercial;
+export type BillingEntitlements = Partial<
+  Record<BillingEntitlementKey, boolean>
+>;

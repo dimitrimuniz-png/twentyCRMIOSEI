@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
+import { WorkspaceBillingEntitlementsCacheService } from 'src/engine/core-modules/billing/services/workspace-billing-entitlements-cache.service';
 import { UpdateSubscriptionQuantityJob } from 'src/engine/core-modules/billing/jobs/update-subscription-quantity.job';
 import { BillingGraphqlApiExceptionFilter } from 'src/engine/core-modules/billing/filters/billing-graphql-api-exception.filter';
 import { BillingRestApiExceptionFilter } from 'src/engine/core-modules/billing/filters/billing-api-exception.filter';
@@ -15,7 +17,9 @@ import { ResourceCreditService } from 'src/engine/core-modules/billing/services/
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
 
 @Module({
+  imports: [EnterpriseModule],
   providers: [
+    WorkspaceBillingEntitlementsCacheService,
     UpdateSubscriptionQuantityJob,
     BillingGraphqlApiExceptionFilter,
     BillingRestApiExceptionFilter,
@@ -31,6 +35,7 @@ import { BillingSubscriptionService } from 'src/engine/core-modules/billing/serv
     BillingSubscriptionService,
   ],
   exports: [
+    WorkspaceBillingEntitlementsCacheService,
     UpdateSubscriptionQuantityJob,
     BillingGraphqlApiExceptionFilter,
     BillingRestApiExceptionFilter,

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { EventLogEmitterModule } from 'src/engine/core-modules/event-logs/emit/event-log-emitter.module';
-import { BillingWebhookController } from 'src/engine/core-modules/billing-webhook/billing-webhook.controller';
 import { BillingWebhookCustomerService } from 'src/engine/core-modules/billing-webhook/services/billing-webhook-customer.service';
 import { BillingSyncEntitlementsCommand } from 'src/engine/core-modules/billing-webhook/commands/billing-sync-entitlements.command';
 import { BillingEntitlementSyncService } from 'src/engine/core-modules/billing-webhook/services/billing-entitlement-sync.service';
@@ -35,7 +34,6 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     TypeOrmModule.forFeature([WorkspaceEntity]),
     RowLevelPermissionModule,
   ],
-  controllers: [BillingWebhookController],
   providers: [
     BillingWebhookProductService,
     BillingWebhookPriceService,
