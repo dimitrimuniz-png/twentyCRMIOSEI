@@ -1,4 +1,7 @@
-import { RowLevelPermissionPredicateOperand } from 'twenty-shared/types';
+import {
+  FieldMetadataType,
+  RowLevelPermissionPredicateOperand,
+} from 'twenty-shared/types';
 import { In } from 'typeorm';
 
 import { RowLevelPermissionPredicateService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate.service';
@@ -41,10 +44,21 @@ describe('RowLevelPermissionPredicateService', () => {
     const workspaceCacheService = {
       invalidateAndRecompute: jest.fn().mockResolvedValue(undefined),
     };
+    const fieldMetadataRepository = {
+      find: jest.fn().mockResolvedValue([
+        { id: 'field-id', type: FieldMetadataType.TEXT, name: 'name' },
+        {
+          id: 'member-field-id',
+          type: FieldMetadataType.TEXT,
+          name: 'locale',
+        },
+      ]),
+    };
     const service = new RowLevelPermissionPredicateService(
       predicateRepository as never,
       predicateGroupRepository as never,
       workspaceRepository as never,
+      fieldMetadataRepository as never,
       workspaceCacheService as never,
     );
 

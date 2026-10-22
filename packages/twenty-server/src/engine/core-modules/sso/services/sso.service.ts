@@ -7,6 +7,10 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import {
+  SsoException,
+  SsoExceptionCode,
+} from 'src/engine/core-modules/sso/sso.exception';
+import {
   IdentityProviderType,
   SsoIdentityProviderStatus,
   WorkspaceSsoIdentityProviderEntity,
@@ -112,6 +116,8 @@ export class SsoService {
     certificate: string;
     ssoUrl: string;
   }): Promise<WorkspaceSsoIdentityProviderEntity> {
+    await this.assertIdentityProviderIdIsAvailable(id);
+
     return this.identityProviderRepository.save(
       this.identityProviderRepository.create({
         id,
@@ -182,6 +188,24 @@ export class SsoService {
     id: string;
   }): Promise<void> {
     await this.identityProviderRepository.delete({ id, workspaceId });
+  }
+
+  // Integration tests still seed the legacy table. The id is global across both.
+  private async assertIdentityProviderIdIsAvailable(id: string): Promise<void> {
+    const [current, legacy] = await Promise.all([
+      this.identityProviderRepository.findOne({ where: { id } }),
+      this.identityProviderRepository.manager.query<Array<{ id: string }>>(
+        `SELECT id FROM core."workspaceSSOIdentityProvider" WHERE id = $1 LIMIT 1`,
+        [id],
+      ),
+    ]);
+
+    if (isDefined(current) || legacy.length > 0) {
+      throw new SsoException(
+        'Identity provider already exists',
+        SsoExceptionCode.IDENTITY_PROVIDER_ALREADY_EXISTS,
+      );
+    }
   }
 
   private buildLoginUrl(protocol: 'saml' | 'oidc', id: string): string {

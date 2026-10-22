@@ -1,17 +1,59 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Injectable } from '@nestjs/common';
 
-export class CreateRowLevelPermissionPredicateGroupActionHandlerService {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
+import { v4 } from 'uuid';
+
+import {
+  FlatCreateRowLevelPermissionPredicateGroupAction,
+  UniversalCreateRowLevelPermissionPredicateGroupAction,
+} from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/row-level-permission-predicate-group/types/workspace-migration-row-level-permission-predicate-group-action.type';
+import { WorkspaceMigrationRunnerActionHandler } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/interfaces/workspace-migration-runner-action-handler-service.interface';
+import {
+  WorkspaceMigrationActionRunnerArgs,
+  WorkspaceMigrationActionRunnerContext,
+} from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/types/workspace-migration-action-runner-args.type';
+import { resolveUniversalRelationIdentifiersToIds } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/utils/resolve-universal-relation-identifiers-to-ids.util';
+
+@Injectable()
+export class CreateRowLevelPermissionPredicateGroupActionHandlerService extends WorkspaceMigrationRunnerActionHandler(
+  'create',
+  'rowLevelPermissionPredicateGroup',
+) {
+  override async transpileUniversalActionToFlatAction({
+    action,
+    allFlatEntityMaps,
+    flatApplication,
+    workspaceId,
+  }: WorkspaceMigrationActionRunnerArgs<UniversalCreateRowLevelPermissionPredicateGroupAction>): Promise<FlatCreateRowLevelPermissionPredicateGroupAction> {
+    const resolvedIds = resolveUniversalRelationIdentifiersToIds({
+      flatEntityMaps: allFlatEntityMaps,
+      metadataName: action.metadataName,
+      universalForeignKeyValues: action.flatEntity,
+    });
+
+    return {
+      ...action,
+      flatEntity: {
+        ...action.flatEntity,
+        ...resolvedIds,
+        applicationId: flatApplication.id,
+        id: action.id ?? v4(),
+        workspaceId,
       },
+    } as FlatCreateRowLevelPermissionPredicateGroupAction;
+  }
+
+  async executeForMetadata(
+    context: WorkspaceMigrationActionRunnerContext<FlatCreateRowLevelPermissionPredicateGroupAction>,
+  ): Promise<void> {
+    await this.insertFlatEntitiesInRepository({
+      queryRunner: context.queryRunner,
+      flatEntities: [context.flatAction.flatEntity],
     });
   }
-  [key: string]: RemovedCommercial;
+
+  async executeForWorkspaceSchema(
+    _context: WorkspaceMigrationActionRunnerContext<FlatCreateRowLevelPermissionPredicateGroupAction>,
+  ): Promise<void> {
+    return;
+  }
 }

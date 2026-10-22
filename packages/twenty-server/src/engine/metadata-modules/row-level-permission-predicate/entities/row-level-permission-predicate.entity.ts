@@ -20,7 +20,15 @@ import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modu
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
 
 @Entity({ name: 'rowLevelPermissionPredicate', schema: 'core' })
-@Index('IDX_RLPP_WORKSPACE_ID_ROLE_ID', ['workspaceId', 'roleId'])
+@Index('IDX_RLPP_WORKSPACE_ID_ROLE_ID_OBJECT_METADATA_ID', [
+  'workspaceId',
+  'roleId',
+  'objectMetadataId',
+])
+@Index('IDX_RLPP_FIELD_METADATA_ID', ['fieldMetadataId'])
+@Index('IDX_RLPP_WORKSPACE_MEMBER_FIELD_METADATA_ID', [
+  'workspaceMemberFieldMetadataId',
+])
 @Index('IDX_RLPP_GROUP_ID', ['rowLevelPermissionPredicateGroupId'])
 export class RowLevelPermissionPredicateEntity
   extends SyncableEntity
@@ -46,7 +54,6 @@ export class RowLevelPermissionPredicateEntity
   @Column({
     type: 'enum',
     enum: RowLevelPermissionPredicateOperand,
-    enumName: 'rowLevelPermissionPredicate_operand_enum',
     default: RowLevelPermissionPredicateOperand.CONTAINS,
   })
   operand: RowLevelPermissionPredicateOperand;

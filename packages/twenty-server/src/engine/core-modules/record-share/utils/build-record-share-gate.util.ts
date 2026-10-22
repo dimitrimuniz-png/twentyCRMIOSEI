@@ -200,7 +200,7 @@ const buildInheritedGate = ({
     expression: {
       kind: 'inheritedReadability',
       parents: parentExpressions,
-      isOpenWhenDetached: false,
+      isOpenWhenDetached: true,
       ...shareTarget(context, target, READ_ACCESS_LEVELS),
     },
   };

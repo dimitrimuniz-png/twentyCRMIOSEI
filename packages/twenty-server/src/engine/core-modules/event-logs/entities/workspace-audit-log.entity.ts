@@ -3,8 +3,13 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
+
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 @Entity({ name: 'workspaceAuditLog', schema: 'core' })
 @Index('IDX_WORKSPACE_AUDIT_LOG_WORKSPACE_TABLE_OCCURRED_AT', [
@@ -13,11 +18,20 @@ import {
   'occurredAt',
 ])
 export class WorkspaceAuditLogEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_workspace_audit_log',
+  })
   id: string;
 
   @Column({ type: 'uuid' })
   workspaceId: string;
+
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'workspaceId',
+    foreignKeyConstraintName: 'FK_workspace_audit_log_workspace',
+  })
+  workspace: Relation<WorkspaceEntity>;
 
   @Column({ type: 'varchar' })
   tableName: string;

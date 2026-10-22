@@ -68,6 +68,7 @@ export class RecordShareOwnershipTransferService {
       await this.findChatThreadObjectMetadataId(workspaceId);
     const schema = quoted(getWorkspaceSchemaName(workspaceId));
     const recordShare = `${schema}.${quoted('recordShare')}`;
+    const accessLevelType = `${schema}.${quoted('recordShare_accessLevel_enum')}`;
     const keepChatThread = isDefined(chatThreadObjectMetadataId)
       ? `AND ${quoted('objectMetadataId')} <> $3::uuid`
       : '';
@@ -105,16 +106,18 @@ export class RecordShareOwnershipTransferService {
              FROM ${recordShare}
              WHERE ${quoted('principalId')} = $1::uuid
                AND ${quoted('principalType')} = '${RecordSharePrincipalType.WORKSPACE_MEMBER}'
-               AND ${quoted('accessLevel')} = ANY(${handoverAccessLevelParameter}::text[])
+               AND ${quoted('accessLevel')}::text = ANY(${handoverAccessLevelParameter}::text[])
                ${keepChatThread}
              ON CONFLICT (${quoted('objectMetadataId')}, ${quoted('recordId')}, ${quoted('principalId')}, ${quoted('rowCause')}, ${quoted('sourceId')})
              DO UPDATE SET
-               ${quoted('accessLevel')} = CASE
-                 WHEN EXCLUDED.${quoted('accessLevel')} = '${RecordShareAccessLevel.FULL}'
-                   OR ${quoted('recordShare')}.${quoted('accessLevel')} = '${RecordShareAccessLevel.FULL}'
-                   THEN '${RecordShareAccessLevel.FULL}'
-                 ELSE '${RecordShareAccessLevel.READ_WRITE}'
-               END,
+               ${quoted('accessLevel')} = (
+                 CASE
+                   WHEN EXCLUDED.${quoted('accessLevel')}::text = '${RecordShareAccessLevel.FULL}'
+                     OR ${quoted('recordShare')}.${quoted('accessLevel')}::text = '${RecordShareAccessLevel.FULL}'
+                     THEN '${RecordShareAccessLevel.FULL}'
+                   ELSE '${RecordShareAccessLevel.READ_WRITE}'
+                 END
+               )::${accessLevelType},
                ${quoted('updatedAt')} = now()`,
             insertParameters,
           );

@@ -45,7 +45,6 @@ export class RowLevelPermissionPredicateGroupEntity
   @Column({
     type: 'enum',
     enum: RowLevelPermissionPredicateGroupLogicalOperator,
-    enumName: 'rowLevelPermissionPredicateGroup_logicaloperator_enum',
     default: RowLevelPermissionPredicateGroupLogicalOperator.AND,
   })
   logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;

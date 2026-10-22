@@ -32,6 +32,9 @@ const UUID_COLUMNS = new Set([
   'sourceId',
 ]);
 
+// Bound parameters arrive as text, and these enums have no text equality operator.
+const ENUM_COLUMNS = new Set(['principalType', 'accessLevel', 'rowCause']);
+
 const UNIQUE_COLUMNS = [
   'objectMetadataId',
   'recordId',
@@ -94,12 +97,18 @@ const appendPredicate = ({
     }
     parameters.push(values);
     const cast = UUID_COLUMNS.has(column) ? '::uuid[]' : '::text[]';
-    clauses.push(`${quotedColumn} = ANY($${parameters.length}${cast})`);
+    const comparedColumn = ENUM_COLUMNS.has(column)
+      ? `${quotedColumn}::text`
+      : quotedColumn;
+    clauses.push(`${comparedColumn} = ANY($${parameters.length}${cast})`);
     return;
   }
 
   parameters.push(value);
-  clauses.push(`${quotedColumn} = $${parameters.length}`);
+  const comparedColumn = ENUM_COLUMNS.has(column)
+    ? `${quotedColumn}::text`
+    : quotedColumn;
+  clauses.push(`${comparedColumn} = $${parameters.length}`);
 };
 
 const toRecordShare = (row: Record<string, unknown>): RecordShare => ({
@@ -167,7 +176,7 @@ export class RecordShareStorageService {
            AND ${quoted('recordId')} = $2
            AND ${quoted('principalId')} = $3
            AND ${quoted('sourceId')} = $4
-           AND ${quoted('rowCause')} = $5`,
+           AND ${quoted('rowCause')}::text = $5`,
         [
           share.objectMetadataId,
           share.recordId,

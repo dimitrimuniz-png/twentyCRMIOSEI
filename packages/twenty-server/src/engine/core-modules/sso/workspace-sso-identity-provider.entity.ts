@@ -35,7 +35,9 @@ registerEnumType(SsoIdentityProviderStatus, {
 @Index('IDX_SSO_IDENTITY_PROVIDER_WORKSPACE_ID', ['workspaceId'])
 export class WorkspaceSsoIdentityProviderEntity {
   @Field()
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_sso_identity_provider',
+  })
   id: string;
 
   @Field()
@@ -80,7 +82,10 @@ export class WorkspaceSsoIdentityProviderEntity {
       onDelete: 'CASCADE',
     },
   )
-  @JoinColumn({ name: 'workspaceId' })
+  @JoinColumn({
+    name: 'workspaceId',
+    foreignKeyConstraintName: 'FK_sso_identity_provider_workspace',
+  })
   workspace: Relation<WorkspaceEntity>;
 
   @CreateDateColumn({ type: 'timestamptz' })

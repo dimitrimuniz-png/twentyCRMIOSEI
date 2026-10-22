@@ -273,7 +273,10 @@ const predicateToFilter = ({
     return { [field.name]: { [predicate.subFieldName]: leaf } };
   }
 
-  return { [field.name]: leaf };
+  // SQL rendering rejects a relation name and compares the join column instead.
+  const joinColumnName = relationJoinColumnName(field);
+
+  return { [joinColumnName ?? field.name]: leaf };
 };
 
 const morphFilter = ({
@@ -342,7 +345,7 @@ const resolvePredicateValue = ({
   }
 
   const memberRecord = workspaceMember as unknown as Record<string, unknown>;
-  const rawValue = memberRecord[memberField.name];
+  const rawValue = readMemberFieldValue(memberRecord, memberField);
   const value =
     isDefined(predicate.workspaceMemberSubFieldName) && isRecord(rawValue)
       ? rawValue[predicate.workspaceMemberSubFieldName]
@@ -453,6 +456,37 @@ const relationSettings = (
   isDefined(field.settings)
     ? (field.settings as { relationType?: string; joinColumnName?: string })
     : undefined;
+
+const relationJoinColumnName = (field: FieldLike): string | undefined => {
+  if (field.type !== FieldMetadataType.RELATION) {
+    return undefined;
+  }
+
+  return relationSettings(field)?.joinColumnName ?? `${field.name}Id`;
+};
+
+const readMemberFieldValue = (
+  record: Record<string, unknown>,
+  field: FieldLike,
+): unknown => {
+  const directValue = record[field.name];
+
+  if (isRecord(directValue) && typeof directValue.id === 'string') {
+    return directValue.id;
+  }
+
+  if (isDefined(directValue) && directValue !== '') {
+    return directValue;
+  }
+
+  const joinColumnName = relationJoinColumnName(field);
+
+  if (isDefined(joinColumnName) && joinColumnName in record) {
+    return record[joinColumnName];
+  }
+
+  return directValue;
+};
 
 const byPosition = (left: PredicateRecord, right: PredicateRecord): number =>
   (left.positionInRowLevelPermissionPredicateGroup ?? 0) -

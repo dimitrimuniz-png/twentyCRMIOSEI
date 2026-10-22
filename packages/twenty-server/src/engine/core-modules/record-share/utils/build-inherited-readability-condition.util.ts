@@ -24,6 +24,7 @@ type CompiledChildrenParent = {
 
 export const buildInheritedReadabilityCondition = ({
   tableAlias,
+  isOpenWhenDetached = false,
   parents,
 }: {
   tableAlias: string;
@@ -71,6 +72,32 @@ export const buildInheritedReadabilityCondition = ({
       },
     ];
   });
+
+  if (isOpenWhenDetached) {
+    const columnParents = parents.filter(
+      (parent): parent is CompiledColumnParent => parent.kind === 'column',
+    );
+
+    if (columnParents.length > 0) {
+      parts.push({
+        sql: columnParents
+          .map((parent) => `"${tableAlias}"."${parent.joinColumnName}" IS NULL`)
+          .join(' AND '),
+        parameters: {},
+      });
+    }
+
+    for (const parent of parents) {
+      if (parent.kind !== 'children') {
+        continue;
+      }
+
+      parts.push({
+        sql: `NOT EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS "${parent.childTableAlias}" WHERE "${parent.childTableAlias}"."${parent.childJoinColumnName}" = "${tableAlias}"."id")`,
+        parameters: {},
+      });
+    }
+  }
 
   if (parts.length === 0) {
     return { sql: '1=0', parameters: {} };

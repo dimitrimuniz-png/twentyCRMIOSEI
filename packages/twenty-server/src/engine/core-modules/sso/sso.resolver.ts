@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards } from '@nestjs/common';
 import {
   Args,
   Field,
@@ -15,6 +15,7 @@ import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorato
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
+import { SsoGraphqlApiExceptionFilter } from 'src/engine/core-modules/sso/sso-graphql-api-exception.filter';
 import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 import {
   IdentityProviderType,
@@ -132,6 +133,7 @@ class DeleteSso {
 }
 
 @MetadataResolver()
+@UseFilters(SsoGraphqlApiExceptionFilter)
 @UseGuards(
   AuthPrincipalGuard({
     userSession: {
