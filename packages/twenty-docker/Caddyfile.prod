@@ -1,0 +1,10 @@
+# CRM_DOMAIN and ACME_EMAIL are set on the caddy service.
+# Let's Encrypt HTTP-01 needs ports 80 and 443 open and a public A record.
+{
+	email {$ACME_EMAIL}
+}
+
+{$CRM_DOMAIN} {
+	encode gzip
+	reverse_proxy server:3000
+}

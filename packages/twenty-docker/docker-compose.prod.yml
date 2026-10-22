@@ -1,0 +1,153 @@
+# Production stack for an EC2 host: GHCR image, external RDS, Redis and Caddy.
+# Postgres is not a service. The server entrypoint runs migrations unless
+# DISABLE_DB_MIGRATIONS=true. The worker skips them.
+#
+# From the repo root:
+#   docker compose --env-file .env.production.example \
+#     -f packages/twenty-docker/docker-compose.prod.yml config
+
+name: twenty-prod
+
+x-twenty-image: &twenty-image
+  image: ghcr.io/dimitrimuniz-png/twentycrmiosei:${TAG:?Set TAG to a published sha-* tag}
+  pull_policy: always
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+x-app-env: &app-env
+  NODE_ENV: "production"
+  # Composed here so it cannot drift from CRM_DOMAIN.
+  SERVER_URL: "https://${CRM_DOMAIN:?Set CRM_DOMAIN}"
+  TRUST_PROXY: "${TRUST_PROXY:-loopback, linklocal, uniquelocal}"
+  PG_DATABASE_URL: "${PG_DATABASE_URL:?Set PG_DATABASE_URL}"
+  PG_SSL_ALLOW_SELF_SIGNED: "${PG_SSL_ALLOW_SELF_SIGNED:?Set PG_SSL_ALLOW_SELF_SIGNED}"
+  REDIS_URL: "redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379"
+  ENCRYPTION_KEY: "${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}"
+  FALLBACK_ENCRYPTION_KEY: "${FALLBACK_ENCRYPTION_KEY:-}"
+  APP_SECRET: "${APP_SECRET:?Set APP_SECRET}"
+  STORAGE_TYPE: "${STORAGE_TYPE:?Set STORAGE_TYPE}"
+  STORAGE_S3_REGION: "${STORAGE_S3_REGION:-}"
+  STORAGE_S3_NAME: "${STORAGE_S3_NAME:-}"
+  STORAGE_S3_ENDPOINT: "${STORAGE_S3_ENDPOINT:-}"
+  STORAGE_S3_ACCESS_KEY_ID: "${STORAGE_S3_ACCESS_KEY_ID:-}"
+  STORAGE_S3_SECRET_ACCESS_KEY: "${STORAGE_S3_SECRET_ACCESS_KEY:-}"
+  STORAGE_S3_PRESIGNED_URL_ENABLED: "${STORAGE_S3_PRESIGNED_URL_ENABLED:-false}"
+  EMAIL_DRIVER: "${EMAIL_DRIVER:?Set EMAIL_DRIVER}"
+  EMAIL_FROM_ADDRESS: "${EMAIL_FROM_ADDRESS:?Set EMAIL_FROM_ADDRESS}"
+  EMAIL_FROM_NAME: "${EMAIL_FROM_NAME:?Set EMAIL_FROM_NAME}"
+  EMAIL_SMTP_HOST: "${EMAIL_SMTP_HOST:-}"
+  EMAIL_SMTP_PORT: "${EMAIL_SMTP_PORT:-587}"
+  EMAIL_SMTP_USER: "${EMAIL_SMTP_USER:-}"
+  EMAIL_SMTP_PASSWORD: "${EMAIL_SMTP_PASSWORD:-}"
+  EMAIL_SMTP_NO_TLS: "${EMAIL_SMTP_NO_TLS:-false}"
+  SSO_ALLOWED_EMAIL_DOMAINS: "${SSO_ALLOWED_EMAIL_DOMAINS:?Set SSO_ALLOWED_EMAIL_DOMAINS}"
+  AUTH_PASSWORD_ENABLED: "${AUTH_PASSWORD_ENABLED:-true}"
+  IS_EMAIL_VERIFICATION_REQUIRED: "${IS_EMAIL_VERIFICATION_REQUIRED:-true}"
+  IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS: "${IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS:-true}"
+  IS_MULTIWORKSPACE_ENABLED: "${IS_MULTIWORKSPACE_ENABLED:-false}"
+  SIGN_IN_PREFILLED: "${SIGN_IN_PREFILLED:-false}"
+  IS_BILLING_ENABLED: "${IS_BILLING_ENABLED:-false}"
+  ANALYTICS_ENABLED: "${ANALYTICS_ENABLED:-false}"
+
+services:
+  server:
+    <<: *twenty-image
+    environment:
+      <<: *app-env
+      NODE_PORT: "3000"
+      DISABLE_DB_MIGRATIONS: "false"
+      DISABLE_CRON_JOBS_REGISTRATION: "false"
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "--show-error",
+          "http://localhost:3000/healthz",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+
+  worker:
+    <<: *twenty-image
+    command: ["yarn", "worker:prod"]
+    environment:
+      <<: *app-env
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+      - --maxmemory
+      - 512mb
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      CRM_DOMAIN: ${CRM_DOMAIN:?Set CRM_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      server:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  server-local-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

@@ -4,6 +4,7 @@ import { GET_AUTHORIZATION_URL_FOR_SSO } from '@/auth/graphql/mutations/getAutho
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { useMutation } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { useToast } from 'twenty-ui/components/feedback';
 import {
   type GetAuthorizationUrlForSsoMutation,
@@ -28,7 +29,7 @@ export const useSso = () => {
           result.data?.getAuthorizationUrlForSSO?.authorizationURL;
 
         if (!authorizationURL) {
-          throw new Error('Missing SSO authorization URL');
+          throw new Error(doNotTranslate('Missing SSO authorization URL'));
         }
 
         redirect(authorizationURL);

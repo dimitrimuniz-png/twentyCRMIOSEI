@@ -36,6 +36,7 @@ import {
   hashPassword,
 } from 'src/engine/core-modules/auth/auth.util';
 import { MAX_WORKSPACES_WITHOUT_ENTERPRISE_KEY } from 'src/engine/core-modules/auth/constants/max-workspaces-without-organization-key.constant';
+import { assertEmailDomainIsAllowed } from 'src/engine/core-modules/auth/utils/assert-email-domain-is-allowed.util';
 import { getSignUpWithoutWorkspaceDecision } from 'src/engine/core-modules/auth/utils/get-sign-up-without-workspace-decision.util';
 import { hasProvisionedSignUpDestination } from 'src/engine/core-modules/auth/utils/has-provisioned-sign-up-destination.util';
 import {
@@ -136,6 +137,8 @@ export class SignInUpService {
       ExistingUserOrPartialUserWithPicture &
       AuthProviderWithPasswordType,
   ) {
+    this.assertAllowedEmailDomain(this.emailFromSignInUpUserData(params));
+
     if (params.workspace && params.invitation) {
       return {
         workspace: params.workspace,
@@ -417,6 +420,21 @@ export class SignInUpService {
     });
 
     return savedUser;
+  }
+
+  private emailFromSignInUpUserData(
+    params: ExistingUserOrPartialUserWithPicture,
+  ): string {
+    return params.userData.type === 'existingUser'
+      ? params.userData.existingUser.email
+      : (params.userData.newUserWithPicture.email ?? '');
+  }
+
+  private assertAllowedEmailDomain(email: string): void {
+    assertEmailDomainIsAllowed({
+      email,
+      allowedDomains: this.twentyConfigService.get('SSO_ALLOWED_EMAIL_DOMAINS'),
+    });
   }
 
   private async isSignUpEnabled(): Promise<boolean> {
@@ -825,6 +843,8 @@ export class SignInUpService {
     newUserParams: SignInUpNewUserPayload,
     authParams: AuthProviderWithPasswordType['authParams'],
   ) {
+    this.assertAllowedEmailDomain(newUserParams.email);
+
     const userExists = await this.userService.findUserByEmail(
       newUserParams.email,
     );

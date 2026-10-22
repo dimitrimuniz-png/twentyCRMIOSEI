@@ -52,6 +52,29 @@ describe('SsoService', () => {
     });
   });
 
+  it('registers the OIDC callback from SERVER_URL and the provider id', async () => {
+    const Client = jest.fn().mockImplementation((metadata) => metadata);
+
+    jest.spyOn(service, 'discoverOidcIssuer').mockResolvedValue({
+      Client,
+    } as never);
+
+    await service.getOidcClient({
+      id: 'idp-id',
+      issuer: 'https://accounts.google.com',
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+    });
+
+    expect(Client).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_id: 'client-id',
+        redirect_uris: ['http://localhost:3000/auth/oidc/callback/idp-id'],
+        response_types: ['code'],
+      }),
+    );
+  });
+
   it('rejects an unknown identity provider', async () => {
     identityProviderRepository.findOne.mockResolvedValue(null);
 

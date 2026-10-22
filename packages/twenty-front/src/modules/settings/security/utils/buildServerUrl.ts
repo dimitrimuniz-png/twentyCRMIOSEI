@@ -1,3 +1,6 @@
+export const buildOidcCallbackPath = (identityProviderId: string): string =>
+  `/auth/oidc/callback/${identityProviderId}`;
+
 export const buildServerUrl = ({
   serverUrl,
   pathname,

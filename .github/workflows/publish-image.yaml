@@ -7,6 +7,7 @@ on:
       - main
       - cursor/self-hosted-agpl-features-90c5
       - cursor/multi-arch-image-1e49
+      - cursor/prod-aws-deploy-3051
     tags:
       - 'v*'
 

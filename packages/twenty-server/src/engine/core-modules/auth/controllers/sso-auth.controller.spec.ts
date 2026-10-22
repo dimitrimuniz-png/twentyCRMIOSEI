@@ -12,6 +12,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { type Response } from 'express';
 import { type Repository } from 'typeorm';
 
+import { AuthExceptionCode } from 'src/engine/core-modules/auth/auth.exception';
 import { SsoAuthController } from 'src/engine/core-modules/auth/controllers/sso-auth.controller';
 import { AuthRestApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-rest-api-exception.filter';
 import { EnterpriseFeaturesEnabledGuard } from 'src/engine/core-modules/auth/guards/enterprise-features-enabled.guard';
@@ -59,6 +60,7 @@ describe('SsoAuthController', () => {
   let controller: SsoAuthController;
   let authService: jest.Mocked<AuthService>;
   let userService: jest.Mocked<UserService>;
+  let twentyConfigService: { get: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -100,7 +102,13 @@ describe('SsoAuthController', () => {
         {
           provide: TwentyConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('http://localhost:3000'),
+            get: jest.fn((key: string) => {
+              if (key === 'SSO_ALLOWED_EMAIL_DOMAINS') {
+                return [];
+              }
+
+              return 'http://localhost:3000';
+            }),
           },
         },
         { provide: GuardRedirectService, useValue: {} },
@@ -131,6 +139,7 @@ describe('SsoAuthController', () => {
     controller = module.get(SsoAuthController);
     authService = module.get(AuthService);
     userService = module.get(UserService);
+    twentyConfigService = module.get(TwentyConfigService);
   });
 
   it('creates a new SSO user with an already verified email', async () => {
@@ -217,5 +226,62 @@ describe('SsoAuthController', () => {
     await controller.samlAuthCallback(buildSamlRequest(), buildResponse());
 
     expect(userService.markEmailAsVerified).not.toHaveBeenCalled();
+  });
+
+  it('rejects an SSO callback when the email domain is outside the allowlist', async () => {
+    twentyConfigService.get.mockImplementation((key: string) => {
+      if (key === 'SSO_ALLOWED_EMAIL_DOMAINS') {
+        return ['iosei.co', 'mstecnologia.med.br', 'i-rad.co'];
+      }
+
+      return 'http://localhost:3000';
+    });
+
+    const response = buildResponse();
+
+    await expect(
+      controller.oidcAuthCallback(
+        {
+          user: {
+            identityProviderId: IDENTITY_PROVIDER_ID,
+            email: 'Person@gmail.com',
+          },
+        } as SamlRequest,
+        response,
+      ),
+    ).rejects.toMatchObject({
+      message: 'Email domain is not allowed',
+      code: AuthExceptionCode.FORBIDDEN_EXCEPTION,
+    });
+
+    expect(authService.signInUp).not.toHaveBeenCalled();
+    expect(response.redirect).not.toHaveBeenCalled();
+  });
+
+  it('accepts an SSO callback for an allowed domain', async () => {
+    twentyConfigService.get.mockImplementation((key: string) => {
+      if (key === 'SSO_ALLOWED_EMAIL_DOMAINS') {
+        return ['iosei.co', 'mstecnologia.med.br', 'i-rad.co'];
+      }
+
+      return 'http://localhost:3000';
+    });
+    userService.findUserByEmail.mockResolvedValue(null);
+    authService.signInUp.mockResolvedValue({
+      workspace,
+      user: { id: 'new-user-id', email: 'ana@iosei.co' } as UserEntity,
+    } as Awaited<ReturnType<AuthService['signInUp']>>);
+
+    await controller.samlAuthCallback(
+      {
+        user: {
+          identityProviderId: IDENTITY_PROVIDER_ID,
+          email: 'Ana@Iosei.co',
+        },
+      } as SamlRequest,
+      buildResponse(),
+    );
+
+    expect(authService.signInUp).toHaveBeenCalled();
   });
 });

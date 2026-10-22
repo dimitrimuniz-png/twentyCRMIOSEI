@@ -5,6 +5,7 @@ import passport from 'passport';
 import { Strategy } from 'passport-strategy';
 import { isDefined } from 'twenty-shared/utils';
 
+import { isOidcEmailVerifiedClaim } from 'src/engine/core-modules/auth/utils/is-oidc-email-verified-claim.util';
 import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 
 type OidcStrategyInstance = Strategy & {
@@ -70,6 +71,12 @@ class OidcPassportStrategy extends Strategy {
 
       if (typeof email !== 'string') {
         strategy.fail('OIDC response did not include an email', 401);
+
+        return;
+      }
+
+      if (!isOidcEmailVerifiedClaim(userInfo.email_verified)) {
+        strategy.fail('OIDC email is not verified', 401);
 
         return;
       }

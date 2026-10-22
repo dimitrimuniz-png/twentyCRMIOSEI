@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
+import { useBuildServerUrl } from '@/settings/security/hooks/useBuildServerUrl';
+import { buildOidcCallbackPath } from '@/settings/security/utils/buildServerUrl';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -21,6 +23,7 @@ import {
 export const SettingsSecuritySsoIdentifyProvider = () => {
   const { t } = useLingui();
   const { enqueueToast } = useToast();
+  const buildServerUrl = useBuildServerUrl();
   const providers = useQuery(GetSsoIdentityProvidersDocument);
   const [createSaml] = useMutation(CreateSamlIdentityProviderDocument);
   const [createOidc] = useMutation(CreateOidcIdentityProviderDocument);
@@ -89,6 +92,11 @@ export const SettingsSecuritySsoIdentifyProvider = () => {
             {providers.data?.getSSOIdentityProviders.map((provider) => (
               <li key={provider.id}>
                 {provider.name} ({provider.type}) — {provider.status}
+                {provider.type === IdentityProviderType.OIDC && (
+                  <div>
+                    {buildServerUrl(buildOidcCallbackPath(provider.id))}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

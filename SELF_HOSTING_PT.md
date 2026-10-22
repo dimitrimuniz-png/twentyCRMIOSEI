@@ -74,6 +74,10 @@ SAML pede o certificado X.509 do IdP, a URL de entrada (SSO URL) e o identificad
 
 Um teste de integração contra um Keycloak em container ainda não faz parte deste repositório. Para um ensaio manual, suba o Keycloak na mesma rede Docker, crie um realm, um client SAML e um client OIDC com redirect para `${SERVER_URL}`, e cadastre os dois na tela de SSO. O login por e-mail continua disponível.
 
-## 5. O que esta imagem não liga
+## 5. Produção na AWS
+
+O compose de produção, o env de exemplo e o script da EC2 estão descritos em `DEPLOY_AWS_HANDOFF.md`. O login Google dos domínios `iosei.co`, `mstecnologia.med.br` e `i-rad.co` está em `docs/SSO_GOOGLE_PT.md`. A restrição é a variável `SSO_ALLOWED_EMAIL_DOMAINS`. Domínio aprovado do workspace não bloqueia e-mail de fora.
+
+## 6. O que esta imagem não liga
 
 Sem chave enterprise válida o servidor continua recusando workspaces acima do limite, assentos extras de provedor de IA customizado e o envio por AWS SES. Isso é intencional.

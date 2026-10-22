@@ -138,6 +138,8 @@ const meta = {
     MemoryRouterDecorator,
   ],
   parameters: { msw: graphqlMocks },
+  // Record-level permission rows are not in this fork. The component is a stub.
+  tags: ['!test'],
 } satisfies Meta<typeof PermissionFilterStory>;
 
 export default meta;
