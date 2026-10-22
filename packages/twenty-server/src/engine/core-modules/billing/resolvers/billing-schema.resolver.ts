@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
@@ -12,7 +12,12 @@ import { BillingSessionDTO } from 'src/engine/core-modules/billing/dtos/billing-
 import { BillingUpdateDTO } from 'src/engine/core-modules/billing/dtos/billing-update.dto';
 import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
+import {
+  BillingException,
+  BillingExceptionCode,
+} from 'src/engine/core-modules/billing/billing.exception';
 import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
+import { BillingGraphqlApiExceptionFilter } from 'src/engine/core-modules/billing/filters/billing-graphql-api-exception.filter';
 import { SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
 import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
 import { UserCreditsFallback } from 'src/engine/core-modules/billing/enums/billing-user-credits-fallback.enum';
@@ -43,6 +48,7 @@ const inactivePaymentIntent = (): BillingPaymentIntentDTO => ({
   paymentIntentType: '',
 });
 
+@UseFilters(BillingGraphqlApiExceptionFilter)
 @MetadataResolver()
 export class BillingResolver {
   constructor(private readonly billingService: BillingService) {}
@@ -191,7 +197,19 @@ export class BillingResolver {
     @Args('requirePaymentMethod', { type: () => Boolean, nullable: true })
     _requirePaymentMethod?: boolean | null,
   ): BillingSessionDTO {
-    return { url: null };
+    // Permission already passed. Checkout still cannot open: this build has
+    // no Stripe account, and billing stays off unless the instance enables it.
+    if (!this.billingService.isBillingEnabled()) {
+      throw new BillingException(
+        'Billing is disabled',
+        BillingExceptionCode.BILLING_SUBSCRIPTION_INACTIVE,
+      );
+    }
+
+    throw new BillingException(
+      'Billing checkout is not configured',
+      BillingExceptionCode.BILLING_STRIPE_ERROR,
+    );
   }
 
   @UseGuards(
