@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
+import { isNonEmptyString } from '@sniptt/guards';
 
 import { type StorageDriver } from 'src/engine/core-modules/file-storage/drivers/interfaces/storage-driver.interface';
 import { StorageDriverType } from 'src/engine/core-modules/file-storage/interfaces/file-storage.interface';
@@ -76,10 +77,13 @@ export class FileStorageDriverFactory extends DriverFactoryBase<StorageDriver> {
 
         rawDriver = new S3Driver({
           bucketName: bucketName ?? '',
-          endpoint: endpoint,
+          // A blank env value must not override the SDK's regional AWS endpoint.
+          endpoint: isNonEmptyString(endpoint) ? endpoint : undefined,
           presignEnabled,
-          presignEndpoint: presignEndpointOverride || undefined,
-          credentials: accessKeyId
+          presignEndpoint: isNonEmptyString(presignEndpointOverride)
+            ? presignEndpointOverride
+            : undefined,
+          credentials: isNonEmptyString(accessKeyId)
             ? { accessKeyId, secretAccessKey }
             : fromNodeProviderChain({ clientConfig: { region } }),
           forcePathStyle: true,

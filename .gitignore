@@ -1,4 +1,6 @@
 **/**/.env
+.env.production
+**/.env.production
 .DS_Store
 /.idea
 .claude/*
