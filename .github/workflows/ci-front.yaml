@@ -9,8 +9,10 @@ on:
 permissions:
   contents: read
 
+# The previous group is held by a run queued on ubuntu-latest-8-cores, a
+# label this fork does not have. A new group lets later commits start.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
+  group: ci-front-${{ github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
@@ -41,7 +43,7 @@ jobs:
       (github.event_name == 'push' ||
       needs.changed-files-check.outputs.any_changed == 'true')
     timeout-minutes: 30
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest
     env:
       REACT_APP_SERVER_BASE_URL: http://localhost:3000
     steps:
@@ -186,9 +188,9 @@ jobs:
     needs: changed-files-check
     if: needs.changed-files-check.outputs.any_changed == 'true'
     timeout-minutes: 30
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest
     env:
-      NODE_OPTIONS: "--max-old-space-size=10240"
+      NODE_OPTIONS: "--max-old-space-size=6144"
       ANALYZE: "true"
     steps:
       - name: Fetch custom Github Actions and base branch history
