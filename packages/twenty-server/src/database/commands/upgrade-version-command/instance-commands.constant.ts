@@ -251,6 +251,8 @@ import { AddExcludePrivateEventsToCalendarChannelFastInstanceCommand } from 'src
 import { AddPeriodMaxSeatsToBillingSubscriptionFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-50/2-50-instance-command-fast-1792410699010-add-period-max-seats-to-billing-subscription';
 import { DropBillingMeterTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-50/2-50-instance-command-fast-1792480059403-drop-billing-meter-table';
 import { AddContentSha256ToFileFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581115000-add-content-sha256-to-file';
+import { AddSsoIdentityProviderTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581116000-add-sso-identity-provider-table';
+import { AddWorkspaceAuditLogTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581117000-add-workspace-audit-log-table';
 
 export const INSTANCE_COMMANDS = [
   AddViewFieldGroupIdIndexOnViewFieldFastInstanceCommand,
@@ -504,4 +506,6 @@ export const INSTANCE_COMMANDS = [
   AddPeriodMaxSeatsToBillingSubscriptionFastInstanceCommand,
   DropBillingMeterTableFastInstanceCommand,
   AddContentSha256ToFileFastInstanceCommand,
+  AddSsoIdentityProviderTableFastInstanceCommand,
+  AddWorkspaceAuditLogTableFastInstanceCommand,
 ];

@@ -1,17 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type NestMiddleware } from '@nestjs/common';
 
-export class ApiRequestContextMiddleware {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+import { type NextFunction, type Request, type Response } from 'express';
+
+// Usage metering shipped with the commercial module. The middleware stays on
+// the API routes, so it still has to hand the request to the next handler.
+export class ApiRequestContextMiddleware implements NestMiddleware {
+  use(_request: Request, _response: Response, next: NextFunction): void {
+    next();
   }
-  [key: string]: RemovedCommercial;
 }
