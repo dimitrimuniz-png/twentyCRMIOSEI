@@ -1,11 +1,8 @@
-/* @license Enterprise */
-
 import {
-  type ApplicationBilling,
   isRecurringCharge,
   type RecurringCharge,
 } from 'twenty-shared/application';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isPlainObject } from 'twenty-shared/utils';
 
 import { type FlatApplicationCacheMaps } from 'src/engine/core-modules/application/types/flat-application-cache-maps.type';
 
@@ -15,60 +12,53 @@ export type DeclaredRecurringCharge = {
   charge: RecurringCharge;
 };
 
-export type RejectedRecurringCharge = {
+export type RejectedRecurringChargeDeclaration = {
   applicationId: string;
   chargeKey: string;
   reason: string;
 };
 
-export type CollectDeclaredRecurringChargesResult = {
-  declaredCharges: DeclaredRecurringCharge[];
-  rejectedCharges: RejectedRecurringCharge[];
-};
+const MALFORMED_RECURRING_CHARGE_REASON =
+  'malformed or out-of-bounds recurring charge declaration';
 
-type CollectDeclaredRecurringChargesParams = {
-  flatApplicationMaps: FlatApplicationCacheMaps;
-};
-
-// `billing` is jsonb persisted without a shape check, so declarations are validated here, at the point of debit
+// Declarations arrive as untrusted jsonb. An array is an object, so it must
+// not be walked with Object.entries or each element would be billed by index.
 export const collectDeclaredRecurringCharges = ({
   flatApplicationMaps,
-}: CollectDeclaredRecurringChargesParams): CollectDeclaredRecurringChargesResult => {
+}: {
+  flatApplicationMaps: FlatApplicationCacheMaps;
+}): {
+  declaredCharges: DeclaredRecurringCharge[];
+  rejectedCharges: RejectedRecurringChargeDeclaration[];
+} => {
   const declaredCharges: DeclaredRecurringCharge[] = [];
-  const rejectedCharges: RejectedRecurringCharge[] = [];
+  const rejectedCharges: RejectedRecurringChargeDeclaration[] = [];
 
   for (const application of Object.values(flatApplicationMaps.byId)) {
     if (!isDefined(application) || isDefined(application.deletedAt)) {
       continue;
     }
 
-    // Undefined until the upgrade that adds the column has run.
-    const billing: ApplicationBilling = application.billing ?? {};
-    const recurring = billing.recurring;
+    const recurring = application.billing?.recurring;
 
-    // Arrays are typeof 'object': Object.entries would bill each element by index
-    if (
-      !isDefined(recurring) ||
-      typeof recurring !== 'object' ||
-      Array.isArray(recurring)
-    ) {
+    if (!isPlainObject(recurring)) {
       continue;
     }
 
     for (const [chargeKey, charge] of Object.entries(recurring)) {
-      if (isRecurringCharge(charge)) {
-        declaredCharges.push({
+      if (!isRecurringCharge(charge)) {
+        rejectedCharges.push({
           applicationId: application.id,
           chargeKey,
-          charge,
+          reason: MALFORMED_RECURRING_CHARGE_REASON,
         });
         continue;
       }
 
-      rejectedCharges.push({
+      declaredCharges.push({
         applicationId: application.id,
         chargeKey,
-        reason: 'malformed or out-of-bounds recurring charge declaration',
+        charge,
       });
     }
   }

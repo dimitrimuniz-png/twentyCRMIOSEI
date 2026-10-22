@@ -1,11 +1,10 @@
-/* @license Enterprise */
-
 import { type RowLevelPermissionPredicateGroupLogicalOperator } from '@/types/RowLevelPermissionPredicateGroupLogicalOperator';
 
 export type RowLevelPermissionPredicateGroup = {
+  __typename?: 'RowLevelPermissionPredicateGroup';
   id: string;
-  logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
   objectMetadataId: string;
+  logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
   parentRowLevelPermissionPredicateGroupId: string | null;
   positionInRowLevelPermissionPredicateGroup: number | null;
   roleId: string;

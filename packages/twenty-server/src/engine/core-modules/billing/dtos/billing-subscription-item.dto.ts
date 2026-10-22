@@ -1,6 +1,4 @@
-/* @license Enterprise */
-
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, Float, ObjectType } from '@nestjs/graphql';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { BillingProductDTO } from 'src/engine/core-modules/billing/dtos/billing-product.dto';
@@ -13,17 +11,17 @@ export class BillingSubscriptionItemDTO {
   @Field(() => Boolean)
   hasReachedCurrentPeriodCap: boolean;
 
-  @Field(() => Number, { nullable: true })
-  quantity: number | null;
+  @Field(() => Float, { nullable: true })
+  quantity?: number | null;
 
   @Field(() => String)
   stripePriceId: string;
 
-  @Field(() => Number, { nullable: true })
-  unitAmount: number | null;
+  @Field(() => Float, { nullable: true })
+  unitAmount?: number | null;
 
-  @Field(() => Number, { nullable: true })
-  creditAmount: number | null;
+  @Field(() => Float, { nullable: true })
+  creditAmount?: number | null;
 
   @Field(() => BillingProductDTO)
   billingProduct: BillingProductDTO;

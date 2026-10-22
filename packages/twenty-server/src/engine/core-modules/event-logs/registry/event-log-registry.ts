@@ -1,120 +1,122 @@
-/* @license Enterprise */
-
 import { EventLogTable } from 'twenty-shared/types';
 
 import { BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
 import { type EventLogRecord } from 'src/engine/core-modules/event-logs/dtos/event-log-result.dto';
-import {
-  type ApplicationLogRow,
-  type ObjectEventRow,
-  type PageviewRow,
-  type UsageEventRow,
-} from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
 
-type StoredRow<TRow> = Partial<Omit<TRow, 'type' | 'version'>> & {
-  timestamp: string;
+type EventLogRow = Record<string, unknown>;
+
+type NormalizedEventLog = Omit<EventLogRecord, 'timestamp'> & {
+  timestamp?: Date;
 };
-
-type StoredEventRow = StoredRow<ObjectEventRow & Pick<PageviewRow, 'name'>>;
 
 export type EventLogTypeDefinition = {
   clickHouseTable: string;
-  // null = free on every plan; otherwise the required billing entitlement
-  requiresEntitlement: BillingEntitlementKey | null;
   eventFieldName: string;
-  filterableFields: string[];
-  // The shared dispatcher stamps `timestamp`; each type maps only its own fields.
-  normalize: (
-    row: Record<string, unknown>,
-  ) => Omit<EventLogRecord, 'timestamp'>;
+  requiresEntitlement: BillingEntitlementKey | null;
+  normalize: (row: EventLogRow) => NormalizedEventLog;
 };
 
-const normalizeGenericEvent =
-  (eventFieldName: 'event' | 'name') =>
-  (row: Record<string, unknown>): Omit<EventLogRecord, 'timestamp'> => {
-    const record = row as StoredEventRow;
-
-    return {
-      event: record[eventFieldName] ?? '',
-      userId: record.userId ?? undefined,
-      properties: record.properties,
-      recordId: record.recordId,
-      objectMetadataId: record.objectMetadataId,
-      isCustom: record.isCustom,
-    };
-  };
+const asRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 
 export const EVENT_LOG_TYPES: Record<EventLogTable, EventLogTypeDefinition> = {
   [EventLogTable.WORKSPACE_EVENT]: {
     clickHouseTable: 'workspaceEvent',
-    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
     eventFieldName: 'event',
-    filterableFields: ['event', 'userId'],
-    normalize: normalizeGenericEvent('event'),
+    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
+    normalize: (row) => ({
+      event: String(row.event ?? ''),
+      userId: row.userId as string | undefined,
+      properties: asRecord(row.properties),
+    }),
   },
   [EventLogTable.PAGEVIEW]: {
     clickHouseTable: 'pageview',
-    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
     eventFieldName: 'name',
-    filterableFields: ['userId'],
-    normalize: normalizeGenericEvent('name'),
+    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
+    normalize: (row) => ({
+      event: String(row.name ?? ''),
+      userId: row.userId as string | undefined,
+      properties: asRecord(row.properties),
+    }),
   },
   [EventLogTable.OBJECT_EVENT]: {
     clickHouseTable: 'objectEvent',
-    requiresEntitlement: null,
     eventFieldName: 'event',
-    filterableFields: ['event', 'objectMetadataId', 'recordId', 'userId'],
-    normalize: normalizeGenericEvent('event'),
+    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
+    normalize: (row) => ({
+      event: String(row.event ?? ''),
+      userId: row.userId as string | undefined,
+      recordId: row.recordId as string | undefined,
+      objectMetadataId: row.objectMetadataId as string | undefined,
+      isCustom:
+        row.isCustom === true || row.isCustom === 1 || row.isCustom === '1',
+      properties: asRecord(row.properties),
+    }),
   },
   [EventLogTable.USAGE_EVENT]: {
     clickHouseTable: 'usageEvent',
-    requiresEntitlement: BillingEntitlementKey.AUDIT_LOGS,
     eventFieldName: 'resourceType',
-    filterableFields: [],
-    normalize: (row) => {
-      const record = row as StoredRow<UsageEventRow>;
-
-      return {
-        event: record.resourceType ?? '',
-        userId: record.userWorkspaceId,
-        properties: {
-          ...(record.metadata ?? {}),
-          operationType: record.operationType,
-          quantity: record.quantity,
-          unit: record.unit,
-          creditsUsedMicro: record.creditsUsedMicro,
-          resourceId: record.resourceId,
-          resourceContext: record.resourceContext,
-        },
-      };
-    },
+    requiresEntitlement: BillingEntitlementKey.USAGE_LIMIT,
+    normalize: (row) => ({
+      event: String(row.resourceType ?? ''),
+      userId: row.userWorkspaceId as string | undefined,
+      properties: {
+        operationType: row.operationType,
+        quantity: row.quantity,
+        unit: row.unit,
+        creditsUsedMicro: row.creditsUsedMicro,
+        resourceId: row.resourceId,
+        resourceContext: row.resourceContext,
+        ...asRecord(row.metadata),
+      },
+    }),
   },
   [EventLogTable.APPLICATION_LOG]: {
     clickHouseTable: 'applicationLog',
-    requiresEntitlement: null,
     eventFieldName: 'logicFunctionName',
-    filterableFields: [
-      'level',
-      'logicFunctionId',
-      'applicationId',
-      'executionId',
-    ],
-    normalize: (row) => {
-      const record = row as StoredRow<ApplicationLogRow>;
-
-      return {
-        event: record.logicFunctionName ?? '',
-        properties: {
-          level: record.level,
-          message: record.message,
-          executionId: record.executionId,
-          logicFunctionId: record.logicFunctionId,
-          applicationId: record.applicationId,
-        },
-      };
-    },
+    requiresEntitlement: null,
+    normalize: (row) => ({
+      event: String(row.logicFunctionName ?? ''),
+      properties: {
+        level: row.level,
+        message: row.message,
+        executionId: row.executionId,
+        applicationId: row.applicationId,
+        logicFunctionId: row.logicFunctionId,
+      },
+    }),
   },
 };
 
 export const getClickHouseTableName = (table: EventLogTable): string =>
   EVENT_LOG_TYPES[table].clickHouseTable;
+
+export const EVENT_LOG_FILTERABLE_FIELDS: Record<
+  EventLogTable,
+  ReadonlySet<string>
+> = {
+  [EventLogTable.WORKSPACE_EVENT]: new Set(['event', 'userId', 'workspaceId']),
+  [EventLogTable.PAGEVIEW]: new Set(['name', 'userId', 'workspaceId']),
+  [EventLogTable.OBJECT_EVENT]: new Set([
+    'event',
+    'userId',
+    'recordId',
+    'objectMetadataId',
+    'workspaceId',
+  ]),
+  [EventLogTable.USAGE_EVENT]: new Set([
+    'resourceType',
+    'userWorkspaceId',
+    'userId',
+    'workspaceId',
+  ]),
+  [EventLogTable.APPLICATION_LOG]: new Set([
+    'level',
+    'message',
+    'logicFunctionName',
+    'workspaceId',
+  ]),
+};

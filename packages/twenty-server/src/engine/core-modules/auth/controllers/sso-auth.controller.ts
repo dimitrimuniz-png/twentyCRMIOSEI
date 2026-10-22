@@ -1,50 +1,27 @@
-/* @license Enterprise */
-
 import {
   Controller,
   Get,
+  Param,
   Post,
   Req,
   Res,
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 
-import { generateServiceProviderMetadata } from '@node-saml/node-saml';
-import { isNonEmptyString } from '@sniptt/guards';
-import { Response } from 'express';
-import {
-  ApiPath,
-  AppPath,
-  ConnectedAccountProvider,
-} from 'twenty-shared/types';
-import { assertIsDefinedOrThrow } from 'twenty-shared/utils';
-import { Repository } from 'typeorm';
+import { type Response } from 'express';
+import { ApiPath } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
-import {
-  AuthException,
-  AuthExceptionCode,
-} from 'src/engine/core-modules/auth/auth.exception';
 import { AuthRestApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-rest-api-exception.filter';
-import { EnterpriseFeaturesEnabledGuard } from 'src/engine/core-modules/auth/guards/enterprise-features-enabled.guard';
 import { OidcAuthGuard } from 'src/engine/core-modules/auth/guards/oidc-auth.guard';
 import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.guard';
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
-import { OidcRequest } from 'src/engine/core-modules/auth/strategies/oidc.auth.strategy';
-import { SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
+import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
-import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
-import { GuardRedirectService } from 'src/engine/core-modules/guard-redirect/services/guard-redirect.service';
-import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
-import {
-  IdentityProviderType,
-  SsoIdentityProviderStatus,
-  WorkspaceSsoIdentityProviderEntity,
-} from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
 import { AuthProviderEnum } from 'src/engine/core-modules/workspace/types/workspace.type';
-import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 
@@ -52,229 +29,132 @@ import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 @UseFilters(AuthRestApiExceptionFilter)
 export class SsoAuthController {
   constructor(
-    private readonly loginTokenService: LoginTokenService,
     private readonly authService: AuthService,
-    private readonly guardRedirectService: GuardRedirectService,
-    private readonly workspaceDomainsService: WorkspaceDomainsService,
     private readonly userService: UserService,
-    private readonly ssoService: SsoService,
-    @InjectRepository(WorkspaceSsoIdentityProviderEntity)
-    private readonly workspaceSsoIdentityProviderRepository: Repository<WorkspaceSsoIdentityProviderEntity>,
+    private readonly loginTokenService: LoginTokenService,
+    private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
-  @Get('saml/metadata/:identityProviderId')
-  @UseGuards(
-    EnterpriseFeaturesEnabledGuard,
-    PublicEndpointGuard,
-    NoPermissionGuard,
-  )
-  // oxlint-disable-next-line typescript/no-explicit-any
-  async generateMetadata(@Req() req: any): Promise<string | void> {
-    return generateServiceProviderMetadata({
-      wantAssertionsSigned: true,
-      issuer: this.ssoService.buildIssuerURL({
-        id: req.params.identityProviderId,
-        type: IdentityProviderType.SAML,
-      }),
-      callbackUrl: this.ssoService.buildCallbackUrl({
-        id: req.params.identityProviderId,
-        type: IdentityProviderType.SAML,
-      }),
-    });
-  }
-
-  @Get('oidc/login/:identityProviderId')
-  @UseGuards(
-    EnterpriseFeaturesEnabledGuard,
-    OidcAuthGuard,
-    PublicEndpointGuard,
-    NoPermissionGuard,
-  )
-  async oidcAuth() {
-    return;
-  }
-
   @Get('saml/login/:identityProviderId')
-  @UseGuards(
-    EnterpriseFeaturesEnabledGuard,
-    SamlAuthGuard,
-    PublicEndpointGuard,
-    NoPermissionGuard,
-  )
-  async samlAuth() {
+  @UseGuards(SamlAuthGuard, PublicEndpointGuard, NoPermissionGuard)
+  async samlAuth(): Promise<void> {
     return;
   }
 
-  @Get('oidc/callback')
-  @UseGuards(
-    EnterpriseFeaturesEnabledGuard,
-    OidcAuthGuard,
-    PublicEndpointGuard,
-    NoPermissionGuard,
-  )
-  async oidcAuthCallback(@Req() req: OidcRequest, @Res() res: Response) {
-    return await this.authCallback(req, res);
+  @Get('saml/metadata/:identityProviderId')
+  @UseGuards(PublicEndpointGuard, NoPermissionGuard)
+  async generateMetadata(
+    @Param('identityProviderId') identityProviderId: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    const serverUrl = this.twentyConfigService
+      .get('SERVER_URL')
+      .replace(/\/$/, '');
+    const entityId = escapeXml(
+      `${serverUrl}/auth/saml/metadata/${identityProviderId}`,
+    );
+    const assertionConsumerUrl = escapeXml(
+      `${serverUrl}/auth/saml/callback/${identityProviderId}`,
+    );
+
+    response.type('application/samlmetadata+xml').send(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<EntityDescriptor entityID="${entityId}" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+  <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" AuthnRequestsSigned="false" WantAssertionsSigned="true">
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${assertionConsumerUrl}" index="0" isDefault="true"/>
+  </SPSSODescriptor>
+</EntityDescriptor>`,
+    );
   }
 
   @Post('saml/callback/:identityProviderId')
-  @UseGuards(
-    EnterpriseFeaturesEnabledGuard,
-    SamlAuthGuard,
-    PublicEndpointGuard,
-    NoPermissionGuard,
-  )
-  async samlAuthCallback(@Req() req: SamlRequest, @Res() res: Response) {
-    try {
-      return await this.authCallback(req, res);
-    } catch (err) {
-      return new AuthException(
-        err.message ?? 'Access denied',
-        AuthExceptionCode.OAUTH_ACCESS_DENIED,
-      );
-    }
+  @UseGuards(SamlAuthGuard, PublicEndpointGuard, NoPermissionGuard)
+  async samlAuthCallback(
+    @Req() request: SamlRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.finishSsoSignIn(request, response);
   }
 
-  private async authCallback(req: OidcRequest | SamlRequest, res: Response) {
-    const workspaceIdentityProvider =
-      await this.workspaceSsoIdentityProviderRepository.findOne({
-        where: { id: req.user.identityProviderId },
-        relations: { workspace: true },
-      });
-
-    try {
-      if (
-        !workspaceIdentityProvider ||
-        workspaceIdentityProvider.status !== SsoIdentityProviderStatus.Active
-      ) {
-        throw new AuthException(
-          'Identity provider not found',
-          AuthExceptionCode.OAUTH_ACCESS_DENIED,
-        );
-      }
-
-      if (!req.user.email) {
-        throw new AuthException(
-          'Email not found from identity provider.',
-          AuthExceptionCode.OAUTH_ACCESS_DENIED,
-        );
-      }
-
-      const currentWorkspace = await this.authService.findWorkspaceForSignInUp({
-        workspaceId: workspaceIdentityProvider.workspaceId,
-        workspaceInviteHash: req.user.workspaceInviteHash,
-        email: req.user.email,
-        authProvider: AuthProviderEnum.SSO,
-      });
-
-      assertIsDefinedOrThrow(
-        currentWorkspace,
-        new AuthException(
-          'Workspace not found',
-          AuthExceptionCode.OAUTH_ACCESS_DENIED,
-        ),
-      );
-
-      if (currentWorkspace.id !== workspaceIdentityProvider.workspaceId) {
-        throw new AuthException(
-          'Identity provider does not belong to this workspace',
-          AuthExceptionCode.OAUTH_ACCESS_DENIED,
-        );
-      }
-
-      const oidcTokenClaims =
-        'oidcTokenClaims' in req.user ? req.user.oidcTokenClaims : undefined;
-
-      const connectedAccountProvider =
-        workspaceIdentityProvider.type === IdentityProviderType.SAML
-          ? ConnectedAccountProvider.SAML
-          : ConnectedAccountProvider.OIDC;
-
-      const { loginToken } = await this.generateLoginToken(
-        req.user,
-        currentWorkspace,
-        { oidcTokenClaims, connectedAccountProvider },
-      );
-
-      return res.redirect(
-        this.authService.computeRedirectURI({
-          loginToken: loginToken.token,
-          workspace: currentWorkspace,
-        }),
-      );
-    } catch (error) {
-      return res.redirect(
-        this.guardRedirectService.getRedirectErrorUrlAndCaptureExceptions({
-          error,
-          workspace:
-            this.workspaceDomainsService.getSubdomainAndCustomDomainFromWorkspaceFallbackOnDefaultSubdomain(
-              workspaceIdentityProvider?.workspace,
-            ),
-          pathname: AppPath.Verify,
-        }),
-      );
-    }
+  @Get('oidc/login/:identityProviderId')
+  @UseGuards(OidcAuthGuard, PublicEndpointGuard, NoPermissionGuard)
+  async oidcAuth(): Promise<void> {
+    return;
   }
 
-  private async generateLoginToken(
-    payload: { email: string; workspaceInviteHash?: string },
-    currentWorkspace: WorkspaceEntity,
-    ssoContext?: {
-      oidcTokenClaims?: Record<string, unknown>;
-      connectedAccountProvider: ConnectedAccountProvider;
-    },
-  ) {
-    const invitation = payload.email
-      ? await this.authService.findInvitationForSignInUp({
-          currentWorkspace,
-          email: payload.email,
-        })
-      : undefined;
+  @Get('oidc/callback/:identityProviderId')
+  @UseGuards(OidcAuthGuard, PublicEndpointGuard, NoPermissionGuard)
+  async oidcAuthCallback(
+    @Req() request: SamlRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.finishSsoSignIn(request, response);
+  }
 
-    const existingUser = await this.userService.findUserByEmail(payload.email);
-
-    const { userData } = this.authService.formatUserDataPayload(
-      { ...payload, isEmailAlreadyVerified: true },
+  private async finishSsoSignIn(
+    request: SamlRequest,
+    response: Response,
+  ): Promise<void> {
+    const email = request.user.email.toLowerCase();
+    const existingUser = await this.userService.findUserByEmail(email);
+    const formattedUser = this.authService.formatUserDataPayload(
+      { email, isEmailAlreadyVerified: true },
       existingUser,
     );
-
-    await this.authService.checkAccessForSignIn({
-      userData,
-      invitation,
-      workspaceInviteHash: payload.workspaceInviteHash,
-      workspace: currentWorkspace,
+    const workspace = await this.authService.findWorkspaceForSignInUp({
+      authProvider: AuthProviderEnum.SSO,
+      email,
     });
-
-    const { workspace, user } = await this.authService.signInUp({
-      userData,
-      workspace: currentWorkspace,
-      invitation,
-      authParams: {
-        provider: AuthProviderEnum.SSO,
-      },
-    });
-
-    if (!user.isEmailVerified && !isNonEmptyString(user.passwordHash)) {
-      await this.userService.markEmailAsVerified(user.id);
-    }
-
-    if (ssoContext) {
-      await this.authService.createSsoConnectedAccountIfFeatureFlagIsOn({
-        workspaceId: workspace.id,
-        userId: user.id,
-        handle: payload.email.toLowerCase(),
-        authProvider: AuthProviderEnum.SSO,
-        oidcTokenClaims: ssoContext.oidcTokenClaims,
-        connectedAccountProvider: ssoContext.connectedAccountProvider,
-      });
-    }
-
-    return {
+    const invitation = isDefined(workspace)
+      ? await this.authService.findInvitationForSignInUp({
+          currentWorkspace: workspace,
+          email,
+        })
+      : undefined;
+    const signedIn = await this.authService.signInUp({
+      ...formattedUser,
       workspace,
-      loginToken: await this.loginTokenService.generateLoginToken(
-        user.email,
-        workspace.id,
-        AuthProviderEnum.SSO,
-      ),
-    };
+      invitation,
+      authParams: { provider: AuthProviderEnum.SSO },
+    });
+
+    if (
+      isDefined(existingUser) &&
+      existingUser.isEmailVerified === false &&
+      !isDefined(existingUser.passwordHash)
+    ) {
+      await this.userService.markEmailAsVerified(existingUser.id);
+    }
+
+    const loginToken = await this.loginTokenService.generateLoginToken(
+      email,
+      signedIn.workspace.id,
+      AuthProviderEnum.SSO,
+    );
+
+    response.redirect(
+      this.authService.computeRedirectURI({
+        loginToken: loginToken.token,
+        workspace: signedIn.workspace,
+      }),
+    );
   }
 }
+
+const escapeXml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&apos;';
+      default:
+        return character;
+    }
+  });

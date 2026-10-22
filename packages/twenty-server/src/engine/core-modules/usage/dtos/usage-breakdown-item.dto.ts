@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 import { Field, Float, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('UsageBreakdownItem')
@@ -8,7 +6,7 @@ export class UsageBreakdownItemDTO {
   key: string;
 
   @Field(() => String, { nullable: true })
-  label?: string;
+  label?: string | null;
 
   @Field(() => Float)
   creditsUsed: number;

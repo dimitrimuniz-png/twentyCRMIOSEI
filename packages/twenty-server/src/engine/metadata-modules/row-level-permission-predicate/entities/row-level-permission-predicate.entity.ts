@@ -1,10 +1,3 @@
-/* @license Enterprise */
-
-import {
-  RowLevelPermissionPredicate,
-  RowLevelPermissionPredicateOperand,
-  RowLevelPermissionPredicateValue,
-} from 'twenty-shared/types';
 import {
   Column,
   CreateDateColumn,
@@ -14,16 +7,17 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  Relation,
+  type Relation,
   UpdateDateColumn,
 } from 'typeorm';
+
+import { RowLevelPermissionPredicateOperand } from 'twenty-shared/types';
 
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate-group.entity';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
-import { JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
 
 @Entity({ name: 'rowLevelPermissionPredicate', schema: 'core' })
 @Index('IDX_RLPP_WORKSPACE_ID_ROLE_ID_OBJECT_METADATA_ID', [
@@ -32,15 +26,13 @@ import { JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/
   'objectMetadataId',
 ])
 @Index('IDX_RLPP_FIELD_METADATA_ID', ['fieldMetadataId'])
-@Index('IDX_RLPP_GROUP_ID', ['rowLevelPermissionPredicateGroupId'])
 @Index('IDX_RLPP_WORKSPACE_MEMBER_FIELD_METADATA_ID', [
   'workspaceMemberFieldMetadataId',
 ])
+@Index('IDX_RLPP_GROUP_ID', ['rowLevelPermissionPredicateGroupId'])
 export class RowLevelPermissionPredicateEntity
   extends SyncableEntity
-  implements
-    Required<RowLevelPermissionPredicateEntity>,
-    RowLevelPermissionPredicate
+  implements Required<RowLevelPermissionPredicateEntity>
 {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -48,46 +40,42 @@ export class RowLevelPermissionPredicateEntity
   @Column({ nullable: false, type: 'uuid' })
   fieldMetadataId: string;
 
-  @ManyToOne(() => FieldMetadataEntity, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => FieldMetadataEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'fieldMetadataId' })
   fieldMetadata: Relation<FieldMetadataEntity>;
 
   @Column({ nullable: false, type: 'uuid' })
   objectMetadataId: string;
 
-  @ManyToOne(() => ObjectMetadataEntity, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => ObjectMetadataEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'objectMetadataId' })
   objectMetadata: Relation<ObjectMetadataEntity>;
 
   @Column({
-    nullable: false,
     type: 'enum',
-    enum: Object.values(RowLevelPermissionPredicateOperand),
+    enum: RowLevelPermissionPredicateOperand,
     default: RowLevelPermissionPredicateOperand.CONTAINS,
   })
   operand: RowLevelPermissionPredicateOperand;
 
   @Column({ nullable: true, type: 'jsonb' })
-  value: JsonbProperty<RowLevelPermissionPredicateValue> | null;
+  value: Record<string, unknown> | string | number | boolean | string[] | null;
 
-  @Column({ nullable: true, type: 'text', default: null })
+  @Column({ nullable: true, type: 'text' })
   subFieldName: string | null;
 
   @Column({ nullable: true, type: 'uuid' })
   workspaceMemberFieldMetadataId: string | null;
 
-  @Column({ nullable: true, type: 'text', default: null })
-  workspaceMemberSubFieldName: string | null;
-
   @ManyToOne(() => FieldMetadataEntity, {
     onDelete: 'SET NULL',
+    nullable: true,
   })
   @JoinColumn({ name: 'workspaceMemberFieldMetadataId' })
   workspaceMemberFieldMetadata: Relation<FieldMetadataEntity> | null;
+
+  @Column({ nullable: true, type: 'text' })
+  workspaceMemberSubFieldName: string | null;
 
   @Column({ nullable: true, type: 'uuid' })
   rowLevelPermissionPredicateGroupId: string | null;
@@ -98,6 +86,20 @@ export class RowLevelPermissionPredicateEntity
   @Column({ nullable: false, type: 'uuid' })
   roleId: string;
 
+  @ManyToOne(() => RoleEntity, (role) => role.rowLevelPermissionPredicates, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'roleId' })
+  role: Relation<RoleEntity>;
+
+  @ManyToOne(
+    () => RowLevelPermissionPredicateGroupEntity,
+    (group) => group.rowLevelPermissionPredicates,
+    { onDelete: 'CASCADE', nullable: true },
+  )
+  @JoinColumn({ name: 'rowLevelPermissionPredicateGroupId' })
+  rowLevelPermissionPredicateGroup: Relation<RowLevelPermissionPredicateGroupEntity> | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
@@ -106,19 +108,4 @@ export class RowLevelPermissionPredicateEntity
 
   @DeleteDateColumn({ type: 'timestamptz' })
   deletedAt: Date | null;
-
-  @ManyToOne(() => RoleEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'roleId' })
-  role: Relation<RoleEntity>;
-
-  @ManyToOne(
-    () => RowLevelPermissionPredicateGroupEntity,
-    (rowLevelPermissionPredicateGroup) =>
-      rowLevelPermissionPredicateGroup.rowLevelPermissionPredicates,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
-  @JoinColumn({ name: 'rowLevelPermissionPredicateGroupId' })
-  rowLevelPermissionPredicateGroup: Relation<RowLevelPermissionPredicateGroupEntity> | null;
 }

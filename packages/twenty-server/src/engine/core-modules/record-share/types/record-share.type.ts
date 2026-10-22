@@ -1,7 +1,16 @@
-/* @license Enterprise */
+import {
+  type RecordShareAccessLevel,
+  type RecordSharePrincipalType,
+  type RecordShareRowCause,
+} from 'twenty-shared/types';
 
-import { type RecordShareInput } from 'src/engine/core-modules/record-share/types/record-share-input.type';
-
-export type RecordShare = RecordShareInput & {
+export type RecordShare = {
   id: string;
+  recordId: string;
+  objectMetadataId: string;
+  principalId: string;
+  principalType: RecordSharePrincipalType;
+  accessLevel: RecordShareAccessLevel;
+  rowCause: RecordShareRowCause;
+  sourceId: string;
 };

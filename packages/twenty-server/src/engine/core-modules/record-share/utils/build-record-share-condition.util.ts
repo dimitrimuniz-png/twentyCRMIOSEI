@@ -1,56 +1,53 @@
-/* @license Enterprise */
-
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from 'crypto';
 
 import { type RecordShareAccessLevel } from 'twenty-shared/types';
-import { type ObjectLiteral } from 'typeorm';
 
 import { buildPostgresSafeAlias } from 'src/engine/twenty-orm/sql/utils/build-postgres-safe-alias.util';
-import { escapeIdentifier } from 'src/engine/workspace-manager/workspace-migration/utils/remove-sql-injection.util';
+import { type SqlCondition } from 'src/engine/twenty-orm/types/row-access-policy.type';
 
 export const buildRecordShareCondition = ({
   tableAlias,
-  recordShareTableExpression,
   objectMetadataId,
   principalIds,
   accessLevels,
+  recordShareTableExpression,
   isUncorrelated = false,
 }: {
   tableAlias: string;
-  recordShareTableExpression: string;
   objectMetadataId: string;
   principalIds: string[];
   accessLevels: RecordShareAccessLevel[];
+  recordShareTableExpression: string;
   isUncorrelated?: boolean;
-}): { sql: string; parameters: ObjectLiteral } => {
-  const parameterSuffix = randomBytes(5).toString('hex');
-  const objectMetadataIdParameterName = `recordShareObjectMetadataId_${parameterSuffix}`;
-  const principalIdsParameterName = `recordSharePrincipalIds_${parameterSuffix}`;
-  const accessLevelsParameterName = `recordShareAccessLevels_${parameterSuffix}`;
+}): SqlCondition => {
+  const shareAlias = buildPostgresSafeAlias(`${tableAlias}_recordShare`);
+  const objectKey = parameterKey('recordShareObject');
+  const principalKey = parameterKey('recordSharePrincipals');
+  const accessKey = parameterKey('recordShareAccess');
+  const where = [
+    `"${shareAlias}"."objectMetadataId" = :${objectKey}`,
+    `"${shareAlias}"."principalId" IN (:...${principalKey})`,
+    `"${shareAlias}"."accessLevel" IN (:...${accessKey})`,
+    `"${shareAlias}"."deletedAt" IS NULL`,
+  ].join(' AND ');
+  const parameters = {
+    [objectKey]: objectMetadataId,
+    [principalKey]: principalIds,
+    [accessKey]: accessLevels,
+  };
 
-  const recordShareAlias = escapeIdentifier(
-    buildPostgresSafeAlias(`${tableAlias}_recordShare`),
-  );
-
-  const recordId = `${escapeIdentifier(tableAlias)}."id"`;
-  const grantConditions = [
-    `${recordShareAlias}."objectMetadataId" = :${objectMetadataIdParameterName}`,
-    `${recordShareAlias}."principalId" = ANY(:${principalIdsParameterName})`,
-    `${recordShareAlias}."accessLevel" IN (:...${accessLevelsParameterName})`,
-    `${recordShareAlias}."deletedAt" IS NULL`,
-  ];
-  const fromRecordShares = `FROM ${recordShareTableExpression} AS ${recordShareAlias}`;
+  if (isUncorrelated) {
+    return {
+      sql: `"${tableAlias}"."id" = ANY(ARRAY(SELECT "${shareAlias}"."recordId" FROM ${recordShareTableExpression} AS "${shareAlias}" WHERE ${where}))`,
+      parameters,
+    };
+  }
 
   return {
-    // Uncorrelated, Postgres reads the grants once and can OR them with an
-    // indexed row filter instead of probing the share table for every row
-    sql: isUncorrelated
-      ? `${recordId} = ANY(ARRAY(SELECT ${recordShareAlias}."recordId" ${fromRecordShares} WHERE ${grantConditions.join(' AND ')}))`
-      : `EXISTS (SELECT 1 ${fromRecordShares} WHERE ${[`${recordShareAlias}."recordId" = ${recordId}`, ...grantConditions].join(' AND ')})`,
-    parameters: {
-      [objectMetadataIdParameterName]: objectMetadataId,
-      [principalIdsParameterName]: principalIds,
-      [accessLevelsParameterName]: accessLevels,
-    },
+    sql: `EXISTS (SELECT 1 FROM ${recordShareTableExpression} AS "${shareAlias}" WHERE "${shareAlias}"."recordId" = "${tableAlias}"."id" AND ${where})`,
+    parameters,
   };
 };
+
+const parameterKey = (prefix: string): string =>
+  `${prefix}${randomBytes(5).toString('hex')}`;

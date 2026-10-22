@@ -26,6 +26,7 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 import { BillingEntitlementDTO } from 'src/engine/core-modules/billing/dtos/billing-entitlement.dto';
 import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
+import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
 import { DomainValidRecords } from 'src/engine/core-modules/dns-manager/dtos/domain-valid-records';
 import { DnsManagerService } from 'src/engine/core-modules/dns-manager/services/dns-manager.service';
@@ -97,6 +98,7 @@ export class WorkspaceResolver {
     private readonly userWorkspaceService: UserWorkspaceService,
     private readonly twentyConfigService: TwentyConfigService,
     private readonly fileUrlService: FileUrlService,
+    private readonly billingService: BillingService,
     private readonly billingSubscriptionService: BillingSubscriptionService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly roleService: RoleService,
@@ -348,7 +350,7 @@ export class WorkspaceResolver {
     @Parent() workspace: WorkspaceEntity,
   ): Promise<BillingCustomerEntity | null> {
     if (!this.twentyConfigService.isBillingEnabled()) {
-      return null;
+      return this.billingService.getBillingCustomer(workspace.id);
     }
 
     return this.billingSubscriptionService.getBillingCustomer(workspace.id);
@@ -376,9 +378,10 @@ export class WorkspaceResolver {
 
   @ResolveField(() => [BillingEntitlementDTO])
   billingEntitlements(@Parent() workspace: WorkspaceEntity) {
-    return this.billingSubscriptionService.getWorkspaceEntitlements(
-      workspace.id,
-    );
+    const entitlements =
+      this.billingSubscriptionService.getWorkspaceEntitlements(workspace.id);
+
+    return Array.isArray(entitlements) ? entitlements : [];
   }
 
   @ResolveField(() => Boolean)

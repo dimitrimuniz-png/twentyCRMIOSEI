@@ -1,38 +1,37 @@
-/* @license Enterprise */
-
 import { formatDateTimeForClickHouse } from 'src/database/clickhouse/utils/format-date-time-for-clickhouse.util';
-import { type WorkspaceEventEnvelope } from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
+import { type UsageEventRow } from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
 import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
+
+const blank = (value: string | null | undefined): string => value ?? '';
 
 export const buildUsageEventEnvelopes = (
   workspaceId: string,
-  usageEvents: UsageEvent[],
-): WorkspaceEventEnvelope[] => {
-  const now = formatDateTimeForClickHouse(new Date());
-
-  return usageEvents.map((usageEvent) => ({
-    table: 'usageEvent',
-    row: {
-      timestamp: now,
+  events: UsageEvent[],
+): Array<{ table: 'usageEvent'; row: UsageEventRow }> =>
+  events.map((event) => {
+    const spenders = event.spenders ?? {};
+    const row = {
+      timestamp: formatDateTimeForClickHouse(new Date()),
       workspaceId,
-      periodStart: usageEvent.periodStart
-        ? formatDateTimeForClickHouse(usageEvent.periodStart)
-        : undefined,
-      userWorkspaceId: usageEvent.spenders?.userWorkspaceId ?? '',
-      apiKeyId: usageEvent.spenders?.apiKeyId ?? '',
-      applicationId: usageEvent.spenders?.applicationId ?? '',
-      agentId: usageEvent.spenders?.agentId ?? '',
-      workflowId: usageEvent.spenders?.workflowId ?? '',
-      logicFunctionId: usageEvent.spenders?.logicFunctionId ?? '',
-      resourceType: usageEvent.resourceType,
-      operationType: usageEvent.operationType,
-      quantity: usageEvent.quantity,
-      unit: usageEvent.unit,
-      creditsUsedMicro: usageEvent.creditsUsedMicro,
-      userCreditsUsedMicro: usageEvent.userCreditsUsedMicro ?? 0,
-      resourceId: usageEvent.resourceId ?? '',
-      resourceContext: usageEvent.resourceContext ?? '',
-      metadata: usageEvent.metadata ?? {},
-    },
-  }));
-};
+      userWorkspaceId: blank(spenders.userWorkspaceId),
+      apiKeyId: blank(spenders.apiKeyId),
+      applicationId: blank(spenders.applicationId),
+      agentId: blank(spenders.agentId),
+      workflowId: blank(spenders.workflowId),
+      logicFunctionId: blank(spenders.logicFunctionId),
+      resourceType: event.resourceType,
+      operationType: event.operationType,
+      quantity: event.quantity,
+      unit: event.unit,
+      creditsUsedMicro: event.creditsUsedMicro ?? 0,
+      userCreditsUsedMicro: event.userCreditsUsedMicro ?? 0,
+      resourceId: blank(event.resourceId),
+      resourceContext: blank(event.resourceContext),
+      metadata: {},
+      ...(event.periodStart
+        ? { periodStart: formatDateTimeForClickHouse(event.periodStart) }
+        : {}),
+    };
+
+    return { table: 'usageEvent' as const, row: row as UsageEventRow };
+  });

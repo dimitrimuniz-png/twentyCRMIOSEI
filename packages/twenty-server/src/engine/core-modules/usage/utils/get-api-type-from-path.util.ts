@@ -1,10 +1,17 @@
-/* @license Enterprise */
-
-import { API_TYPE_BY_PATH_PREFIX } from 'src/engine/core-modules/usage/constants/api-types.constant';
 import { type ApiType } from 'src/engine/core-modules/usage/types/api-type.type';
 
 export const getApiTypeFromPath = (path: string): ApiType | undefined => {
-  const [pathPrefix] = path.replace(/^\//, '').split('/');
+  if (path === '/graphql' || path.startsWith('/graphql/')) {
+    return 'CORE_GQL';
+  }
 
-  return API_TYPE_BY_PATH_PREFIX[pathPrefix];
+  if (path === '/mcp' || path.startsWith('/mcp/')) {
+    return 'MCP';
+  }
+
+  if (path === '/rest' || path.startsWith('/rest/')) {
+    return 'CORE_REST';
+  }
+
+  return undefined;
 };

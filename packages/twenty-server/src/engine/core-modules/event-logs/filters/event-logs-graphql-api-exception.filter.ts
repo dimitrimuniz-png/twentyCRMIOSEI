@@ -1,13 +1,18 @@
-/* @license Enterprise */
-
 import { Catch, type ExceptionFilter } from '@nestjs/common';
+import { GraphQLError } from 'graphql';
 
-import { EventLogsException } from 'src/engine/core-modules/event-logs/event-logs.exception';
-import { eventLogsGraphqlApiExceptionHandler } from 'src/engine/core-modules/event-logs/utils/event-logs-graphql-api-exception-handler.util';
+import {
+  EventLogsException,
+  EventLogsExceptionCode,
+} from 'src/engine/core-modules/event-logs/event-logs.exception';
 
 @Catch(EventLogsException)
 export class EventLogsGraphqlApiExceptionFilter implements ExceptionFilter {
-  catch(exception: EventLogsException) {
-    return eventLogsGraphqlApiExceptionHandler(exception);
+  catch(exception: EventLogsException): never {
+    throw new GraphQLError(exception.message, {
+      extensions: {
+        code: exception.code ?? EventLogsExceptionCode.INVALID_FIELD_FILTER,
+      },
+    });
   }
 }

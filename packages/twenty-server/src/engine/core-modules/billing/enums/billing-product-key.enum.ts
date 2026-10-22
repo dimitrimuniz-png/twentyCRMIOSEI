@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum BillingProductKey {
@@ -7,7 +5,4 @@ export enum BillingProductKey {
   RESOURCE_CREDIT = 'RESOURCE_CREDIT',
 }
 
-registerEnumType(BillingProductKey, {
-  name: 'BillingProductKey',
-  description: 'The different billing products available',
-});
+registerEnumType(BillingProductKey, { name: 'BillingProductKey' });

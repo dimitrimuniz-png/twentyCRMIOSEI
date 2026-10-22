@@ -1,238 +1,259 @@
-/* @license Enterprise */
+import {
+  MetadataReadability,
+  RecordShareAccessLevel,
+} from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
-import { resolveRecordShareGateKind } from 'src/engine/core-modules/record-share/utils/resolve-record-share-gate-kind.util';
-import { type RecordShareAccessLevel } from 'twenty-shared/types';
-import { assertUnreachable, isDefined } from 'twenty-shared/utils';
-
-import { MAX_INHERITED_READABILITY_DEPTH } from 'src/engine/core-modules/record-share/constants/max-inherited-readability-depth.constant';
-import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
-import { type InheritedReadabilityParent } from 'src/engine/core-modules/record-share/types/inherited-readability-parent.type';
-import { isOpenWhenDetachedObject } from 'src/engine/core-modules/record-share/utils/is-open-when-detached-object.util';
 import { resolveInheritedReadabilityParents } from 'src/engine/core-modules/record-share/utils/resolve-inherited-readability-parents.util';
+import { buildPostgresSafeAlias } from 'src/engine/twenty-orm/sql/utils/build-postgres-safe-alias.util';
 import { resolveObjectSharing } from 'src/engine/core-modules/record-share/utils/resolve-object-sharing.util';
-import { resolveRequiredRecordShareAccessLevels } from 'src/engine/core-modules/record-share/utils/resolve-required-record-share-access-levels.util';
+import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
+import { isMetadataWritePermitted } from 'src/engine/twenty-orm/utils/is-metadata-write-permitted.util';
+import { isObjectOperationPermitted } from 'src/engine/twenty-orm/utils/is-object-operation-permitted.util';
 import {
   type InheritedReadabilityParentExpression,
+  type RecordShareExpressionTarget,
   type RowAccessPolicy,
   type RowAccessPolicyContext,
   type RowAccessPolicyTarget,
 } from 'src/engine/twenty-orm/types/row-access-policy.type';
-import { buildPostgresSafeAlias } from 'src/engine/twenty-orm/sql/utils/build-postgres-safe-alias.util';
 
-type BuildParentPolicy = (target: RowAccessPolicyTarget) => RowAccessPolicy;
+const READ_ACCESS_LEVELS = [
+  RecordShareAccessLevel.READ,
+  RecordShareAccessLevel.READ_WRITE,
+  RecordShareAccessLevel.FULL,
+];
 
-type RecordShareGateArgs = {
-  context: RowAccessPolicyContext;
-  target: RowAccessPolicyTarget;
-  buildParentPolicy: BuildParentPolicy;
-};
+const WRITE_ACCESS_LEVELS = [
+  RecordShareAccessLevel.READ_WRITE,
+  RecordShareAccessLevel.FULL,
+];
+
+const MAX_INHERITANCE_DEPTH = 8;
 
 export const buildRecordShareGate = ({
   context,
   target,
   buildParentPolicy,
-}: RecordShareGateArgs): RowAccessPolicy => {
-  const isOwningApplication = context.subject.isOwningApplication(
-    target.flatObjectMetadata,
-  );
+}: {
+  context: RowAccessPolicyContext;
+  target: RowAccessPolicyTarget;
+  buildParentPolicy: (parentTarget: RowAccessPolicyTarget) => RowAccessPolicy;
+}): RowAccessPolicy => {
+  const { subject } = context;
+  const { flatObjectMetadata, operationType } = target;
 
-  const gateKind = resolveRecordShareGateKind({
-    readability: target.flatObjectMetadata.readability,
-    isOwningApplication,
-  });
-  const { sharingMode } = resolveObjectSharing({
+  if (subject.isOwningApplication(flatObjectMetadata)) {
+    if (
+      flatObjectMetadata.readability === MetadataReadability.APPLICATION ||
+      flatObjectMetadata.readability === MetadataReadability.INHERITED
+    ) {
+      return { kind: 'open' };
+    }
+  }
+
+  if (flatObjectMetadata.readability === MetadataReadability.APPLICATION) {
+    return { kind: 'denied' };
+  }
+
+  if (
+    flatObjectMetadata.readability === MetadataReadability.SYSTEM ||
+    !isDefined(flatObjectMetadata.readability)
+  ) {
+    return { kind: 'open' };
+  }
+
+  if (flatObjectMetadata.readability === MetadataReadability.INHERITED) {
+    return buildInheritedGate({ context, target, buildParentPolicy });
+  }
+
+  if (flatObjectMetadata.readability === MetadataReadability.PRIVATE) {
+    return buildPrivateGate(context, target);
+  }
+
+  return buildOpenGate(context, target, operationType);
+};
+
+const buildOpenGate = (
+  context: RowAccessPolicyContext,
+  target: RowAccessPolicyTarget,
+  operationType: RowAccessPolicyTarget['operationType'],
+): RowAccessPolicy => {
+  const sharing = resolveObjectSharing({
     flatObjectMetadata: target.flatObjectMetadata,
     featureFlagsMap: context.environment.featureFlagsMap,
   });
 
-  switch (gateKind) {
-    case 'open':
-      return sharingMode === RecordSharingMode.OPEN_BY_DEFAULT &&
-        !context.subject.canAccessAllRecords
-        ? buildRecordShareExceptionGate(context, target)
-        : { kind: 'open' };
-    case 'deny':
-      return { kind: 'denied' };
-    case 'inherited':
-      return buildInheritedReadabilityGate({
-        context,
-        target,
-        buildParentPolicy,
-      });
-    case 'private':
-      return buildOwnRecordShareGate(context, target);
-    default:
-      return assertUnreachable(gateKind);
-  }
-};
-
-const resolveRecordSharePrincipals = (
-  { subject }: RowAccessPolicyContext,
-  { operationType }: RowAccessPolicyTarget,
-):
-  | { principalIds: string[]; accessLevels: RecordShareAccessLevel[] }
-  | undefined => {
-  if (!isDefined(subject.principalIds)) {
-    return undefined;
-  }
-
-  const accessLevels = resolveRequiredRecordShareAccessLevels(operationType);
-
-  if (accessLevels.length === 0) {
-    return undefined;
-  }
-
-  return { principalIds: subject.principalIds, accessLevels };
-};
-
-const buildOwnRecordShareGate = (
-  context: RowAccessPolicyContext,
-  target: RowAccessPolicyTarget,
-): RowAccessPolicy => {
-  const principals = resolveRecordSharePrincipals(context, target);
-
-  if (!isDefined(principals)) {
+  if (
+    target.flatObjectMetadata.isSystem === true ||
+    operationType === 'insert' ||
+    context.subject.canAccessAllRecords ||
+    sharing.sharingMode !== RecordSharingMode.OPEN_BY_DEFAULT
+  ) {
     return { kind: 'open' };
   }
 
-  return {
-    kind: 'gated',
-    expression: {
-      kind: 'recordShared',
-      tableAlias: target.tableAlias,
-      objectMetadataId: target.flatObjectMetadata.id,
-      ...principals,
-    },
-  };
-};
-
-const buildRecordShareExceptionGate = (
-  context: RowAccessPolicyContext,
-  target: RowAccessPolicyTarget,
-): RowAccessPolicy => {
-  const principals = resolveRecordSharePrincipals(context, target);
-
-  if (!isDefined(principals)) {
-    return { kind: 'open' };
-  }
+  const accessLevels =
+    operationType === 'select' ? READ_ACCESS_LEVELS : WRITE_ACCESS_LEVELS;
 
   return {
     kind: 'gated',
     expression: {
       kind: 'recordNotRestricted',
-      tableAlias: target.tableAlias,
-      objectMetadataId: target.flatObjectMetadata.id,
-      ...principals,
+      ...shareTarget(context, target, accessLevels),
     },
   };
 };
 
-const buildInheritedReadabilityGate = ({
+const buildPrivateGate = (
+  context: RowAccessPolicyContext,
+  target: RowAccessPolicyTarget,
+): RowAccessPolicy => {
+  const principalIds = context.subject.principalIds;
+
+  if (!isDefined(principalIds) || principalIds.length === 0) {
+    return { kind: 'open' };
+  }
+
+  const accessLevels =
+    target.operationType === 'select' || target.operationType === 'insert'
+      ? READ_ACCESS_LEVELS
+      : target.operationType === 'update'
+        ? WRITE_ACCESS_LEVELS
+        : [RecordShareAccessLevel.FULL];
+
+  return {
+    kind: 'gated',
+    expression: {
+      kind: 'recordShared',
+      ...shareTarget(context, target, accessLevels),
+    },
+  };
+};
+
+const buildInheritedGate = ({
   context,
   target,
   buildParentPolicy,
-}: RecordShareGateArgs): RowAccessPolicy => {
-  const { tableAlias, flatObjectMetadata, depth, joinParentRelationShape } =
-    target;
-
-  if (depth > MAX_INHERITED_READABILITY_DEPTH) {
-    return { kind: 'denied' };
+}: {
+  context: RowAccessPolicyContext;
+  target: RowAccessPolicyTarget;
+  buildParentPolicy: (parentTarget: RowAccessPolicyTarget) => RowAccessPolicy;
+}): RowAccessPolicy => {
+  if (target.depth > MAX_INHERITANCE_DEPTH) {
+    return buildPrivateGate(context, target);
   }
 
   const parents = resolveInheritedReadabilityParents({
-    flatObjectMetadata,
+    flatObjectMetadata: target.flatObjectMetadata,
     flatFieldMetadataMaps: context.environment.flatFieldMetadataMaps,
     flatObjectMetadataMaps: context.environment.flatObjectMetadataMaps,
   });
 
-  if (
-    isDefined(joinParentRelationShape) &&
-    parents.some(
-      (parent) =>
-        parent.kind === 'column' &&
-        parent.fieldMetadataId ===
-          joinParentRelationShape.targetFieldMetadataId,
-    )
-  ) {
-    return { kind: 'open' };
-  }
+  const parentExpressions = parents.flatMap(
+    (parent): InheritedReadabilityParentExpression[] => {
+      const parentObject =
+        parent.kind === 'column'
+          ? parent.parentFlatObjectMetadata
+          : parent.childFlatObjectMetadata;
 
-  const isOpenWhenDetached = isOpenWhenDetachedObject(flatObjectMetadata);
+      if (!isParentAdmitted({ context, target, parentObject })) {
+        return [];
+      }
 
-  if (parents.length === 0) {
-    return isOpenWhenDetached
-      ? { kind: 'open' }
-      : buildOwnRecordShareGate(context, target);
-  }
+      if (parent.kind === 'column') {
+        const parentTableAlias = buildPostgresSafeAlias(
+          `${target.tableAlias}_${parent.joinColumnName}`,
+        );
+        const expression: InheritedReadabilityParentExpression = {
+          kind: 'column',
+          joinColumnName: parent.joinColumnName,
+          parentTableAlias,
+          parentFlatObjectMetadata: parent.parentFlatObjectMetadata,
+          policy: buildParentPolicy({
+            tableAlias: parentTableAlias,
+            flatObjectMetadata: parent.parentFlatObjectMetadata,
+            operationType: target.operationType,
+            depth: target.depth + 1,
+          }),
+        };
 
-  const principals = resolveRecordSharePrincipals(context, target);
+        return expression.policy.kind === 'denied' ? [] : [expression];
+      }
 
-  if (!isDefined(principals)) {
-    return { kind: 'open' };
-  }
+      const childTableAlias = buildPostgresSafeAlias(
+        `${target.tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`,
+      );
+      const expression: InheritedReadabilityParentExpression = {
+        kind: 'children',
+        childTableAlias,
+        childJoinColumnName: parent.childJoinColumnName,
+        childFlatObjectMetadata: parent.childFlatObjectMetadata,
+        policy: buildParentPolicy({
+          tableAlias: childTableAlias,
+          flatObjectMetadata: parent.childFlatObjectMetadata,
+          operationType: target.operationType,
+          depth: target.depth + 1,
+        }),
+      };
 
-  const parentExpressions = parents.map((parent) =>
-    buildInheritedReadabilityParentExpression({
-      context,
-      target,
-      parent,
-      buildParentPolicy,
-    }),
+      return expression.policy.kind === 'denied' ? [] : [expression];
+    },
   );
+
+  if (parentExpressions.length === 0) {
+    return buildPrivateGate(context, target);
+  }
 
   return {
     kind: 'gated',
     expression: {
       kind: 'inheritedReadability',
-      tableAlias,
-      objectMetadataId: flatObjectMetadata.id,
-      ...principals,
-      isOpenWhenDetached,
       parents: parentExpressions,
+      isOpenWhenDetached: true,
+      ...shareTarget(context, target, READ_ACCESS_LEVELS),
     },
   };
 };
 
-const buildInheritedReadabilityParentExpression = ({
-  target: { tableAlias, operationType, depth },
-  parent,
-  buildParentPolicy,
-}: RecordShareGateArgs & {
-  parent: InheritedReadabilityParent;
-}): InheritedReadabilityParentExpression => {
-  if (parent.kind === 'column') {
-    const parentTableAlias = buildPostgresSafeAlias(
-      `${tableAlias}_${parent.joinColumnName}`,
-    );
-
-    return {
-      kind: 'column',
-      joinColumnName: parent.joinColumnName,
-      parentTableAlias,
-      parentFlatObjectMetadata: parent.parentFlatObjectMetadata,
-      policy: buildParentPolicy({
-        tableAlias: parentTableAlias,
-        flatObjectMetadata: parent.parentFlatObjectMetadata,
-        operationType,
-        depth: depth + 1,
-      }),
-    };
+const isParentAdmitted = ({
+  context,
+  target,
+  parentObject,
+}: {
+  context: RowAccessPolicyContext;
+  target: RowAccessPolicyTarget;
+  parentObject: RowAccessPolicyTarget['flatObjectMetadata'];
+}): boolean => {
+  if (
+    target.operationType !== 'select' &&
+    !isMetadataWritePermitted({
+      writability: parentObject.writability,
+      isSystemContext: false,
+      isOwningApplication: context.subject.isOwningApplication(parentObject),
+    })
+  ) {
+    return false;
   }
 
-  const childTableAlias = buildPostgresSafeAlias(
-    `${tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`,
-  );
+  if (!isDefined(context.subject.objectsPermissions)) {
+    return true;
+  }
 
-  return {
-    kind: 'children',
-    childTableAlias,
-    childJoinColumnName: parent.childJoinColumnName,
-    childFlatObjectMetadata: parent.childFlatObjectMetadata,
-    policy: buildParentPolicy({
-      tableAlias: childTableAlias,
-      flatObjectMetadata: parent.childFlatObjectMetadata,
-      operationType,
-      depth: depth + 1,
-    }),
-  };
+  return isObjectOperationPermitted({
+    objectMetadata: parentObject,
+    operationType: 'select',
+    objectsPermissions: context.subject.objectsPermissions,
+  });
 };
+
+const shareTarget = (
+  context: RowAccessPolicyContext,
+  target: RowAccessPolicyTarget,
+  accessLevels: RecordShareAccessLevel[],
+): RecordShareExpressionTarget => ({
+  tableAlias: target.tableAlias,
+  objectMetadataId: target.flatObjectMetadata.id,
+  principalIds: context.subject.principalIds ?? [],
+  accessLevels,
+});

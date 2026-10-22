@@ -1,20 +1,30 @@
-/* @license Enterprise */
+type EventWithProperties = {
+  properties?: object;
+};
 
-import { type ObjectRecordEvent } from 'twenty-shared/database-events';
-import { isDefined } from 'twenty-shared/utils';
-
-import { type InheritedReadabilityChildRecordsCarrier } from 'src/engine/core-modules/record-share/types/inherited-readability-child-records.type';
-
+// Child rows travel with the deletion so parents can be rechecked. Subscribers
+// only see the record that was deleted.
 export const omitInheritedReadabilityChildRecords = <
-  TEvent extends ObjectRecordEvent,
+  TEvent extends EventWithProperties,
 >(
   event: TEvent,
 ): TEvent => {
-  const { inheritedReadabilityChildRecords, ...properties } =
-    event.properties as TEvent['properties'] &
-      InheritedReadabilityChildRecordsCarrier;
+  const properties = event.properties;
 
-  return isDefined(inheritedReadabilityChildRecords)
-    ? ({ ...event, properties } as TEvent)
-    : event;
+  if (
+    properties === undefined ||
+    !('inheritedReadabilityChildRecords' in properties)
+  ) {
+    return event;
+  }
+
+  const {
+    inheritedReadabilityChildRecords: _childRecords,
+    ...visibleProperties
+  } = properties as { inheritedReadabilityChildRecords?: unknown };
+
+  return {
+    ...event,
+    properties: visibleProperties,
+  };
 };

@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 import { Field, ObjectType } from '@nestjs/graphql';
 
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';

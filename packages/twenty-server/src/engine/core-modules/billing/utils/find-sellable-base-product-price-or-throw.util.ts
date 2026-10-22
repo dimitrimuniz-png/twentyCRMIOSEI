@@ -1,51 +1,65 @@
-/* @license Enterprise */
-
 import {
   BillingException,
   BillingExceptionCode,
 } from 'src/engine/core-modules/billing/billing.exception';
 import { BillingProductKey } from 'src/engine/core-modules/billing/enums/billing-product-key.enum';
-import { isSellableCatalogPrice } from 'src/engine/core-modules/billing/utils/is-sellable-catalog-price.util';
 
 type SellableBaseProductPrice = {
-  active: boolean;
   stripePriceId: string;
-  metadata?: { isLegacy?: string | null } | null;
-  billingProduct?: {
+  active: boolean;
+  metadata?: {
+    isLegacy?: string;
+  };
+  billingProduct: {
     active: boolean;
-    metadata: { productKey: BillingProductKey; isLegacy?: string | null };
-  } | null;
+    metadata: {
+      productKey?: string;
+      isLegacy?: string;
+    };
+  };
 };
 
-// More than one match means two sellable packagings are live; refuse rather than charge by row order.
+// Billing stays inactive. The lookup only exists so a stored catalog still
+// resolves to one current base price instead of a legacy or credit price.
 export const findSellableBaseProductPriceOrThrow = <
   TPrice extends SellableBaseProductPrice,
 >(
-  billingPrices: TPrice[],
+  prices: TPrice[],
 ): TPrice => {
-  const sellableBasePrices = billingPrices.filter(
-    (billingPrice) =>
-      billingPrice.billingProduct?.metadata.productKey ===
-        BillingProductKey.BASE_PRODUCT && isSellableCatalogPrice(billingPrice),
+  const sellablePrices = prices.filter(
+    (price) =>
+      price.active &&
+      price.metadata?.isLegacy !== 'true' &&
+      price.billingProduct.active &&
+      price.billingProduct.metadata.productKey ===
+        BillingProductKey.BASE_PRODUCT &&
+      price.billingProduct.metadata.isLegacy !== 'true',
   );
 
-  if (sellableBasePrices.length === 0) {
+  if (sellablePrices.length === 0) {
     throw new BillingException(
-      'No sellable base product price found',
+      'No sellable base product price.',
       BillingExceptionCode.BILLING_PRICE_NOT_FOUND,
     );
   }
 
-  if (sellableBasePrices.length > 1) {
+  if (sellablePrices.length > 1) {
     throw new BillingException(
-      `Expected a single sellable base product price, found ${sellableBasePrices.length}: ${sellableBasePrices
-        .map((billingPrice) => billingPrice.stripePriceId)
-        .join(
-          ', ',
-        )}. Mark the superseded product or price with metadata isLegacy=true.`,
+      `Multiple sellable base product prices: ${sellablePrices
+        .map((price) => price.stripePriceId)
+        .join(', ')}.`,
       BillingExceptionCode.BILLING_PRICE_INVALID,
     );
   }
 
-  return sellableBasePrices[0];
+  const [price] = sellablePrices;
+
+  if (!price) {
+    throw new BillingException(
+      'No sellable base product price.',
+      BillingExceptionCode.BILLING_PRICE_NOT_FOUND,
+    );
+  }
+
+  return price;
 };

@@ -2,39 +2,21 @@ import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
 
-import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
-import { billingState } from '@/client-config/states/billingState';
-import { isClickHouseConfiguredState } from '@/client-config/states/isClickHouseConfiguredState';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { SettingsEmptyPlaceholder } from '@/settings/components/SettingsEmptyPlaceholder';
-import { SettingsOptionCardContentButton } from '@/settings/components/SettingsOptions/SettingsOptionCardContentButton';
 import { EventLogFilters } from '@/settings/event-logs/components/EventLogFilters';
 import { EventLogResultsTable } from '@/settings/event-logs/components/EventLogResultsTable';
 import { EventLogTableSelector } from '@/settings/event-logs/components/EventLogTableSelector';
 import { useEventLogsLiveStream } from '@/settings/event-logs/hooks/useEventLogsLiveStream';
 import { useEventLogs } from '@/settings/event-logs/hooks/useQueryEventLogs';
 import { type EventLogFiltersState } from '@/settings/event-logs/types/EventLogFiltersState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { checkIfBillingEntitlementIsEnabledOnWorkspace } from '@/workspace/utils/checkIfBillingEntitlementIsEnabledOnWorkspace';
-import { SettingsPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import {
-  IconArrowUp,
-  IconLock,
-  IconPlayerPause,
-  IconPlayerPlay,
-} from 'twenty-ui/icon';
-import { Button } from 'twenty-ui/primitives/input';
+import { IconPlayerPause, IconPlayerPlay } from 'twenty-ui/icon';
 import { IconButton } from 'twenty-ui/components/input';
 import { Card } from 'twenty-ui/primitives/surfaces';
 import { themeCssVariables } from 'twenty-ui/theme';
 
-import {
-  BillingEntitlementKey,
-  EventLogTable,
-} from '~/generated-metadata/graphql';
-import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { isGraphqlErrorOfType } from '~/utils/is-graphql-error-of-type.util';
+import { EventLogTable } from '~/generated-metadata/graphql';
 
 const StyledRoot = styled.div`
   box-sizing: border-box;
@@ -93,29 +75,13 @@ export const SettingsLogs = () => {
   const { t } = useLingui();
   const { formatNumber } = useNumberFormat();
 
-  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
-  const isClickHouseConfigured = useAtomStateValue(isClickHouseConfiguredState);
-  const billing = useAtomStateValue(billingState);
-  const navigateSettings = useNavigateSettings();
-
-  const isBillingEnabled = billing?.isBillingEnabled ?? false;
-  const hasAuditLogsEntitlement = checkIfBillingEntitlementIsEnabledOnWorkspace(
-    BillingEntitlementKey.AUDIT_LOGS,
-    currentWorkspace,
-  );
-
   const [selectedTable, setSelectedTable] = useState<EventLogTable>(
     EventLogTable.PAGEVIEW,
   );
   const [filters, setFilters] = useState<EventLogFiltersState>({});
   const [isPaused, setIsPaused] = useState(false);
 
-  const isAvailableOnEveryPlan =
-    selectedTable === EventLogTable.APPLICATION_LOG ||
-    selectedTable === EventLogTable.OBJECT_EVENT;
-  const canQuery =
-    isClickHouseConfigured &&
-    (isAvailableOnEveryPlan || hasAuditLogsEntitlement);
+  const canQuery = true;
 
   const { records, totalCount, hasNextPage, loading, error, loadMore } =
     useEventLogs(
@@ -165,49 +131,8 @@ export const SettingsLogs = () => {
     setFilters(newFilters);
   };
 
-  const renderUpgradeCard = () => (
-    <Card.Root backgroundColor={themeCssVariables.background.secondary}>
-      <SettingsOptionCardContentButton
-        Icon={IconLock}
-        title={t`Upgrade to access audit logs`}
-        description={t`Record changes and app logs are available on your current plan. Other log types require an Organization subscription.`}
-        Button={
-          <Button
-            size="sm"
-            startIcon={<IconArrowUp />}
-            onClick={() =>
-              navigateSettings(
-                isBillingEnabled
-                  ? SettingsPath.BillingPlans
-                  : SettingsPath.AdminPanelOrganization,
-              )
-            }
-            variant="solid"
-            color="accent"
-          >{t`Upgrade`}</Button>
-        }
-      />
-    </Card.Root>
-  );
-
   const renderResults = () => {
-    if (!isAvailableOnEveryPlan && !hasAuditLogsEntitlement) {
-      return renderUpgradeCard();
-    }
-
-    if (!isClickHouseConfigured) {
-      return (
-        <SettingsEmptyPlaceholder>
-          {t`Logs require ClickHouse to be configured. Please contact your administrator.`}
-        </SettingsEmptyPlaceholder>
-      );
-    }
-
     if (isDefined(error)) {
-      if (isGraphqlErrorOfType(error, 'NO_ENTITLEMENT')) {
-        return renderUpgradeCard();
-      }
-
       return (
         <SettingsEmptyPlaceholder>
           {t`Something went wrong while loading logs. Please try again.`}

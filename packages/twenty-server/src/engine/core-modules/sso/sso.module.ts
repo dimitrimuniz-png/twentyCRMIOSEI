@@ -1,26 +1,19 @@
-/* @license Enterprise */
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
-import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
-import { GuardRedirectModule } from 'src/engine/core-modules/guard-redirect/guard-redirect.module';
-import { SecureHttpClientModule } from 'src/engine/core-modules/secure-http-client/secure-http-client.module';
-import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 import { SsoResolver } from 'src/engine/core-modules/sso/sso.resolver';
+import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 import { WorkspaceSsoIdentityProviderEntity } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
+import { TwentyConfigModule } from 'src/engine/core-modules/twenty-config/twenty-config.module';
 import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([WorkspaceSsoIdentityProviderEntity]),
-    BillingModule,
-    EnterpriseModule,
-    GuardRedirectModule,
+    TwentyConfigModule,
     PermissionsModule,
-    SecureHttpClientModule,
+    TypeOrmModule.forFeature([WorkspaceSsoIdentityProviderEntity]),
   ],
-  exports: [SsoService],
   providers: [SsoService, SsoResolver],
+  exports: [SsoService],
 })
 export class WorkspaceSsoModule {}

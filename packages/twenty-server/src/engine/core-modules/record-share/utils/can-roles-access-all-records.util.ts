@@ -1,9 +1,5 @@
-/* @license Enterprise */
-
-import { isNonEmptyArray } from 'twenty-shared/utils';
-
-// Several roles combine as an intersection, so every one of them needs the
-// permission for the restrictions to be lifted
+// Every role the caller holds must be allowed to see all records. One
+// narrower role keeps the caller on the row policy.
 export const canRolesAccessAllRecords = ({
   roleIds,
   roleIdsWithAllRecordsAccess,
@@ -11,5 +7,5 @@ export const canRolesAccessAllRecords = ({
   roleIds: string[];
   roleIdsWithAllRecordsAccess: string[];
 }): boolean =>
-  isNonEmptyArray(roleIds) &&
+  roleIds.length > 0 &&
   roleIds.every((roleId) => roleIdsWithAllRecordsAccess.includes(roleId));

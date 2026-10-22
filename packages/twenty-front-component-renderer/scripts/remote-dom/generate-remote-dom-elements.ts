@@ -123,3 +123,5 @@ const main = (): void => {
 };
 
 main();
+// ts-morph and tsx leave the event loop open under Nx.
+process.exit(0);

@@ -1,8 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type InheritedReadabilityColumnParent } from 'src/engine/core-modules/record-share/types/inherited-readability-column-parent.type';
-
-export type InheritedReadabilityParentLink = Pick<
-  InheritedReadabilityColumnParent,
-  'joinColumnName' | 'parentFlatObjectMetadata'
->;
+export type InheritedReadabilityParentLink = RemovedCommercial;

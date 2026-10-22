@@ -51,6 +51,8 @@ jobs:
           retention-days: 7
 
   dispatch:
+    # Storybook hosting is twentyhq/twenty-factory. The build job above still runs.
+    if: github.repository == 'twentyhq/twenty'
     needs: build
     permissions: {}
     runs-on: ubuntu-latest

@@ -116,7 +116,7 @@ COPY ./packages/twenty-docker/twenty/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 WORKDIR /app/packages/twenty-server
 
-ARG APP_VERSION
+ARG APP_VERSION=0.0.0
 ENV APP_VERSION=$APP_VERSION
 ENV NODE_ENV=production
 
@@ -144,8 +144,8 @@ COPY --chown=1000 --from=twenty-server-build /app/packages/twenty-emails/dist /a
 COPY --chown=1000 --from=twenty-server-build /app/packages/twenty-client-sdk/package.json /app/packages/twenty-client-sdk/
 COPY --chown=1000 --from=twenty-server-build /app/packages/twenty-client-sdk/dist /app/packages/twenty-client-sdk/dist
 
-LABEL org.opencontainers.image.source=https://github.com/twentyhq/twenty
-LABEL org.opencontainers.image.description="Twenty server image (no frontend)."
+LABEL org.opencontainers.image.source=https://github.com/dimitrimuniz-png/twentyCRMIOSEI
+LABEL org.opencontainers.image.description="TwentyCRMIOSEI server image (no frontend)."
 
 # Remove unused, unpatchable components the scanner flags (none are executed at
 # runtime, and none can be fixed by upgrading our deps or Node):
@@ -196,7 +196,7 @@ FROM twenty-server AS twenty
 
 COPY --chown=1000 --from=twenty-front-build /app/packages/twenty-front/build /app/packages/twenty-server/dist/front
 
-LABEL org.opencontainers.image.description="Twenty image with backend and frontend."
+LABEL org.opencontainers.image.description="TwentyCRMIOSEI image with backend and frontend."
 
 
 # ===========================================================================
@@ -328,7 +328,7 @@ ENV PG_DATABASE_URL=postgres://twenty:twenty@localhost:5432/default \
 EXPOSE 2020
 VOLUME ["/data/postgres", "/data/clickhouse", "/app/packages/twenty-server/.local-storage"]
 
-LABEL org.opencontainers.image.source=https://github.com/twentyhq/twenty
-LABEL org.opencontainers.image.description="All-in-one Twenty image for local development and SDK usage. Includes PostgreSQL, Redis, ClickHouse, server, and worker."
+LABEL org.opencontainers.image.source=https://github.com/dimitrimuniz-png/twentyCRMIOSEI
+LABEL org.opencontainers.image.description="All-in-one TwentyCRMIOSEI image for local development and SDK usage. Includes PostgreSQL, Redis, ClickHouse, server, and worker."
 
 ENTRYPOINT ["/init"]

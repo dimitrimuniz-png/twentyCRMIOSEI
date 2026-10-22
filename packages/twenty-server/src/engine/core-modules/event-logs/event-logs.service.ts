@@ -1,302 +1,250 @@
-/* @license Enterprise */
-
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+import { LessThan, type Repository } from 'typeorm';
 import { EventLogTable } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
-import { Repository } from 'typeorm';
 
 import { ClickHouseService } from 'src/database/clickhouse/clickhouse.service';
 import { formatDateTimeForClickHouse } from 'src/database/clickhouse/utils/format-date-time-for-clickhouse.util';
-import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
-import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/services/enterprise-plan.service';
-import { EventLogRetentionService } from 'src/engine/core-modules/event-logs/retention/services/event-log-retention.service';
-import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
-import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
-
-import {
-  EventLogsException,
-  EventLogsExceptionCode,
-} from './event-logs.exception';
-
-import { EventLogFiltersInput } from './dtos/event-log-filters.input';
-import { EventLogQueryInput } from './dtos/event-log-query.input';
-import { EventLogQueryResult } from './dtos/event-log-result.dto';
+import { WorkspaceAuditLogEntity } from 'src/engine/core-modules/event-logs/entities/workspace-audit-log.entity';
+import { type EventLogQueryInput } from 'src/engine/core-modules/event-logs/dtos/event-log-query.input';
+import { type EventLogQueryResult } from 'src/engine/core-modules/event-logs/dtos/event-log-result.dto';
 import {
   EVENT_LOG_TYPES,
   getClickHouseTableName,
-} from './registry/event-log-registry';
-import { buildEventLogFieldFilterCondition } from './utils/build-event-log-field-filter-condition.util';
-import { normalizeEventLogRecords } from './utils/normalize-event-log-records';
+} from 'src/engine/core-modules/event-logs/registry/event-log-registry';
+import { isEventLogRowMatchingFieldFilters } from 'src/engine/core-modules/event-logs/utils/is-event-log-row-matching-field-filters.util';
+import { buildEventLogFieldFilterCondition } from 'src/engine/core-modules/event-logs/utils/build-event-log-field-filter-condition.util';
+import { normalizeEventLogRecords } from 'src/engine/core-modules/event-logs/utils/normalize-event-log-records';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { type WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
-const ALLOWED_TABLES = Object.values(EventLogTable);
-const MAX_LIMIT = 10000;
+const decodeOffset = (after?: string): number => {
+  if (!after) {
+    return 0;
+  }
+
+  const parsed = Number(Buffer.from(after, 'base64').toString('utf8'));
+
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+};
 
 @Injectable()
 export class EventLogsService {
   constructor(
-    private readonly clickHouseService: ClickHouseService,
-    private readonly billingService: BillingService,
-    private readonly enterprisePlanService: EnterprisePlanService,
-    private readonly eventLogRetentionService: EventLogRetentionService,
-    @InjectRepository(UserWorkspaceEntity)
-    private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
+    @InjectWorkspaceScopedRepository(WorkspaceAuditLogEntity)
+    private readonly auditLogRepository: WorkspaceScopedRepository<WorkspaceAuditLogEntity>,
+    @InjectRepository(WorkspaceEntity)
+    private readonly workspaceRepository: Repository<WorkspaceEntity>,
+    @Optional()
+    private readonly clickHouseService?: ClickHouseService,
   ) {}
 
-  async queryEventLogs(
-    workspace: Pick<WorkspaceEntity, 'id' | 'eventLogRetentionDays'>,
-    input: EventLogQueryInput,
-    { callingApplicationId }: { callingApplicationId?: string } = {},
-  ): Promise<EventLogQueryResult> {
-    const workspaceId = workspace.id;
+  // Audit history in this fork is stored in Postgres and is not entitlement-gated.
+  async validateAccess(
+    _workspaceId: string,
+    _table: EventLogTable,
+  ): Promise<void> {
+    return;
+  }
 
-    await this.validateAccess(workspaceId, input.table);
+  async query({
+    workspaceId,
+    input,
+  }: {
+    workspaceId: string;
+    input: EventLogQueryInput;
+  }): Promise<EventLogQueryResult> {
+    if (this.clickHouseService?.getMainClient()) {
+      return this.queryClickHouse({ workspaceId, input });
+    }
 
-    const limit = Math.min(input.first ?? 100, MAX_LIMIT);
-    const tableName = getClickHouseTableName(input.table);
-    const eventFieldName = EVENT_LOG_TYPES[input.table].eventFieldName;
-
-    const retentionStartDate =
-      await this.eventLogRetentionService.getRetentionStartDate({
-        workspaceId,
-        workspaceRetentionInDays: workspace.eventLogRetentionDays,
+    const first = input.first ?? 100;
+    const offset = decodeOffset(input.after);
+    const filters = input.filters;
+    const queryBuilder = this.auditLogRepository
+      .createScopedQueryBuilder(workspaceId, 'auditLog')
+      .andWhere('auditLog.tableName = :tableName', {
+        tableName: getClickHouseTableName(input.table),
       });
 
-    const whereClauses: string[] = [
-      '"workspaceId" = {workspaceId:String}',
-      '"timestamp" >= {retentionStartDate:DateTime64(3)}',
-    ];
-    const params: Record<string, unknown> = {
-      workspaceId,
-      retentionStartDate: formatDateTimeForClickHouse(retentionStartDate),
-    };
-
-    if (
-      input.table === EventLogTable.APPLICATION_LOG &&
-      isDefined(callingApplicationId)
-    ) {
-      whereClauses.push('"applicationId" = {callingApplicationId:String}');
-      params.callingApplicationId = callingApplicationId;
+    if (filters?.eventType) {
+      queryBuilder.andWhere('auditLog.event = :event', {
+        event: filters.eventType,
+      });
     }
 
-    await this.applyFilters(
-      whereClauses,
-      params,
-      input.filters,
-      eventFieldName,
-      input.table,
+    if (filters?.userWorkspaceId) {
+      queryBuilder.andWhere('auditLog.userId = :userId', {
+        userId: filters.userWorkspaceId,
+      });
+    }
+
+    if (filters?.recordId) {
+      queryBuilder.andWhere('auditLog.recordId = :recordId', {
+        recordId: filters.recordId,
+      });
+    }
+
+    if (filters?.objectMetadataId) {
+      queryBuilder.andWhere('auditLog.objectMetadataId = :objectMetadataId', {
+        objectMetadataId: filters.objectMetadataId,
+      });
+    }
+
+    if (filters?.dateRange?.start) {
+      queryBuilder.andWhere('auditLog.occurredAt >= :start', {
+        start: filters.dateRange.start,
+      });
+    }
+
+    if (filters?.dateRange?.end) {
+      queryBuilder.andWhere('auditLog.occurredAt <= :end', {
+        end: filters.dateRange.end,
+      });
+    }
+
+    const rows = await queryBuilder
+      .orderBy('auditLog.occurredAt', 'DESC')
+      .addOrderBy('auditLog.id', 'DESC')
+      .getMany();
+    const matchingRows = rows.filter((row) =>
+      isEventLogRowMatchingFieldFilters({
+        row: row.payload,
+        fieldFilters: filters?.fieldFilters ?? [],
+      }),
     );
-
-    const paginationClauses = [...whereClauses];
-
-    if (isDefined(input.after)) {
-      const cursorMs = this.decodeCursor(input.after);
-
-      paginationClauses.push(
-        '"timestamp" < fromUnixTimestamp64Milli({cursorMs:Int64})',
-      );
-      params.cursorMs = cursorMs;
-    }
-
-    const filterWhereClause = whereClauses.join(' AND ');
-    const paginationWhereClause = paginationClauses.join(' AND ');
-
-    const countQuery = `
-      SELECT count() as totalCount
-      FROM ${tableName}
-      WHERE ${filterWhereClause}
-    `;
-
-    const query = `
-      SELECT *
-      FROM ${tableName}
-      WHERE ${paginationWhereClause}
-      ORDER BY "timestamp" DESC
-      LIMIT {limit:Int32}
-    `;
-
-    const recordsAtLastTimestampQuery = `
-      SELECT *
-      FROM ${tableName}
-      WHERE ${filterWhereClause} AND "timestamp" = {lastRecordTimestamp:DateTime64(3)}
-      LIMIT {maxLimit:Int32}
-    `;
-
-    params.limit = limit + 1;
-
-    const [records, countResult] = await Promise.all([
-      this.clickHouseService.select<Record<string, unknown>>(query, params),
-      this.clickHouseService.select<{ totalCount: number }>(countQuery, params),
-    ]);
-
-    const totalCount = countResult[0]?.totalCount ?? 0;
-    const hasNextPage = records.length > limit;
-    const lastRecordTimestamp = records[limit - 1]?.timestamp;
-    const hasMoreRecordsAtLastTimestamp =
-      hasNextPage && records[limit].timestamp === lastRecordTimestamp;
-
-    let pageRecords = records.slice(0, limit);
-
-    if (hasMoreRecordsAtLastTimestamp) {
-      params.lastRecordTimestamp = lastRecordTimestamp;
-      params.maxLimit = MAX_LIMIT;
-
-      const recordsAtLastTimestamp = await this.clickHouseService.select<
-        Record<string, unknown>
-      >(recordsAtLastTimestampQuery, params);
-      const pageRecordsAtLastTimestamp = pageRecords.filter(
-        (record) => record.timestamp === lastRecordTimestamp,
-      );
-
-      if (recordsAtLastTimestamp.length >= pageRecordsAtLastTimestamp.length) {
-        pageRecords = [
-          ...pageRecords.filter(
-            (record) => record.timestamp !== lastRecordTimestamp,
-          ),
-          ...recordsAtLastTimestamp,
-        ];
-      }
-    }
-
-    const normalizedRecords = normalizeEventLogRecords(
-      pageRecords,
-      input.table,
-    );
-    const lastRecord = normalizedRecords[normalizedRecords.length - 1];
-    const endCursor =
-      hasNextPage && lastRecord
-        ? this.encodeCursor(lastRecord.timestamp)
-        : undefined;
+    const page = matchingRows.slice(offset, offset + first);
+    const hasNextPage = offset + first < matchingRows.length;
 
     return {
-      records: normalizedRecords,
-      totalCount,
+      records: page.map((row) => ({
+        event: row.event,
+        timestamp: row.occurredAt,
+        userId: row.userId ?? undefined,
+        properties: row.properties,
+        recordId: row.recordId ?? undefined,
+        objectMetadataId: row.objectMetadataId ?? undefined,
+      })),
+      totalCount: matchingRows.length,
       pageInfo: {
-        endCursor,
         hasNextPage,
+        endCursor: hasNextPage
+          ? Buffer.from(String(offset + first)).toString('base64')
+          : undefined,
       },
     };
   }
 
-  async validateAccess(
-    workspaceId: string,
-    table: EventLogTable,
-  ): Promise<void> {
-    if (!ALLOWED_TABLES.includes(table)) {
-      throw new EventLogsException(
-        `Invalid table: ${table}`,
-        EventLogsExceptionCode.INVALID_TABLE,
+  private async queryClickHouse({
+    workspaceId,
+    input,
+  }: {
+    workspaceId: string;
+    input: EventLogQueryInput;
+  }): Promise<EventLogQueryResult> {
+    const definition = EVENT_LOG_TYPES[input.table];
+    const first = input.first ?? 100;
+    const offset = decodeOffset(input.after);
+    const filters = input.filters;
+    const conditions = ['workspaceId = {workspaceId:String}'];
+    const params: Record<string, unknown> = { workspaceId };
+
+    if (filters?.eventType) {
+      conditions.push(
+        `positionCaseInsensitive(${definition.eventFieldName}, {eventType:String}) > 0`,
       );
+      params.eventType = filters.eventType;
     }
 
-    if (!this.clickHouseService.getMainClient()) {
-      throw new EventLogsException(
-        'Audit logs require ClickHouse to be configured. Please set the CLICKHOUSE_URL environment variable.',
-        EventLogsExceptionCode.CLICKHOUSE_NOT_CONFIGURED,
-      );
+    if (filters?.userWorkspaceId) {
+      const userColumn =
+        input.table === EventLogTable.USAGE_EVENT
+          ? 'userWorkspaceId'
+          : 'userId';
+
+      conditions.push(`${userColumn} = {userWorkspaceId:String}`);
+      params.userWorkspaceId = filters.userWorkspaceId;
     }
 
-    const requiredEntitlement = EVENT_LOG_TYPES[table].requiresEntitlement;
-
-    if (requiredEntitlement === null) {
-      return;
+    if (filters?.recordId) {
+      conditions.push('recordId = {recordId:String}');
+      params.recordId = filters.recordId;
     }
 
-    const hasAccess =
-      this.enterprisePlanService.isValid() &&
-      (await this.billingService.hasEntitlement(
-        workspaceId,
-        requiredEntitlement,
-      ));
-
-    if (!hasAccess) {
-      throw new EventLogsException(
-        'Audit logs require an Organization subscription.',
-        EventLogsExceptionCode.NO_ENTITLEMENT,
-      );
-    }
-  }
-
-  private async applyFilters(
-    whereClauses: string[],
-    params: Record<string, unknown>,
-    filters: EventLogFiltersInput | undefined,
-    eventFieldName: string,
-    table: EventLogTable,
-  ): Promise<void> {
-    if (!isDefined(filters)) {
-      return;
+    if (filters?.objectMetadataId) {
+      conditions.push('objectMetadataId = {objectMetadataId:String}');
+      params.objectMetadataId = filters.objectMetadataId;
     }
 
-    if (isDefined(filters.eventType)) {
-      whereClauses.push(
-        `lower("${eventFieldName}") LIKE {eventTypePattern:String}`,
-      );
-      params.eventTypePattern = `%${filters.eventType.toLowerCase()}%`;
+    if (filters?.dateRange?.start) {
+      conditions.push('timestamp >= {rangeStart:String}');
+      params.rangeStart = formatDateTimeForClickHouse(filters.dateRange.start);
     }
 
-    // TODO: non-usage tables filter by userId (some actions are logged out) while usageEvent uses userWorkspaceId; migrate all to userWorkspaceId for consistency.
-    if (isDefined(filters.userWorkspaceId)) {
-      if (table === EventLogTable.APPLICATION_LOG) {
-        // Application logs don't have a user column
-      } else if (table === EventLogTable.USAGE_EVENT) {
-        whereClauses.push('"userWorkspaceId" = {userWorkspaceId:String}');
-        params.userWorkspaceId = filters.userWorkspaceId;
-      } else {
-        const userWorkspace = await this.userWorkspaceRepository.findOne({
-          where: { id: filters.userWorkspaceId },
-          select: ['userId'],
-        });
-
-        if (isDefined(userWorkspace)) {
-          whereClauses.push('"userId" = {userId:String}');
-          params.userId = userWorkspace.userId;
-        }
-      }
+    if (filters?.dateRange?.end) {
+      conditions.push('timestamp <= {rangeEnd:String}');
+      params.rangeEnd = formatDateTimeForClickHouse(filters.dateRange.end);
     }
 
-    if (isDefined(filters.dateRange?.start)) {
-      whereClauses.push('"timestamp" >= {startDate:DateTime64(3)}');
-      params.startDate = formatDateTimeForClickHouse(filters.dateRange.start);
-    }
-
-    if (isDefined(filters.dateRange?.end)) {
-      whereClauses.push('"timestamp" <= {endDate:DateTime64(3)}');
-      params.endDate = formatDateTimeForClickHouse(filters.dateRange.end);
-    }
-
-    if (table === EventLogTable.OBJECT_EVENT) {
-      if (isDefined(filters.recordId)) {
-        whereClauses.push('"recordId" = {recordId:String}');
-        params.recordId = filters.recordId;
-      }
-
-      if (isDefined(filters.objectMetadataId)) {
-        whereClauses.push('"objectMetadataId" = {objectMetadataId:String}');
-        params.objectMetadataId = filters.objectMetadataId;
-      }
-    }
-
-    filters.fieldFilters?.forEach((fieldFilter, index) => {
+    filters?.fieldFilters?.forEach((fieldFilter, index) => {
       const parameterName = `fieldFilter${index}`;
 
-      whereClauses.push(
+      conditions.push(
         buildEventLogFieldFilterCondition({
           fieldFilter,
           parameterName,
-          table,
+          table: input.table,
         }),
       );
       params[parameterName] = fieldFilter.values;
     });
+
+    const where = conditions.join(' AND ');
+    const tableName = definition.clickHouseTable;
+    const [rows, counts] = await Promise.all([
+      this.clickHouseService!.selectOrThrow<Record<string, unknown>>(
+        `SELECT * FROM ${tableName} WHERE ${where} ORDER BY timestamp DESC LIMIT {limit:UInt32} OFFSET {offset:UInt32}`,
+        { ...params, limit: first, offset },
+      ),
+      this.clickHouseService!.selectOrThrow<{ totalCount: string }>(
+        `SELECT count() AS totalCount FROM ${tableName} WHERE ${where}`,
+        params,
+      ),
+    ]);
+    const totalCount = Number(counts[0]?.totalCount ?? 0);
+
+    return {
+      records: normalizeEventLogRecords(rows, input.table),
+      totalCount,
+      pageInfo: {
+        hasNextPage: offset + rows.length < totalCount,
+        endCursor:
+          offset + rows.length < totalCount
+            ? Buffer.from(String(offset + rows.length)).toString('base64')
+            : undefined,
+      },
+    };
   }
 
-  private encodeCursor(timestamp: Date): string {
-    return Buffer.from(String(timestamp.getTime())).toString('base64');
-  }
+  async deleteExpired(): Promise<number> {
+    const workspaces = await this.workspaceRepository.find({
+      select: { id: true, eventLogRetentionDays: true },
+    });
+    let deletedCount = 0;
 
-  private decodeCursor(cursor: string): number {
-    return parseInt(Buffer.from(cursor, 'base64').toString('utf-8'), 10);
+    for (const workspace of workspaces) {
+      const cutoff = new Date(
+        Date.now() - workspace.eventLogRetentionDays * 24 * 60 * 60 * 1000,
+      );
+      const result = await this.auditLogRepository.delete(workspace.id, {
+        occurredAt: LessThan(cutoff),
+      });
+
+      deletedCount += result.affected ?? 0;
+    }
+
+    return deletedCount;
   }
 }

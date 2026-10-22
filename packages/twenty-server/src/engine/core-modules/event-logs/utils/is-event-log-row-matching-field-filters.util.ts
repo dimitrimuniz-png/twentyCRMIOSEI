@@ -1,19 +1,21 @@
-/* @license Enterprise */
-
-import { type EventLogFieldFilterInput } from 'src/engine/core-modules/event-logs/dtos/event-log-field-filter.input';
-import { EventLogFilterOperand } from 'src/engine/core-modules/event-logs/dtos/event-log-filter-operand.enum';
+import { type EventLogFilterOperand } from 'src/engine/core-modules/event-logs/dtos/event-log-filter-operand.enum';
 
 export const isEventLogRowMatchingFieldFilters = ({
   row,
   fieldFilters,
 }: {
   row: Record<string, unknown>;
-  fieldFilters: EventLogFieldFilterInput[];
+  fieldFilters: Array<{
+    field: string;
+    operand: EventLogFilterOperand;
+    values: string[];
+  }>;
 }): boolean =>
-  fieldFilters.every(({ field, operand, values }) => {
-    const isValueIncluded = values.includes(String(row[field] ?? ''));
+  fieldFilters.every((fieldFilter) => {
+    const value = row[fieldFilter.field];
+    const comparable =
+      value === undefined || value === null ? '' : String(value);
+    const listed = fieldFilter.values.includes(comparable);
 
-    return operand === EventLogFilterOperand.IS
-      ? isValueIncluded
-      : !isValueIncluded;
+    return fieldFilter.operand === 'IS_NOT' ? !listed : listed;
   });

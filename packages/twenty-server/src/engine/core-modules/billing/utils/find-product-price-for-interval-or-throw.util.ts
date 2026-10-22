@@ -1,56 +1,58 @@
-/* @license Enterprise */
-
 import {
   BillingException,
   BillingExceptionCode,
 } from 'src/engine/core-modules/billing/billing.exception';
 import { type SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
 
-type IntervalPrice = {
-  active: boolean;
+type BillingPriceForInterval = {
   stripePriceId: string;
-  interval?: SubscriptionInterval | null;
-  metadata?: { isLegacy?: string | null } | null;
+  interval: SubscriptionInterval;
+  active: boolean;
+  metadata?: {
+    isLegacy?: string;
+  };
 };
 
-// Switching interval is not a sale, so this resolves what is billable on the current product rather than what is sellable.
-// isLegacy only breaks a tie between two active prices at the same interval.
+// Billing stays inactive on this fork. The lookup only exists so price
+// selection stays deterministic if a caller still has stored prices.
 export const findProductPriceForIntervalOrThrow = <
-  TPrice extends IntervalPrice,
+  TPrice extends BillingPriceForInterval,
 >(
-  billingProduct: {
-    stripeProductId: string;
-    billingPrices?: TPrice[] | null;
-  },
+  product: { billingPrices: TPrice[] },
   interval: SubscriptionInterval,
 ): TPrice => {
-  const intervalPrices = (billingProduct.billingPrices ?? []).filter(
-    (billingPrice) => billingPrice.interval === interval && billingPrice.active,
+  const activePrices = product.billingPrices.filter(
+    (price) => price.active && price.interval === interval,
   );
+  const currentPrices = activePrices.filter(
+    (price) => price.metadata?.isLegacy !== 'true',
+  );
+  const candidates = currentPrices.length > 0 ? currentPrices : activePrices;
 
-  if (intervalPrices.length === 0) {
+  if (candidates.length === 0) {
     throw new BillingException(
-      `No active ${interval} price on product ${billingProduct.stripeProductId}`,
+      `No active price for interval ${interval}.`,
       BillingExceptionCode.BILLING_PRICE_NOT_FOUND,
     );
   }
 
-  if (intervalPrices.length === 1) {
-    return intervalPrices[0];
+  if (candidates.length > 1) {
+    throw new BillingException(
+      `Multiple current prices for interval ${interval}: ${candidates
+        .map((price) => price.stripePriceId)
+        .join(', ')}.`,
+      BillingExceptionCode.BILLING_PRICE_INVALID,
+    );
   }
 
-  const currentPrices = intervalPrices.filter(
-    (billingPrice) => billingPrice.metadata?.isLegacy !== 'true',
-  );
+  const [price] = candidates;
 
-  if (currentPrices.length === 1) {
-    return currentPrices[0];
+  if (!price) {
+    throw new BillingException(
+      `No active price for interval ${interval}.`,
+      BillingExceptionCode.BILLING_PRICE_NOT_FOUND,
+    );
   }
 
-  throw new BillingException(
-    `Expected a single billable ${interval} price on product ${billingProduct.stripeProductId}, found ${intervalPrices.length}: ${intervalPrices
-      .map((billingPrice) => billingPrice.stripePriceId)
-      .join(', ')}. Mark the superseded price with metadata isLegacy=true.`,
-    BillingExceptionCode.BILLING_PRICE_INVALID,
-  );
+  return price;
 };

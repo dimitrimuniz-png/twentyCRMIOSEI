@@ -1,29 +1,25 @@
-/* @license Enterprise */
-
-import { isDefined } from 'twenty-shared/utils';
-
 import type Stripe from 'stripe';
 
-export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = (
-  event:
-    | Stripe.CustomerSubscriptionUpdatedEvent
-    | Stripe.CustomerSubscriptionCreatedEvent
-    | Stripe.CustomerSubscriptionDeletedEvent,
-): string[] => {
-  const hasUpdatedSubscriptionItems = isDefined(
-    event.data.previous_attributes?.items?.data,
-  );
+type SubscriptionItemWithId = {
+  id?: string;
+};
 
-  if (!hasUpdatedSubscriptionItems) {
+export const getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent = (
+  event: Stripe.CustomerSubscriptionUpdatedEvent,
+): string[] => {
+  const previousItems = event.data.previous_attributes?.items?.data as
+    | SubscriptionItemWithId[]
+    | undefined;
+
+  if (!previousItems) {
     return [];
   }
 
-  const subscriptionItemIds =
-    event.data.object.items.data.map((item) => item.id) ?? [];
+  const currentItemIds = new Set(
+    event.data.object.items.data.map((item) => item.id),
+  );
 
-  return (
-    event.data.previous_attributes?.items?.data
-      .filter((item) => !subscriptionItemIds.includes(item.id))
-      .map((item) => item.id) ?? []
+  return previousItems.flatMap((item) =>
+    item.id && !currentItemIds.has(item.id) ? [item.id] : [],
   );
 };

@@ -1,32 +1,29 @@
-/* @license Enterprise */
-
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import GraphQLJSON from 'graphql-type-json';
 
 import { AdminResolver } from 'src/engine/api/graphql/graphql-config/decorators/admin-resolver.decorator';
-import { CustomAiProviderAccessDTO } from 'src/engine/core-modules/admin-panel/dtos/custom-ai-provider-access.dto';
+import {
+  CustomAiProviderAccessDTO,
+  ModelsDevModelSuggestionDTO,
+  ModelsDevProviderSuggestionDTO,
+} from 'src/engine/core-modules/admin-panel/dtos/admin-panel-ai-provider.dto';
 import { AdminPanelAiProviderService } from 'src/engine/core-modules/admin-panel/services/admin-panel-ai-provider.service';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
-import { EnterpriseExceptionFilter } from 'src/engine/core-modules/enterprise/enterprise-exception.filter';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { ConfigVariableGraphqlApiExceptionFilter } from 'src/engine/core-modules/twenty-config/filters/config-variable-graphql-api-exception.filter';
 import { AdminPanelGuard } from 'src/engine/guards/admin-panel-guard';
 import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { ModelsDevModelSuggestionDTO } from 'src/engine/core-modules/admin-panel/dtos/models-dev-model-suggestion.dto';
-import { ModelsDevProviderSuggestionDTO } from 'src/engine/core-modules/admin-panel/dtos/models-dev-provider-suggestion.dto';
-import { ModelsDevCatalogService } from 'src/engine/metadata-modules/ai/ai-models/services/models-dev-catalog.service';
 
 @UsePipes(ResolverValidationPipe)
 @AdminResolver()
 @UseFilters(
   AuthGraphqlApiExceptionFilter,
-  EnterpriseExceptionFilter,
-  PreventNestToAutoLogGraphqlErrorsFilter,
   ConfigVariableGraphqlApiExceptionFilter,
+  PreventNestToAutoLogGraphqlErrorsFilter,
 )
 @UseGuards(
   AuthPrincipalGuard({
@@ -41,83 +38,75 @@ import { ModelsDevCatalogService } from 'src/engine/metadata-modules/ai/ai-model
     application: false,
   }),
   NoPermissionGuard,
+  AdminPanelGuard,
 )
 export class AdminPanelAiProviderResolver {
   constructor(
     private readonly adminPanelAiProviderService: AdminPanelAiProviderService,
-    private readonly modelsDevCatalogService: ModelsDevCatalogService,
   ) {}
 
-  @UseGuards(AdminPanelGuard)
+  @Query(() => GraphQLJSON)
+  getAiProviders(): Record<string, unknown> {
+    return this.adminPanelAiProviderService.listAiProviders();
+  }
+
   @Query(() => CustomAiProviderAccessDTO)
-  async getCustomAiProviderAccess(): Promise<CustomAiProviderAccessDTO> {
+  getCustomAiProviderAccess(): Promise<CustomAiProviderAccessDTO> {
     return this.adminPanelAiProviderService.getCustomAiProviderAccess();
   }
 
-  @UseGuards(AdminPanelGuard)
-  @Query(() => GraphQLJSON)
-  async getAiProviders(): Promise<Record<string, unknown>> {
-    return this.adminPanelAiProviderService.getMaskedProviders();
+  @Query(() => [ModelsDevProviderSuggestionDTO])
+  getModelsDevProviders(): Promise<ModelsDevProviderSuggestionDTO[]> {
+    return this.adminPanelAiProviderService.getModelsDevProviders();
   }
 
-  @UseGuards(AdminPanelGuard)
+  @Query(() => [ModelsDevModelSuggestionDTO])
+  getModelsDevSuggestions(
+    @Args('providerType', { type: () => String }) providerType: string,
+  ): Promise<ModelsDevModelSuggestionDTO[]> {
+    return this.adminPanelAiProviderService.getModelsDevSuggestions(
+      providerType,
+    );
+  }
+
   @Mutation(() => Boolean)
-  async addAiProvider(
+  addAiProvider(
     @Args('providerName', { type: () => String }) providerName: string,
     @Args('providerConfig', { type: () => GraphQLJSON })
     providerConfig: unknown,
   ): Promise<boolean> {
-    return this.adminPanelAiProviderService.addProvider({
+    return this.adminPanelAiProviderService.addAiProvider(
       providerName,
       providerConfig,
-    });
+    );
   }
 
-  @UseGuards(AdminPanelGuard)
   @Mutation(() => Boolean)
-  async removeAiProvider(
-    @Args('providerName', { type: () => String })
-    providerName: string,
-  ): Promise<boolean> {
-    return this.adminPanelAiProviderService.removeProvider(providerName);
-  }
-
-  @UseGuards(AdminPanelGuard)
-  @Query(() => [ModelsDevProviderSuggestionDTO])
-  async getModelsDevProviders(): Promise<ModelsDevProviderSuggestionDTO[]> {
-    return this.modelsDevCatalogService.getProviderSuggestions();
-  }
-
-  @UseGuards(AdminPanelGuard)
-  @Query(() => [ModelsDevModelSuggestionDTO])
-  async getModelsDevSuggestions(
-    @Args('providerType', { type: () => String }) providerType: string,
-  ): Promise<ModelsDevModelSuggestionDTO[]> {
-    return this.modelsDevCatalogService.getModelSuggestions(providerType);
-  }
-
-  @UseGuards(AdminPanelGuard)
-  @Mutation(() => Boolean)
-  async addModelToProvider(
+  removeAiProvider(
     @Args('providerName', { type: () => String }) providerName: string,
-    @Args('modelConfig', { type: () => GraphQLJSON })
-    modelConfig: unknown,
   ): Promise<boolean> {
-    return this.adminPanelAiProviderService.addModelToProvider({
+    return this.adminPanelAiProviderService.removeAiProvider(providerName);
+  }
+
+  @Mutation(() => Boolean)
+  addModelToProvider(
+    @Args('providerName', { type: () => String }) providerName: string,
+    @Args('modelConfig', { type: () => GraphQLJSON }) modelConfig: unknown,
+  ): Promise<boolean> {
+    return this.adminPanelAiProviderService.addModelToProvider(
       providerName,
       modelConfig,
-    });
+    );
   }
 
-  @UseGuards(AdminPanelGuard)
   @Mutation(() => Boolean)
-  async removeModelFromProvider(
+  removeModelFromProvider(
     @Args('providerName', { type: () => String }) providerName: string,
     @Args('modelName', { type: () => String }) modelName: string,
   ): Promise<boolean> {
-    return this.adminPanelAiProviderService.removeModelFromProvider({
+    return this.adminPanelAiProviderService.removeModelFromProvider(
       providerName,
       modelName,
-    });
+    );
   }
 }

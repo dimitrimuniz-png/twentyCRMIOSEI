@@ -18,8 +18,19 @@ const unmockedRequestCatchAllHandler = http.all('*', ({ request }) => {
   return HttpResponse.json({ error: { message } }, { status: 500 });
 });
 
+const twentyCompaniesHandler = http.get(
+  'https://twenty-companies.com/:domain',
+  ({ params }) => {
+    const domain = String(params.domain ?? '');
+    const name = domain.split('.')[0] || domain;
+
+    return HttpResponse.json({ name, city: '' });
+  },
+);
+
 const server = setupServer(
   ...localhostPassthroughHandlers,
+  twentyCompaniesHandler,
   unmockedRequestCatchAllHandler,
 );
 

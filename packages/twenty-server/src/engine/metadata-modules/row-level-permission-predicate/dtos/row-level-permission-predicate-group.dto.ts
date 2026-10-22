@@ -1,29 +1,44 @@
-/* @license Enterprise */
-
-import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, Float, ID, InputType, ObjectType } from '@nestjs/graphql';
 
 import { RowLevelPermissionPredicateGroupLogicalOperator } from 'twenty-shared/types';
 
-registerEnumType(RowLevelPermissionPredicateGroupLogicalOperator, {
-  name: 'RowLevelPermissionPredicateGroupLogicalOperator',
-});
+import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
+
 @ObjectType('RowLevelPermissionPredicateGroup')
 export class RowLevelPermissionPredicateGroupDTO {
-  @Field(() => String)
+  @Field(() => ID)
   id: string;
-
-  @Field(() => String, { nullable: true })
-  parentRowLevelPermissionPredicateGroupId?: string | null;
 
   @Field(() => RowLevelPermissionPredicateGroupLogicalOperator)
   logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
 
-  @Field(() => Number, { nullable: true })
+  @Field()
+  objectMetadataId: string;
+
+  @Field(() => ID, { nullable: true })
+  parentRowLevelPermissionPredicateGroupId?: string | null;
+
+  @Field(() => Float, { nullable: true })
   positionInRowLevelPermissionPredicateGroup?: number | null;
 
-  @Field(() => String)
+  @Field()
   roleId: string;
+}
 
-  @Field(() => String)
+@InputType('RowLevelPermissionPredicateGroupInput')
+export class RowLevelPermissionPredicateGroupInput {
+  @Field(() => UUIDScalarType, { nullable: true })
+  id?: string;
+
+  @Field(() => RowLevelPermissionPredicateGroupLogicalOperator)
+  logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
+
+  @Field(() => UUIDScalarType)
   objectMetadataId: string;
+
+  @Field(() => UUIDScalarType, { nullable: true })
+  parentRowLevelPermissionPredicateGroupId?: string | null;
+
+  @Field(() => Float, { nullable: true })
+  positionInRowLevelPermissionPredicateGroup?: number | null;
 }

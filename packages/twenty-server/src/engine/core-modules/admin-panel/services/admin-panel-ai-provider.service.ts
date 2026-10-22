@@ -1,241 +1,243 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 import { isDefined } from 'twenty-shared/utils';
+import { type Repository } from 'typeorm';
 
 import {
   AdminPanelException,
   AdminPanelExceptionCode,
 } from 'src/engine/core-modules/admin-panel/admin-panel.exception';
+import { type CustomAiProviderAccessDTO } from 'src/engine/core-modules/admin-panel/dtos/admin-panel-ai-provider.dto';
 import { MAX_SEATS_WITHOUT_ENTERPRISE_KEY } from 'src/engine/core-modules/enterprise/constants/max-seats-without-organization-key.constant';
+import { CustomAiProviderAccessService } from 'src/engine/core-modules/enterprise/services/custom-ai-provider-access.service';
 import {
-  EnterpriseException,
-  EnterpriseExceptionCode,
-} from 'src/engine/core-modules/enterprise/enterprise.exception';
-import {
-  type CustomAiProviderAccess,
-  CustomAiProviderAccessService,
-} from 'src/engine/core-modules/enterprise/services/custom-ai-provider-access.service';
-import { UserInputError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
+  ForbiddenError,
+  UserInputError,
+} from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
+import { ConfigSource } from 'src/engine/core-modules/twenty-config/enums/config-source.enum';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
-import { AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
+import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { DefaultAiCatalogService } from 'src/engine/metadata-modules/ai/ai-models/services/default-ai-catalog.service';
+import { ModelsDevCatalogService } from 'src/engine/metadata-modules/ai/ai-models/services/models-dev-catalog.service';
+import { type AiProviderConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-config.type';
 import { aiProviderConfigSchema } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-config.schema';
-import { aiProviderModelConfigSchema } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-model-config.schema';
 import { type AiProviderModelConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-model-config.type';
+import { aiProviderModelConfigSchema } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-model-config.schema';
+import { type AiProvidersConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-providers-config.type';
 import { extractConfigVariableName } from 'src/engine/metadata-modules/ai/ai-models/utils/extract-config-variable-name.util';
 
-const PROVIDER_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+type ListedAiProvider = AiProviderConfig & {
+  source: 'catalog' | 'custom';
+  apiKeyConfigVariable?: string;
+  hasAccessKey?: boolean;
+};
 
 @Injectable()
 export class AdminPanelAiProviderService {
   constructor(
     private readonly twentyConfigService: TwentyConfigService,
-    private readonly customAiProviderAccessService: CustomAiProviderAccessService,
-    private readonly aiModelRegistryService: AiModelRegistryService,
     private readonly defaultAiCatalogService: DefaultAiCatalogService,
+    private readonly modelsDevCatalogService: ModelsDevCatalogService,
+    private readonly customAiProviderAccessService: CustomAiProviderAccessService,
+    @InjectRepository(UserWorkspaceEntity)
+    private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
   ) {}
 
-  // Recomputed rather than cached so the admin panel is exact and model resolution refreshed
-  async getCustomAiProviderAccess(): Promise<CustomAiProviderAccess> {
-    return this.customAiProviderAccessService.computeAccess();
-  }
+  listAiProviders(): Record<string, ListedAiProvider> {
+    const listed: Record<string, ListedAiProvider> = {};
 
-  private async assertCustomAiProviderAccess(): Promise<void> {
-    const { hasAccess, seatCount } = await this.getCustomAiProviderAccess();
-
-    if (hasAccess) {
-      return;
+    for (const [providerName, config] of Object.entries(
+      this.defaultAiCatalogService.getDefaultAiCatalog(),
+    )) {
+      listed[providerName] = this.listCatalogProvider(config);
     }
 
-    throw new EnterpriseException(
-      `Custom AI providers require a valid enterprise key above ${MAX_SEATS_WITHOUT_ENTERPRISE_KEY} seats (this instance has ${seatCount})`,
-      EnterpriseExceptionCode.ENTERPRISE_SEAT_THRESHOLD_EXCEEDED,
+    for (const [providerName, config] of Object.entries(this.readProviders())) {
+      listed[providerName] = { ...config, source: 'custom' };
+    }
+
+    return listed;
+  }
+
+  async getCustomAiProviderAccess(): Promise<CustomAiProviderAccessDTO> {
+    return {
+      hasAccess: this.customAiProviderAccessService.getCachedHasAccess(),
+      seatCount: await this.userWorkspaceRepository.count(),
+      seatThreshold: MAX_SEATS_WITHOUT_ENTERPRISE_KEY,
+    };
+  }
+
+  getModelsDevProviders() {
+    return this.modelsDevCatalogService.getProviderSuggestions();
+  }
+
+  getModelsDevSuggestions(providerType: string) {
+    return this.modelsDevCatalogService.getModelSuggestions(providerType);
+  }
+
+  async addAiProvider(
+    providerName: string,
+    providerConfig: unknown,
+  ): Promise<boolean> {
+    const parsed = aiProviderConfigSchema.safeParse(providerConfig);
+
+    if (!parsed.success) {
+      throw new UserInputError(
+        parsed.error.issues[0]?.message ?? 'Invalid provider',
+      );
+    }
+
+    this.assertProviderNameIsNotBuiltIn(providerName);
+    this.assertCustomProviderAccess();
+
+    const providers = this.readProviders();
+
+    providers[providerName] = parsed.data;
+    await this.writeProviders(providers);
+
+    return true;
+  }
+
+  async removeAiProvider(providerName: string): Promise<boolean> {
+    const providers = this.readProviders();
+
+    delete providers[providerName];
+    await this.writeProviders(providers);
+
+    return true;
+  }
+
+  async addModelToProvider(
+    providerName: string,
+    modelConfig: unknown,
+  ): Promise<boolean> {
+    const parsed = aiProviderModelConfigSchema.safeParse(modelConfig);
+
+    if (!parsed.success) {
+      throw new UserInputError(
+        parsed.error.issues[0]?.message ?? 'Invalid model',
+      );
+    }
+
+    this.assertProviderNameIsNotBuiltIn(providerName);
+    this.assertCustomProviderAccess();
+
+    const providers = this.readProviders();
+    const provider = providers[providerName];
+
+    if (!isDefined(provider)) {
+      throw new UserInputError(`Provider ${providerName} was not found`);
+    }
+
+    const models = provider.models ?? [];
+    const existingIndex = models.findIndex(
+      (model) => model.name === parsed.data.name,
     );
+    const nextModels =
+      existingIndex === -1
+        ? [...models, parsed.data]
+        : models.map((model, index) =>
+            index === existingIndex ? parsed.data : model,
+          );
+
+    providers[providerName] = { ...provider, models: nextModels };
+    await this.writeProviders(providers);
+
+    return true;
   }
 
-  getMaskedProviders(): Record<string, unknown> {
-    const providers =
-      this.aiModelRegistryService.getResolvedProvidersForAdmin();
-    const catalogNames = this.aiModelRegistryService.getCatalogProviderNames();
-    const rawCatalog = this.defaultAiCatalogService.getDefaultAiCatalog();
-    const customProviders = this.twentyConfigService.get('AI_PROVIDERS');
-    const masked: Record<string, Record<string, unknown>> = {};
+  async removeModelFromProvider(
+    providerName: string,
+    modelName: string,
+  ): Promise<boolean> {
+    const providers = this.readProviders();
+    const provider = providers[providerName];
 
-    for (const [key, config] of Object.entries(providers)) {
-      const isCatalog =
-        catalogNames.has(key) && !isDefined(customProviders[key]);
-      const rawConfig = isCatalog ? rawCatalog[key] : undefined;
-      const apiKeyConfigVariable = rawConfig
-        ? extractConfigVariableName(rawConfig.apiKey)
-        : undefined;
-
-      masked[key] = {
-        npm: config.npm,
-        label: config.label ?? key,
-        source: isCatalog ? 'catalog' : 'custom',
-        ...(config.authType && { authType: config.authType }),
-        ...(config.name && { name: config.name }),
-        ...(config.baseUrl && { baseUrl: config.baseUrl }),
-        ...(config.region && { region: config.region }),
-        ...(config.dataResidency && { dataResidency: config.dataResidency }),
-        ...(config.apiKey && {
-          apiKey: `${config.apiKey.substring(0, 8)}...`,
-        }),
-        ...(apiKeyConfigVariable && { apiKeyConfigVariable }),
-        hasAccessKey: !!(config.accessKeyId && config.secretAccessKey),
-      };
+    if (!isDefined(provider)) {
+      return true;
     }
 
-    return masked;
+    providers[providerName] = {
+      ...provider,
+      models: (provider.models ?? []).filter(
+        (model: AiProviderModelConfig) => model.name !== modelName,
+      ),
+    };
+    await this.writeProviders(providers);
+
+    return true;
   }
 
-  async addProvider({
-    providerName,
-    providerConfig,
-  }: {
-    providerName: string;
-    providerConfig: unknown;
-  }): Promise<boolean> {
-    await this.assertCustomAiProviderAccess();
-
-    if (!PROVIDER_NAME_PATTERN.test(providerName)) {
-      throw new UserInputError('Invalid provider name');
-    }
-
+  private assertProviderNameIsNotBuiltIn(providerName: string): void {
     if (
-      this.aiModelRegistryService.getCatalogProviderNames().has(providerName)
+      isDefined(
+        this.defaultAiCatalogService.getDefaultAiCatalog()[providerName],
+      )
     ) {
       throw new UserInputError(
         new AdminPanelException(
-          `Provider "${providerName}" is built in and cannot be added as a custom provider`,
+          `Provider ${providerName} is built in`,
           AdminPanelExceptionCode.BUILT_IN_AI_PROVIDER_NAME,
         ),
       );
     }
-
-    // An invalid config would otherwise break model resolution for every provider on the instance
-    const validatedProviderConfig =
-      aiProviderConfigSchema.safeParse(providerConfig);
-
-    if (!validatedProviderConfig.success) {
-      throw new UserInputError(
-        `Invalid provider configuration: ${validatedProviderConfig.error.issues
-          .map((issue) => `${issue.path.join('.')} ${issue.message}`)
-          .join(', ')}`,
-      );
-    }
-
-    const customProviders = {
-      ...this.twentyConfigService.get('AI_PROVIDERS'),
-    };
-
-    customProviders[providerName] = validatedProviderConfig.data;
-    await this.twentyConfigService.set('AI_PROVIDERS', customProviders);
-
-    return true;
   }
 
-  // No access check so an instance past the threshold can still clean up its providers
-  async removeProvider(providerName: string): Promise<boolean> {
-    const customProviders = {
-      ...this.twentyConfigService.get('AI_PROVIDERS'),
-    };
-
-    delete customProviders[providerName];
-    await this.twentyConfigService.set('AI_PROVIDERS', customProviders);
-
-    return true;
-  }
-
-  async addModelToProvider({
-    providerName,
-    modelConfig,
-  }: {
-    providerName: string;
-    modelConfig: unknown;
-  }): Promise<boolean> {
-    await this.assertCustomAiProviderAccess();
-
-    const validatedModelConfig =
-      aiProviderModelConfigSchema.safeParse(modelConfig);
-
-    if (!validatedModelConfig.success) {
-      throw new UserInputError(
-        `Invalid model configuration: ${validatedModelConfig.error.issues
-          .map((issue) => `${issue.path.join('.')} ${issue.message}`)
-          .join(', ')}`,
-      );
+  private assertCustomProviderAccess(): void {
+    if (this.customAiProviderAccessService.getCachedHasAccess()) {
+      return;
     }
 
-    const customProviders = {
-      ...this.twentyConfigService.get('AI_PROVIDERS'),
-    };
-
-    const existing = customProviders[providerName];
-
-    if (!existing) {
-      throw new UserInputError(
-        `Provider "${providerName}" not found in custom providers`,
-      );
-    }
-
-    const existingModels = existing.models ?? [];
-    const alreadyExists = existingModels.some(
-      (model: AiProviderModelConfig) =>
-        model.name === validatedModelConfig.data.name,
+    throw new ForbiddenError(
+      'Custom AI providers are not available on this build',
     );
-
-    if (alreadyExists) {
-      throw new UserInputError(
-        `Model "${validatedModelConfig.data.name}" already exists on provider "${providerName}"`,
-      );
-    }
-
-    customProviders[providerName] = {
-      ...existing,
-      models: [
-        ...existingModels,
-        { ...validatedModelConfig.data, source: 'manual' },
-      ],
-    };
-
-    await this.twentyConfigService.set('AI_PROVIDERS', customProviders);
-
-    return true;
   }
 
-  async removeModelFromProvider({
-    providerName,
-    modelName,
-  }: {
-    providerName: string;
-    modelName: string;
-  }): Promise<boolean> {
-    const customProviders = {
-      ...this.twentyConfigService.get('AI_PROVIDERS'),
-    };
+  private readProviders(): AiProvidersConfig {
+    return structuredClone(this.twentyConfigService.get('AI_PROVIDERS') ?? {});
+  }
 
-    const existing = customProviders[providerName];
+  private async writeProviders(providers: AiProvidersConfig): Promise<void> {
+    const metadata =
+      this.twentyConfigService.getVariableWithMetadata('AI_PROVIDERS');
+    const isStoredInDatabase = metadata?.source === ConfigSource.DATABASE;
 
-    if (!existing) {
-      throw new UserInputError(
-        `Provider "${providerName}" not found in custom providers`,
-      );
+    if (Object.keys(providers).length === 0) {
+      if (isStoredInDatabase) {
+        await this.twentyConfigService.delete('AI_PROVIDERS');
+      }
+
+      return;
     }
 
-    const existingModels = existing.models ?? [];
+    if (isStoredInDatabase) {
+      await this.twentyConfigService.update('AI_PROVIDERS', providers);
 
-    customProviders[providerName] = {
-      ...existing,
-      models: existingModels.filter(
-        (model: AiProviderModelConfig) => model.name !== modelName,
-      ),
-    };
+      return;
+    }
 
-    await this.twentyConfigService.set('AI_PROVIDERS', customProviders);
+    await this.twentyConfigService.set('AI_PROVIDERS', providers);
+  }
 
-    return true;
+  private listCatalogProvider(config: AiProviderConfig): ListedAiProvider {
+    const listed: ListedAiProvider = { ...config, source: 'catalog' };
+    const apiKeyVariable = extractConfigVariableName(config.apiKey);
+
+    if (isDefined(apiKeyVariable)) {
+      delete listed.apiKey;
+      listed.apiKeyConfigVariable = apiKeyVariable;
+    }
+
+    if (
+      isDefined(extractConfigVariableName(config.accessKeyId)) ||
+      isDefined(extractConfigVariableName(config.secretAccessKey))
+    ) {
+      delete listed.accessKeyId;
+      delete listed.secretAccessKey;
+      listed.hasAccessKey = true;
+    }
+
+    return listed;
   }
 }

@@ -355,7 +355,7 @@ export class MessageCampaignBatchDeliveryService {
           replacements: replacementsByDeliveryId.get(recipient.messageId) ?? {},
         })),
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         this.exceptionHandlerService.captureExceptions([error], {
           additionalData: { workspaceId, campaignId },
         });

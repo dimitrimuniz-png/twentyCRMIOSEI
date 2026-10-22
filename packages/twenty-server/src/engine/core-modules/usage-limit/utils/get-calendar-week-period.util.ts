@@ -1,24 +1,18 @@
-/* @license Enterprise */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
+// Monday 00:00 UTC through the following Monday, independent of billing.
+export const getCalendarWeekPeriod = (
+  date: Date,
+): { periodStart: Date; periodEnd: Date } => {
+  const periodStart = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  const daysSinceMonday = (periodStart.getUTCDay() + 6) % 7;
 
-export const getCalendarWeekPeriod = (now: Date): UsagePeriod => {
-  const daysSinceMonday = (now.getUTCDay() + 6) % 7;
+  periodStart.setUTCDate(periodStart.getUTCDate() - daysSinceMonday);
 
   return {
-    periodStart: new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate() - daysSinceMonday,
-      ),
-    ),
-    periodEnd: new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate() - daysSinceMonday + 7,
-      ),
-    ),
+    periodStart,
+    periodEnd: new Date(periodStart.getTime() + 7 * MS_PER_DAY),
   };
 };

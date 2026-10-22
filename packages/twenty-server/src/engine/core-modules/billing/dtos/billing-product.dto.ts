@@ -5,7 +5,7 @@ import { BillingPriceLicensedDTO } from 'src/engine/core-modules/billing/dtos/bi
 import { BillingPriceMeteredDTO } from 'src/engine/core-modules/billing/dtos/billing-price-metered.dto';
 import { BillingUsageType } from 'src/engine/core-modules/billing/enums/billing-usage-type.enum';
 
-@InterfaceType({
+@InterfaceType('BillingProductDto', {
   resolveType(product: BillingProductDTO) {
     return product.metadata.priceUsageBased === BillingUsageType.METERED
       ? BillingMeteredProduct

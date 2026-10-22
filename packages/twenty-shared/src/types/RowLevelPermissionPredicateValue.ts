@@ -1,15 +1,12 @@
-/* @license Enterprise */
-
 export type RelationPredicateValue = {
-  isCurrentWorkspaceMemberSelected?: boolean;
-  selectedRecordIds: string[];
+  id: string;
 };
 
 export type RowLevelPermissionPredicateValue =
   | string
-  | string[]
-  | boolean
   | number
+  | boolean
+  | string[]
   | RelationPredicateValue
   | Record<string, unknown>
   | null;

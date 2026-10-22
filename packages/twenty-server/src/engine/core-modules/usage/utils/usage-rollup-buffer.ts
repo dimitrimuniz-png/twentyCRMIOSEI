@@ -1,73 +1,70 @@
-/* @license Enterprise */
-
-import { isDefined } from 'twenty-shared/utils';
-
 import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
 
-const ABSENT = '-';
+const scopeKey = (event: UsageEvent): string => {
+  const spenders = event.spenders ?? {};
+  const spenderKey = Object.keys(spenders)
+    .sort()
+    .map((key) => `${key}:${spenders[key] ?? ''}`)
+    .join('|');
+  const periodStart =
+    event.periodStart instanceof Date
+      ? event.periodStart.toISOString()
+      : (event.periodStart ?? '');
 
-type BufferedRollup = {
-  workspaceId: string;
-  usageEvent: UsageEvent;
+  return [
+    event.resourceType,
+    event.operationType,
+    event.unit,
+    spenderKey,
+    periodStart,
+    event.resourceId ?? '',
+    event.resourceContext ?? '',
+  ].join('\u0000');
 };
 
-const buildRollupKey = (workspaceId: string, usageEvent: UsageEvent): string =>
-  [
-    workspaceId,
-    usageEvent.resourceType,
-    usageEvent.operationType,
-    usageEvent.unit,
-    usageEvent.resourceContext || ABSENT,
-    usageEvent.resourceId || ABSENT,
-    usageEvent.periodStart?.toISOString() ?? ABSENT,
-    usageEvent.spenders?.userWorkspaceId || ABSENT,
-    usageEvent.spenders?.apiKeyId || ABSENT,
-    usageEvent.spenders?.applicationId || ABSENT,
-    usageEvent.spenders?.agentId || ABSENT,
-    usageEvent.spenders?.workflowId || ABSENT,
-    usageEvent.spenders?.logicFunctionId || ABSENT,
-  ].join('|');
-
 export class UsageRollupBuffer {
-  private rollupByKey = new Map<string, BufferedRollup>();
+  private readonly rowsByWorkspaceId = new Map<
+    string,
+    Map<string, UsageEvent>
+  >();
+
+  private entryCount = 0;
 
   constructor(private readonly maxEntries: number) {}
 
   get isFull(): boolean {
-    return this.rollupByKey.size >= this.maxEntries;
+    return this.entryCount >= this.maxEntries;
   }
 
-  increment(workspaceId: string, usageEvent: UsageEvent): void {
-    const rollupKey = buildRollupKey(workspaceId, usageEvent);
-    const bufferedRollup = this.rollupByKey.get(rollupKey);
+  increment(workspaceId: string, event: UsageEvent): void {
+    const workspaceRows =
+      this.rowsByWorkspaceId.get(workspaceId) ?? new Map<string, UsageEvent>();
+    const key = scopeKey(event);
+    const existing = workspaceRows.get(key);
 
-    if (isDefined(bufferedRollup)) {
-      bufferedRollup.usageEvent.quantity += usageEvent.quantity;
-      bufferedRollup.usageEvent.creditsUsedMicro += usageEvent.creditsUsedMicro;
+    if (existing) {
+      existing.quantity = (existing.quantity ?? 0) + (event.quantity ?? 0);
+      existing.creditsUsedMicro =
+        (existing.creditsUsedMicro ?? 0) + (event.creditsUsedMicro ?? 0);
 
       return;
     }
 
-    this.rollupByKey.set(rollupKey, {
-      workspaceId,
-      usageEvent: { ...usageEvent },
-    });
+    workspaceRows.set(key, { ...event });
+    this.rowsByWorkspaceId.set(workspaceId, workspaceRows);
+    this.entryCount += 1;
   }
 
   drain(): Map<string, UsageEvent[]> {
-    const drainedRollups = [...this.rollupByKey.values()];
+    const drained = new Map<string, UsageEvent[]>();
 
-    this.rollupByKey = new Map();
-
-    const usageEventsByWorkspaceId = new Map<string, UsageEvent[]>();
-
-    for (const { workspaceId, usageEvent } of drainedRollups) {
-      const usageEvents = usageEventsByWorkspaceId.get(workspaceId) ?? [];
-
-      usageEvents.push(usageEvent);
-      usageEventsByWorkspaceId.set(workspaceId, usageEvents);
+    for (const [workspaceId, rows] of this.rowsByWorkspaceId) {
+      drained.set(workspaceId, [...rows.values()]);
     }
 
-    return usageEventsByWorkspaceId;
+    this.rowsByWorkspaceId.clear();
+    this.entryCount = 0;
+
+    return drained;
   }
 }

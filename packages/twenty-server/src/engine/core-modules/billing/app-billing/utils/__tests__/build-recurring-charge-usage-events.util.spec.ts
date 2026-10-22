@@ -107,14 +107,24 @@ describe('buildRecurringChargeUsageEvents', () => {
     });
 
     expect(
-      result.every((event) => !isDefined(event.spenders?.userWorkspaceId)),
+      result.every(
+        (event: {
+          spenders?: { userWorkspaceId?: string; applicationId?: string };
+          resourceId?: string;
+        }) => !isDefined(event.spenders?.userWorkspaceId),
+      ),
     ).toBe(true);
     expect(
-      result.every((event) => event.spenders?.applicationId === APPLICATION_ID),
+      result.every(
+        (event: { spenders?: { applicationId?: string } }) =>
+          event.spenders?.applicationId === APPLICATION_ID,
+      ),
     ).toBe(true);
-    expect(result.every((event) => event.resourceId === APPLICATION_ID)).toBe(
-      true,
-    );
+    expect(
+      result.every(
+        (event: { resourceId?: string }) => event.resourceId === APPLICATION_ID,
+      ),
+    ).toBe(true);
   });
 
   it('should return no events when nothing is due', () => {

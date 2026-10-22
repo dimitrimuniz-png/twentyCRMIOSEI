@@ -151,6 +151,7 @@ export class WorkspaceOrmManager {
       flatRoleTargetByAgentIdMaps,
       flatRowLevelPermissionPredicateMaps,
       flatRowLevelPermissionPredicateGroupMaps,
+      flatValidationRuleMaps: cachedValidationRuleMaps,
     } = await this.workspaceCacheService.getOrRecompute(workspaceId, [
       'flatObjectMetadataMaps',
       'flatFieldMetadataMapsOrm',
@@ -164,6 +165,7 @@ export class WorkspaceOrmManager {
       'flatRoleTargetByAgentIdMaps',
       'flatRowLevelPermissionPredicateMaps',
       'flatRowLevelPermissionPredicateGroupMaps',
+      'flatValidationRuleMaps',
     ]);
 
     const { idByNameSingular: objectIdByNameSingular } =
@@ -175,11 +177,7 @@ export class WorkspaceOrmManager {
       hasValidEnterprisePlan: this.enterprisePlanService.isValid(),
       isBillingEnabled: this.twentyConfigService.get('IS_BILLING_ENABLED'),
     })
-      ? (
-          await this.workspaceCacheService.getOrRecompute(workspaceId, [
-            'flatValidationRuleMaps',
-          ])
-        ).flatValidationRuleMaps
+      ? cachedValidationRuleMaps
       : undefined;
 
     return {

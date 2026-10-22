@@ -12,7 +12,7 @@ import { PublicDomainModule } from 'src/engine/core-modules/public-domain/public
     CustomDomainManagerModule,
     PublicDomainModule,
   ],
-  providers: [DnsCloudflareService],
   controllers: [DnsCloudflareController],
+  providers: [DnsCloudflareService],
 })
 export class CloudflareModule {}

@@ -1,82 +1,64 @@
-/* @license Enterprise */
+import { FieldMetadataType } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
-import {
-  FieldMetadataType,
-  type RowLevelPermissionPredicateValue,
-} from 'twenty-shared/types';
-import { isNonEmptyString } from '@sniptt/guards';
-import { isDefined, isPlainObject } from 'twenty-shared/utils';
-
-import { type UserWorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
-import { computeMorphOrRelationFieldJoinColumnName } from 'src/engine/metadata-modules/field-metadata/utils/compute-morph-or-relation-field-join-column-name.util';
-import { isCompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/utils/is-composite-field-metadata-type.util';
 import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
-import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
-
-type ResolveWorkspaceMemberPredicateValueArgs = {
-  workspaceMember: NonNullable<UserWorkspaceAuthContext['workspaceMember']>;
-  workspaceMemberFieldMetadata: OrmFlatFieldMetadata;
-  workspaceMemberSubFieldName: string | null;
-};
-
-const isOwningRelationFlatFieldMetadata = (
-  flatFieldMetadata: OrmFlatFieldMetadata,
-): boolean =>
-  flatFieldMetadata.type === FieldMetadataType.RELATION &&
-  isMorphOrRelationFlatFieldMetadata(flatFieldMetadata) &&
-  flatFieldMetadata.settings?.relationType === RelationType.MANY_TO_ONE;
+import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
 export const resolveWorkspaceMemberPredicateValue = ({
   workspaceMember,
   workspaceMemberFieldMetadata,
   workspaceMemberSubFieldName,
-}: ResolveWorkspaceMemberPredicateValueArgs): RowLevelPermissionPredicateValue | null => {
-  const workspaceMemberValues = workspaceMember as unknown as Record<
-    string,
-    unknown
+}: {
+  workspaceMember: WorkspaceMemberWorkspaceEntity;
+  workspaceMemberFieldMetadata: Pick<
+    OrmFlatFieldMetadata,
+    'name' | 'type' | 'settings'
   >;
+  workspaceMemberSubFieldName: string | null;
+}): string | string[] | null => {
+  const member = workspaceMember as unknown as Record<string, unknown>;
 
-  if (isMorphOrRelationFlatFieldMetadata(workspaceMemberFieldMetadata)) {
-    if (!isOwningRelationFlatFieldMetadata(workspaceMemberFieldMetadata)) {
+  if (workspaceMemberFieldMetadata.type === FieldMetadataType.RELATION) {
+    const settings = workspaceMemberFieldMetadata.settings;
+
+    if (
+      !isDefined(settings) ||
+      !('relationType' in settings) ||
+      settings.relationType !== RelationType.MANY_TO_ONE
+    ) {
       return null;
     }
 
-    const relatedRecordId =
-      workspaceMemberValues[
-        computeMorphOrRelationFieldJoinColumnName({
-          name: workspaceMemberFieldMetadata.name,
-        })
-      ];
+    const joinColumnValue =
+      member[`${workspaceMemberFieldMetadata.name}Id`] ?? null;
 
-    return isNonEmptyString(relatedRecordId) ? relatedRecordId : null;
+    return typeof joinColumnValue === 'string' ? joinColumnValue : null;
   }
 
-  const rawWorkspaceMemberValue =
-    workspaceMemberValues[workspaceMemberFieldMetadata.name];
+  if (isDefined(workspaceMemberSubFieldName)) {
+    const composite = member[workspaceMemberFieldMetadata.name];
 
-  if (!isDefined(rawWorkspaceMemberValue)) {
+    if (!isDefined(composite) || typeof composite !== 'object') {
+      return null;
+    }
+
+    const subFieldValue = (composite as Record<string, unknown>)[
+      workspaceMemberSubFieldName
+    ];
+
+    return typeof subFieldValue === 'string' ? subFieldValue : null;
+  }
+
+  const value = member[workspaceMemberFieldMetadata.name];
+
+  if (!isDefined(value)) {
     return null;
   }
 
-  const workspaceMemberValue =
-    isDefined(workspaceMemberSubFieldName) &&
-    isCompositeFieldMetadataType(workspaceMemberFieldMetadata.type) &&
-    isPlainObject(rawWorkspaceMemberValue)
-      ? rawWorkspaceMemberValue[workspaceMemberSubFieldName]
-      : rawWorkspaceMemberValue;
-
-  if (!isDefined(workspaceMemberValue)) {
-    return null;
+  if (workspaceMemberFieldMetadata.type === FieldMetadataType.SELECT) {
+    return typeof value === 'string' ? [value] : null;
   }
 
-  if (
-    (workspaceMemberFieldMetadata.type === FieldMetadataType.SELECT ||
-      workspaceMemberFieldMetadata.type === FieldMetadataType.MULTI_SELECT) &&
-    typeof workspaceMemberValue === 'string'
-  ) {
-    return [workspaceMemberValue];
-  }
-
-  return workspaceMemberValue as RowLevelPermissionPredicateValue;
+  return typeof value === 'string' ? value : null;
 };

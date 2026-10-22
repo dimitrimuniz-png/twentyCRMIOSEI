@@ -1,12 +1,14 @@
-/* @license Enterprise */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
+export const getCalendarDayPeriod = (
+  date: Date,
+): { periodStart: Date; periodEnd: Date } => {
+  const periodStart = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
 
-export const getCalendarDayPeriod = (now: Date): UsagePeriod => ({
-  periodStart: new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  ),
-  periodEnd: new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
-  ),
-});
+  return {
+    periodStart,
+    periodEnd: new Date(periodStart.getTime() + MS_PER_DAY),
+  };
+};

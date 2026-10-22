@@ -33,6 +33,8 @@ concurrency:
 
 jobs:
   pull_docs_translations:
+    # Crowdin sync for twentyhq/twenty docs.
+    if: github.repository == 'twentyhq/twenty'
     name: Pull docs translations
     runs-on: ubuntu-latest
     steps:

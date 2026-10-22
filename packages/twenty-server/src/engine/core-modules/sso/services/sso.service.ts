@@ -1,361 +1,222 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { msg } from '@lingui/core/macro';
-import { custom, Issuer } from 'openid-client';
+import { Issuer, type Client } from 'openid-client';
+import { Repository } from 'typeorm';
 import { isDefined } from 'twenty-shared/utils';
-import { QueryFailedError, Repository } from 'typeorm';
 
-import { POSTGRESQL_ERROR_CODES } from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-codes.constants';
-import { type QueryFailedErrorWithCode } from 'src/engine/api/graphql/workspace-query-runner/utils/workspace-query-runner-graphql-api-exception-handler.util';
-import {
-  WorkspaceSsoIdentityProviderEntity,
-  IdentityProviderType,
-  OidcResponseType,
-} from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
-import { BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
-import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
-import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
-import { SecureHttpClientService } from 'src/engine/core-modules/secure-http-client/secure-http-client.service';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import {
   SsoException,
   SsoExceptionCode,
 } from 'src/engine/core-modules/sso/sso.exception';
 import {
-  type OidcConfiguration,
-  type SamlConfiguration,
-  type SsoConfiguration,
-} from 'src/engine/core-modules/sso/types/sso-configurations.type';
-import { resolveIdTokenSigningAlgorithm } from 'src/engine/core-modules/sso/utils/resolve-id-token-signing-algorithm.util';
-import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+  IdentityProviderType,
+  SsoIdentityProviderStatus,
+  WorkspaceSsoIdentityProviderEntity,
+} from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
+
+export type SsoAuthorizationUrl = {
+  id: string;
+  type: IdentityProviderType;
+  authorizationURL: string;
+};
 
 @Injectable()
 export class SsoService {
-  private readonly featureLookUpKey = BillingEntitlementKey.SSO;
-
-  // openid-client resolves this hook on the Issuer class, issuer and client instances, so all three get it.
-  // It deep-merges the result with its own per-request options, so only the agent is returned.
-  private readonly oidcHttpOptions = (url: URL) => ({
-    agent: this.secureHttpClientService.getSsrfSafeAgent(url),
-  });
+  private readonly issuerByUrl = new Map<string, Issuer>();
 
   constructor(
     @InjectRepository(WorkspaceSsoIdentityProviderEntity)
-    private readonly workspaceSsoIdentityProviderRepository: Repository<WorkspaceSsoIdentityProviderEntity>,
+    private readonly identityProviderRepository: Repository<WorkspaceSsoIdentityProviderEntity>,
     private readonly twentyConfigService: TwentyConfigService,
-    private readonly billingService: BillingService,
-    private readonly exceptionHandlerService: ExceptionHandlerService,
-    private readonly secureHttpClientService: SecureHttpClientService,
-  ) {
-    Issuer[custom.http_options] = this.oidcHttpOptions;
-  }
+  ) {}
 
-  private async isSsoEnabled(workspaceId: string) {
-    const isSsoBillingEnabled = await this.billingService.hasEntitlement(
-      workspaceId,
-      this.featureLookUpKey,
-    );
-
-    if (!isSsoBillingEnabled) {
-      throw new SsoException(
-        `No entitlement found for this workspace`,
-        SsoExceptionCode.SSO_DISABLE,
-      );
-    }
-  }
-
-  async discoverOidcIssuer(issuerUrl: string) {
-    try {
-      return await Issuer.discover(issuerUrl);
-    } catch (error) {
-      // Surfaced so a blocked private-network issuer is diagnosable at setup; at login it only shows as a redirect.
-      const reason = error instanceof Error ? error.message : String(error);
-
-      throw new SsoException(
-        `Invalid issuer: ${reason}`,
-        SsoExceptionCode.INVALID_ISSUER_URL,
-        { userFriendlyMessage: msg`Invalid issuer URL: ${reason}` },
-      );
-    }
-  }
-
-  async createOidcIdentityProvider(
-    data: Pick<
-      WorkspaceSsoIdentityProviderEntity,
-      'issuer' | 'clientID' | 'clientSecret' | 'name'
-    >,
-    workspaceId: string,
-  ) {
-    try {
-      await this.isSsoEnabled(workspaceId);
-
-      const issuer = await this.discoverOidcIssuer(data.issuer);
-
-      const identityProvider =
-        await this.workspaceSsoIdentityProviderRepository.save({
-          type: IdentityProviderType.OIDC,
-          clientID: data.clientID,
-          clientSecret: data.clientSecret,
-          issuer: issuer.metadata.issuer,
-          name: data.name,
-          workspaceId,
-        });
-
-      return {
-        id: identityProvider.id,
-        type: identityProvider.type,
-        name: identityProvider.name,
-        status: identityProvider.status,
-        issuer: identityProvider.issuer,
-      };
-    } catch (err) {
-      if (err instanceof SsoException) {
-        return err;
-      }
-
-      this.exceptionHandlerService.captureExceptions([err]);
-
-      return new SsoException(
-        'Unknown SSO configuration error',
-        SsoExceptionCode.UNKNOWN_SSO_CONFIGURATION_ERROR,
-      );
-    }
-  }
-
-  async createSamlIdentityProvider(
-    data: Pick<
-      WorkspaceSsoIdentityProviderEntity,
-      'ssoURL' | 'certificate' | 'fingerprint' | 'id' | 'name' | 'issuer'
-    >,
-    workspaceId: string,
-  ) {
-    await this.isSsoEnabled(workspaceId);
-
-    const identityProvider = {
-      id: data.id,
-      name: data.name,
-      issuer: data.issuer,
-      ssoURL: data.ssoURL,
-      certificate: data.certificate,
-      fingerprint: data.fingerprint,
-      type: IdentityProviderType.SAML,
-      workspaceId,
-    };
-
-    try {
-      const { generatedMaps } =
-        await this.workspaceSsoIdentityProviderRepository.insert(
-          identityProvider,
-        );
-
-      const { status } = generatedMaps[0] as Pick<
-        WorkspaceSsoIdentityProviderEntity,
-        'status'
-      >;
-
-      return {
-        id: identityProvider.id,
-        type: identityProvider.type,
-        name: identityProvider.name,
-        issuer: this.buildIssuerURL(identityProvider),
-        status,
-      };
-    } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        (error as QueryFailedErrorWithCode).code ===
-          POSTGRESQL_ERROR_CODES.UNIQUE_VIOLATION
-      ) {
-        throw new SsoException(
-          'Identity provider already exists',
-          SsoExceptionCode.IDENTITY_PROVIDER_ALREADY_EXISTS,
-        );
-      }
-
-      throw error;
-    }
-  }
-
-  async findSsoIdentityProviderById(identityProviderId: string) {
-    return (await this.workspaceSsoIdentityProviderRepository.findOne({
+  async findSsoIdentityProviderById(
+    identityProviderId: string,
+  ): Promise<WorkspaceSsoIdentityProviderEntity | null> {
+    return this.identityProviderRepository.findOne({
       where: { id: identityProviderId },
-      relations: { workspace: true },
-    })) as (SsoConfiguration & WorkspaceSsoIdentityProviderEntity) | null;
-  }
-
-  buildCallbackUrl(
-    identityProvider: Pick<WorkspaceSsoIdentityProviderEntity, 'type' | 'id'>,
-  ) {
-    const callbackURL = new URL(this.twentyConfigService.get('SERVER_URL'));
-
-    callbackURL.pathname = `/auth/${identityProvider.type.toLowerCase()}/callback`;
-
-    if (identityProvider.type === IdentityProviderType.SAML) {
-      callbackURL.pathname += `/${identityProvider.id}`;
-    }
-
-    return callbackURL.toString();
-  }
-
-  buildIssuerURL(
-    identityProvider: Pick<WorkspaceSsoIdentityProviderEntity, 'id' | 'type'>,
-    searchParams?: Record<string, string | boolean>,
-  ) {
-    const authorizationUrl = new URL(
-      this.twentyConfigService.get('SERVER_URL'),
-    );
-
-    authorizationUrl.pathname = `/auth/${identityProvider.type.toLowerCase()}/login/${identityProvider.id}`;
-
-    if (searchParams) {
-      Object.entries(searchParams).forEach(([key, value]) => {
-        authorizationUrl.searchParams.append(key, value.toString());
-      });
-    }
-
-    return authorizationUrl.toString();
-  }
-
-  private isOidcIdentityProvider(
-    identityProvider: WorkspaceSsoIdentityProviderEntity,
-  ): identityProvider is OidcConfiguration &
-    WorkspaceSsoIdentityProviderEntity {
-    return identityProvider.type === IdentityProviderType.OIDC;
-  }
-
-  isSamlIdentityProvider(
-    identityProvider: WorkspaceSsoIdentityProviderEntity,
-  ): identityProvider is SamlConfiguration &
-    WorkspaceSsoIdentityProviderEntity {
-    return identityProvider.type === IdentityProviderType.SAML;
-  }
-
-  getOidcClient(
-    identityProvider: WorkspaceSsoIdentityProviderEntity,
-    issuer: Issuer,
-  ) {
-    if (!this.isOidcIdentityProvider(identityProvider)) {
-      throw new SsoException(
-        'Invalid Identity Provider type',
-        SsoExceptionCode.INVALID_IDP_TYPE,
-      );
-    }
-
-    issuer[custom.http_options] = this.oidcHttpOptions;
-
-    const idTokenSigningAlgorithm = resolveIdTokenSigningAlgorithm(
-      issuer.metadata,
-    );
-
-    const client = new issuer.Client({
-      client_id: identityProvider.clientID,
-      client_secret: identityProvider.clientSecret,
-      redirect_uris: [this.buildCallbackUrl(identityProvider)],
-      response_types: [OidcResponseType.CODE],
-      ...(isDefined(idTokenSigningAlgorithm) && {
-        id_token_signed_response_alg: idTokenSigningAlgorithm,
-      }),
+      relations: ['workspace'],
     });
+  }
 
-    client[custom.http_options] = this.oidcHttpOptions;
+  async discoverOidcIssuer(issuerUrl: string): Promise<Issuer> {
+    const cached = this.issuerByUrl.get(issuerUrl);
 
-    return client;
+    if (isDefined(cached)) {
+      return cached;
+    }
+
+    const issuer = await Issuer.discover(issuerUrl);
+
+    this.issuerByUrl.set(issuerUrl, issuer);
+
+    return issuer;
+  }
+
+  async getOidcClient(
+    identityProvider: Pick<
+      WorkspaceSsoIdentityProviderEntity,
+      'id' | 'issuer' | 'clientId' | 'clientSecret'
+    >,
+  ): Promise<Client> {
+    const issuer = await this.discoverOidcIssuer(identityProvider.issuer);
+
+    return new issuer.Client({
+      client_id: identityProvider.clientId ?? '',
+      client_secret: identityProvider.clientSecret ?? '',
+      redirect_uris: [this.buildCallbackUrl('oidc', identityProvider.id)],
+      response_types: ['code'],
+    });
   }
 
   async getAuthorizationUrlForSSO(
     identityProviderId: string,
-    searchParams: Record<string, string | boolean>,
-  ) {
+    _state: { workspaceInviteHash?: string | null },
+  ): Promise<SsoAuthorizationUrl> {
     const identityProvider =
-      (await this.workspaceSsoIdentityProviderRepository.findOne({
-        where: {
-          id: identityProviderId,
-        },
-      })) as WorkspaceSsoIdentityProviderEntity & SsoConfiguration;
+      await this.findSsoIdentityProviderById(identityProviderId);
 
-    if (!identityProvider) {
-      throw new SsoException(
-        'Identity Provider not found',
-        SsoExceptionCode.USER_NOT_FOUND,
-      );
+    if (!isDefined(identityProvider)) {
+      throw new Error('SSO identity provider not found');
     }
+
+    const protocol =
+      identityProvider.type === IdentityProviderType.SAML ? 'saml' : 'oidc';
 
     return {
       id: identityProvider.id,
-      authorizationURL: this.buildIssuerURL(identityProvider, searchParams),
       type: identityProvider.type,
+      authorizationURL: this.buildLoginUrl(protocol, identityProvider.id),
     };
   }
 
-  async getSsoIdentityProviders(workspaceId: string) {
-    return (await this.workspaceSsoIdentityProviderRepository.find({
+  async listForWorkspace(
+    workspaceId: string,
+  ): Promise<WorkspaceSsoIdentityProviderEntity[]> {
+    return this.identityProviderRepository.find({
       where: { workspaceId },
-      select: ['id', 'name', 'type', 'issuer', 'status'],
-    })) as Array<
-      Pick<
-        WorkspaceSsoIdentityProviderEntity,
-        'id' | 'name' | 'type' | 'issuer' | 'status'
-      >
-    >;
-  }
-
-  async deleteSsoIdentityProvider(
-    identityProviderId: string,
-    workspaceId: string,
-  ) {
-    const identityProvider =
-      await this.workspaceSsoIdentityProviderRepository.findOne({
-        where: {
-          id: identityProviderId,
-          workspaceId,
-        },
-      });
-
-    if (!identityProvider) {
-      throw new SsoException(
-        'Identity Provider not found',
-        SsoExceptionCode.IDENTITY_PROVIDER_NOT_FOUND,
-      );
-    }
-
-    await this.workspaceSsoIdentityProviderRepository.delete({
-      id: identityProvider.id,
+      relations: ['workspace'],
     });
-
-    return { identityProviderId: identityProvider.id };
   }
 
-  async editSsoIdentityProvider(
-    payload: Partial<WorkspaceSsoIdentityProviderEntity>,
-    workspaceId: string,
-  ) {
-    const ssoIdp = await this.workspaceSsoIdentityProviderRepository.findOne({
-      where: {
-        id: payload.id,
+  async createSamlIdentityProvider({
+    workspaceId,
+    id,
+    name,
+    issuer,
+    certificate,
+    ssoUrl,
+  }: {
+    workspaceId: string;
+    id: string;
+    name: string;
+    issuer: string;
+    certificate: string;
+    ssoUrl: string;
+  }): Promise<WorkspaceSsoIdentityProviderEntity> {
+    await this.assertIdentityProviderIdIsAvailable(id);
+
+    return this.identityProviderRepository.save(
+      this.identityProviderRepository.create({
+        id,
         workspaceId,
-      },
+        name,
+        issuer,
+        certificate,
+        ssoUrl,
+        type: IdentityProviderType.SAML,
+        status: SsoIdentityProviderStatus.Active,
+      }),
+    );
+  }
+
+  async createOidcIdentityProvider({
+    workspaceId,
+    name,
+    issuer,
+    clientId,
+    clientSecret,
+  }: {
+    workspaceId: string;
+    name: string;
+    issuer: string;
+    clientId: string;
+    clientSecret: string;
+  }): Promise<WorkspaceSsoIdentityProviderEntity> {
+    return this.identityProviderRepository.save(
+      this.identityProviderRepository.create({
+        workspaceId,
+        name,
+        issuer,
+        clientId,
+        clientSecret,
+        type: IdentityProviderType.OIDC,
+        status: SsoIdentityProviderStatus.Active,
+      }),
+    );
+  }
+
+  async editIdentityProvider({
+    workspaceId,
+    id,
+    status,
+  }: {
+    workspaceId: string;
+    id: string;
+    status: SsoIdentityProviderStatus;
+  }): Promise<WorkspaceSsoIdentityProviderEntity> {
+    const identityProvider = await this.identityProviderRepository.findOne({
+      where: { id, workspaceId },
     });
 
-    if (!ssoIdp) {
-      throw new SsoException(
-        'Identity Provider not found',
-        SsoExceptionCode.IDENTITY_PROVIDER_NOT_FOUND,
-      );
+    if (!isDefined(identityProvider)) {
+      throw new Error('SSO identity provider not found');
     }
 
-    const result = await this.workspaceSsoIdentityProviderRepository.save({
-      ...ssoIdp,
-      ...payload,
-    });
+    identityProvider.status = status;
 
-    return {
-      id: result.id,
-      type: result.type,
-      issuer: result.issuer,
-      name: result.name,
-      status: result.status,
-    };
+    return this.identityProviderRepository.save(identityProvider);
+  }
+
+  async deleteIdentityProvider({
+    workspaceId,
+    id,
+  }: {
+    workspaceId: string;
+    id: string;
+  }): Promise<void> {
+    await this.identityProviderRepository.delete({ id, workspaceId });
+  }
+
+  // Integration tests still seed the legacy table. The id is global across both.
+  private async assertIdentityProviderIdIsAvailable(id: string): Promise<void> {
+    const [current, legacy] = await Promise.all([
+      this.identityProviderRepository.findOne({ where: { id } }),
+      this.identityProviderRepository.manager.query<Array<{ id: string }>>(
+        `SELECT id FROM core."workspaceSSOIdentityProvider" WHERE id = $1 LIMIT 1`,
+        [id],
+      ),
+    ]);
+
+    if (isDefined(current) || legacy.length > 0) {
+      throw new SsoException(
+        'Identity provider already exists',
+        SsoExceptionCode.IDENTITY_PROVIDER_ALREADY_EXISTS,
+      );
+    }
+  }
+
+  private buildLoginUrl(protocol: 'saml' | 'oidc', id: string): string {
+    return `${this.serverUrl()}/auth/${protocol}/login/${id}`;
+  }
+
+  private buildCallbackUrl(protocol: 'saml' | 'oidc', id: string): string {
+    return `${this.serverUrl()}/auth/${protocol}/callback/${id}`;
+  }
+
+  private serverUrl(): string {
+    return this.twentyConfigService.get('SERVER_URL').replace(/\/$/, '');
   }
 }

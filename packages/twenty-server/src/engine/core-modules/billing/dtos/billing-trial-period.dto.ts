@@ -1,13 +1,8 @@
-/* @license Enterprise */
-
-import { Field, ObjectType } from '@nestjs/graphql';
-
-import { Min } from 'class-validator';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('BillingTrialPeriod')
 export class BillingTrialPeriodDTO {
-  @Field(() => Number)
-  @Min(0)
+  @Field(() => Int)
   duration: number;
 
   @Field(() => Boolean)

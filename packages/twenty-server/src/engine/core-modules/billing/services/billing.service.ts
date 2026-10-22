@@ -1,153 +1,75 @@
-/* @license Enterprise */
+import { Injectable } from '@nestjs/common';
 
-import { Injectable, Logger } from '@nestjs/common';
-
-import { isDefined } from 'twenty-shared/utils';
-
-import {
-  BillingException,
-  BillingExceptionCode,
-} from 'src/engine/core-modules/billing/billing.exception';
-import { NO_BILLING_SUBSCRIPTION } from 'src/engine/core-modules/billing/constants/no-billing-subscription.constant';
+import { BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
+import { UserCreditsFallback } from 'src/engine/core-modules/billing/enums/billing-user-credits-fallback.enum';
 import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
-import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
-import { type BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
-import { type UserCreditsFallback } from 'src/engine/core-modules/billing/enums/billing-user-credits-fallback.enum';
-import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
-import { BillingProductService } from 'src/engine/core-modules/billing/services/billing-product.service';
-import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
-import { StripeCustomerService } from 'src/engine/core-modules/billing/stripe/services/stripe-customer.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
-import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
-import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
-import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
+
+// Commercial checkout stays off. With billing disabled, a workspace still
+// activates and locally configured usage limits stay enforceable.
 @Injectable()
 export class BillingService {
-  protected readonly logger = new Logger(BillingService.name);
-  constructor(
-    private readonly twentyConfigService: TwentyConfigService,
-    private readonly billingSubscriptionService: BillingSubscriptionService,
-    private readonly billingProductService: BillingProductService,
-    private readonly stripeCustomerService: StripeCustomerService,
-    private readonly workspaceCacheService: WorkspaceCacheService,
-    @InjectWorkspaceScopedRepository(BillingSubscriptionEntity)
-    private readonly billingSubscriptionRepository: WorkspaceScopedRepository<BillingSubscriptionEntity>,
-    @InjectWorkspaceScopedRepository(BillingCustomerEntity)
-    private readonly billingCustomerRepository: WorkspaceScopedRepository<BillingCustomerEntity>,
-  ) {}
+  private readonly userCreditsFallbackByWorkspaceId = new Map<
+    string,
+    UserCreditsFallback
+  >();
 
-  isBillingEnabled() {
-    return this.twentyConfigService.get('IS_BILLING_ENABLED');
+  constructor(private readonly twentyConfigService: TwentyConfigService) {}
+
+  isBillingEnabled(): boolean {
+    return this.twentyConfigService.isBillingEnabled();
   }
 
-  async ensureBillingCustomer({
-    userEmail,
-    workspaceId,
-    workspaceDisplayName,
-    partner,
-  }: {
-    userEmail: string;
-    workspaceId: string;
-    workspaceDisplayName: string | undefined;
-    partner?: string;
-  }): Promise<void> {
-    const existingBillingCustomer =
-      await this.billingCustomerRepository.findOne(workspaceId, { where: {} });
-
-    if (isDefined(existingBillingCustomer)) {
-      return;
-    }
-
-    await this.stripeCustomerService.createStripeCustomer({
-      userEmail,
-      workspaceId,
-      customerName: workspaceDisplayName,
-      partner,
-    });
+  async hasWorkspaceAnySubscription(_workspaceId: string): Promise<boolean> {
+    return !this.isBillingEnabled();
   }
 
-  async updateUserCreditsFallbackOrThrow({
-    workspaceId,
-    userCreditsFallback,
-  }: {
-    workspaceId: string;
-    userCreditsFallback: UserCreditsFallback;
-  }): Promise<BillingCustomerEntity> {
-    const { affected } = await this.billingCustomerRepository.update(
-      workspaceId,
-      {},
-      { userCreditsFallback },
-    );
-
-    if (affected === 0) {
-      throw new BillingException(
-        `No billing customer found for workspace ${workspaceId}`,
-        BillingExceptionCode.BILLING_CUSTOMER_NOT_FOUND,
-      );
-    }
-
-    await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
-      'currentBillingSubscription',
-    ]);
-
-    return this.billingCustomerRepository.findOneOrFail(workspaceId, {
-      where: {},
-    });
-  }
-
-  async hasWorkspaceAnySubscription(workspaceId: string) {
-    const isBillingEnabled = this.isBillingEnabled();
-
-    if (!isBillingEnabled) {
-      return true;
-    }
-
-    const subscription = await this.billingSubscriptionRepository.findOne(
-      workspaceId,
-      { where: {} },
-    );
-
-    return isDefined(subscription);
+  async isSubscriptionIncompleteOnboardingStatus(
+    _workspaceId: string,
+  ): Promise<boolean> {
+    return false;
   }
 
   async hasEntitlement(
-    workspaceId: string,
-    entitlementKey: BillingEntitlementKey,
-  ) {
-    const isBillingEnabled = this.isBillingEnabled();
-
-    if (!isBillingEnabled) {
-      return true;
-    }
-
-    return this.billingSubscriptionService.getWorkspaceEntitlementByKey(
-      workspaceId,
-      entitlementKey,
-    );
+    _workspaceId: string,
+    _entitlementKey: BillingEntitlementKey,
+  ): Promise<boolean> {
+    return false;
   }
 
-  async isPayingCustomer(workspaceId: string) {
-    const isBillingEnabled = this.isBillingEnabled();
+  async isPayingCustomer(_workspaceId: string): Promise<boolean> {
+    return false;
+  }
 
-    if (!isBillingEnabled) {
-      return true;
-    }
+  async ensureBillingCustomer(_input: {
+    userEmail: string;
+    workspaceId: string;
+    workspaceDisplayName?: string;
+    partner?: unknown;
+  }): Promise<void> {
+    return;
+  }
 
-    const { currentBillingSubscription } =
-      await this.workspaceCacheService.getOrRecompute(workspaceId, [
-        'currentBillingSubscription',
-      ]);
-
+  getUserCreditsFallback(workspaceId: string): UserCreditsFallback {
     return (
-      currentBillingSubscription !== NO_BILLING_SUBSCRIPTION &&
-      currentBillingSubscription.status === SubscriptionStatus.Active
+      this.userCreditsFallbackByWorkspaceId.get(workspaceId) ??
+      UserCreditsFallback.WORKSPACE_CREDITS
     );
   }
 
-  async isSubscriptionIncompleteOnboardingStatus(workspaceId: string) {
-    const hasAnySubscription =
-      await this.hasWorkspaceAnySubscription(workspaceId);
+  setUserCreditsFallback(
+    workspaceId: string,
+    userCreditsFallback: UserCreditsFallback,
+  ): BillingCustomerEntity {
+    this.userCreditsFallbackByWorkspaceId.set(workspaceId, userCreditsFallback);
 
-    return !hasAnySubscription;
+    return this.getBillingCustomer(workspaceId);
+  }
+
+  getBillingCustomer(workspaceId: string): BillingCustomerEntity {
+    return {
+      id: workspaceId,
+      userCreditsFallback: this.getUserCreditsFallback(workspaceId),
+    };
   }
 }

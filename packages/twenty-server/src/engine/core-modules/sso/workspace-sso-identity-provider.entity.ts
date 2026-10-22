@@ -1,89 +1,96 @@
-/* @license Enterprise */
-
 import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
+
 import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
   UpdateDateColumn,
 } from 'typeorm';
 
-import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
-import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity.type';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 export enum IdentityProviderType {
   OIDC = 'OIDC',
   SAML = 'SAML',
 }
 
-export enum OidcResponseType {
-  // Only Authorization Code is used for now
-  CODE = 'code',
-  ID_TOKEN = 'id_token',
-  TOKEN = 'token',
-  NONE = 'none',
-}
-
-registerEnumType(IdentityProviderType, {
-  name: 'IdentityProviderType',
-});
-
 export enum SsoIdentityProviderStatus {
   Active = 'Active',
-  Inactive = 'Inactive',
   Error = 'Error',
+  Inactive = 'Inactive',
 }
 
+registerEnumType(IdentityProviderType, { name: 'IdentityProviderType' });
 registerEnumType(SsoIdentityProviderStatus, {
-  name: 'SSOIdentityProviderStatus',
+  name: 'SsoIdentityProviderStatus',
 });
 
-@Entity({ name: 'workspaceSSOIdentityProvider', schema: 'core' })
-@ObjectType('WorkspaceSSOIdentityProvider')
-export class WorkspaceSsoIdentityProviderEntity extends WorkspaceRelatedEntity {
-  @Field(() => UUIDScalarType)
-  @PrimaryGeneratedColumn('uuid')
+@Entity({ name: 'ssoIdentityProvider', schema: 'core' })
+@ObjectType('SSOIdentityProvider')
+@Index('IDX_SSO_IDENTITY_PROVIDER_WORKSPACE_ID', ['workspaceId'])
+export class WorkspaceSsoIdentityProviderEntity {
+  @Field()
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_sso_identity_provider',
+  })
   id: string;
 
+  @Field()
   @Column()
   name: string;
 
+  @Field(() => IdentityProviderType)
+  @Column({ type: 'varchar' })
+  type: IdentityProviderType;
+
+  @Field(() => SsoIdentityProviderStatus)
   @Column({
-    type: 'enum',
-    enum: SsoIdentityProviderStatus,
+    type: 'varchar',
     default: SsoIdentityProviderStatus.Active,
   })
   status: SsoIdentityProviderStatus;
+
+  @Field()
+  @Column()
+  issuer: string;
+
+  @Column({ nullable: true, type: 'text' })
+  certificate: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  ssoUrl: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  clientId: string | null;
+
+  @Column({ nullable: true, type: 'text' })
+  clientSecret: string | null;
+
+  @Field()
+  @Column({ type: 'uuid' })
+  workspaceId: string;
+
+  @ManyToOne(
+    () => WorkspaceEntity,
+    (workspace) => workspace.workspaceSsoIdentityProviders,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
+  @JoinColumn({
+    name: 'workspaceId',
+    foreignKeyConstraintName: 'FK_sso_identity_provider_workspace',
+  })
+  workspace: Relation<WorkspaceEntity>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
-
-  @Column({
-    type: 'enum',
-    enum: IdentityProviderType,
-    default: IdentityProviderType.OIDC,
-  })
-  type: IdentityProviderType;
-
-  @Column()
-  issuer: string;
-
-  @Column({ nullable: true })
-  clientID?: string;
-
-  @Column({ nullable: true })
-  clientSecret?: string;
-
-  @Column({ nullable: true })
-  ssoURL?: string;
-
-  @Column({ nullable: true })
-  certificate?: string;
-
-  @Column({ nullable: true })
-  fingerprint?: string;
 }

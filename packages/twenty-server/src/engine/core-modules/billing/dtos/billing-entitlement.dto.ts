@@ -1,13 +1,9 @@
-/* @license Enterprise */
-
-import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 import { BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
 
-registerEnumType(BillingEntitlementKey, {
-  name: 'BillingEntitlementKey',
-});
-
+// Billing stays inactive. The type only exists so the metadata schema matches
+// the documents the front already sends.
 @ObjectType('BillingEntitlement')
 export class BillingEntitlementDTO {
   @Field(() => BillingEntitlementKey)

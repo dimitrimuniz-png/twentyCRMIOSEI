@@ -1,10 +1,14 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import type Stripe from 'stripe';
-
-export const getCustomerIdFromInvoice = (
-  invoice: Pick<Stripe.Invoice, 'customer'>,
-): string | undefined =>
-  typeof invoice.customer === 'string'
-    ? invoice.customer
-    : invoice.customer?.id;
+const removedgetCustomerIdFromInvoice: RemovedCommercial = new Proxy(
+  function getCustomerIdFromInvoice(..._args: unknown[]) {
+    return removedgetCustomerIdFromInvoice;
+  },
+  {
+    get: () => removedgetCustomerIdFromInvoice,
+    apply: () => removedgetCustomerIdFromInvoice,
+  },
+);
+export const getCustomerIdFromInvoice = removedgetCustomerIdFromInvoice;

@@ -1,43 +1,45 @@
-/* @license Enterprise */
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 
-import { Field, ObjectType } from '@nestjs/graphql';
-
-import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
-import { type SsoConfiguration } from 'src/engine/core-modules/sso/types/sso-configurations.type';
 import {
   IdentityProviderType,
   SsoIdentityProviderStatus,
 } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
 import { WorkspaceUrlsDTO } from 'src/engine/core-modules/workspace/dtos/workspace-urls.dto';
 
-@ObjectType('SSOConnection')
-class SsoConnectionDTO {
-  @Field(() => IdentityProviderType)
-  type: SsoConfiguration['type'];
-
-  @Field(() => UUIDScalarType)
+@ObjectType('AvailableWorkspaceSso')
+export class AvailableWorkspaceSso {
+  @Field(() => ID)
   id: string;
-
-  @Field(() => String)
-  issuer: string;
 
   @Field(() => String)
   name: string;
 
+  @Field(() => String)
+  issuer: string;
+
+  @Field(() => IdentityProviderType)
+  type: IdentityProviderType;
+
   @Field(() => SsoIdentityProviderStatus)
-  status: SsoConfiguration['status'];
+  status: SsoIdentityProviderStatus;
 }
 
 @ObjectType('AvailableWorkspace')
 export class AvailableWorkspace {
-  @Field(() => UUIDScalarType)
+  @Field(() => ID)
   id: string;
 
   @Field(() => String, { nullable: true })
   displayName?: string;
 
-  @Field(() => String, { nullable: true })
-  loginToken?: string;
+  @Field(() => WorkspaceUrlsDTO)
+  workspaceUrls: WorkspaceUrlsDTO;
+
+  @Field(() => String)
+  logo: string;
+
+  @Field(() => [AvailableWorkspaceSso])
+  sso: AvailableWorkspaceSso[];
 
   @Field(() => String, { nullable: true })
   personalInviteToken?: string;
@@ -45,21 +47,15 @@ export class AvailableWorkspace {
   @Field(() => String, { nullable: true })
   inviteHash?: string;
 
-  @Field(() => WorkspaceUrlsDTO)
-  workspaceUrls: WorkspaceUrlsDTO;
-
   @Field(() => String, { nullable: true })
-  logo?: string;
-
-  @Field(() => [SsoConnectionDTO])
-  sso: SsoConnectionDTO[];
+  loginToken?: string;
 }
 
 @ObjectType('AvailableWorkspaces')
 export class AvailableWorkspaces {
   @Field(() => [AvailableWorkspace])
-  availableWorkspacesForSignIn: Array<AvailableWorkspace>;
+  availableWorkspacesForSignUp: AvailableWorkspace[];
 
   @Field(() => [AvailableWorkspace])
-  availableWorkspacesForSignUp: Array<AvailableWorkspace>;
+  availableWorkspacesForSignIn: AvailableWorkspace[];
 }

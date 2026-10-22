@@ -1,8 +1,7 @@
-/* @license Enterprise */
+import { type RecordShareAccessLevel } from 'twenty-shared/types';
 
-import { type RecordShare } from 'src/engine/core-modules/record-share/types/record-share.type';
-
-export type RecordShareGrant = Pick<
-  RecordShare,
-  'recordId' | 'principalId' | 'accessLevel'
->;
+export type RecordShareGrant = {
+  recordId: string;
+  principalId: string;
+  accessLevel: RecordShareAccessLevel;
+};

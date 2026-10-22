@@ -1,9 +1,3 @@
-/* @license Enterprise */
-
-import {
-  RowLevelPermissionPredicateGroup,
-  RowLevelPermissionPredicateGroupLogicalOperator,
-} from 'twenty-shared/types';
 import {
   Column,
   CreateDateColumn,
@@ -14,9 +8,11 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  Relation,
+  type Relation,
   UpdateDateColumn,
 } from 'typeorm';
+
+import { RowLevelPermissionPredicateGroupLogicalOperator } from 'twenty-shared/types';
 
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
@@ -34,63 +30,39 @@ import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-enti
 ])
 export class RowLevelPermissionPredicateGroupEntity
   extends SyncableEntity
-  implements
-    Required<RowLevelPermissionPredicateGroupEntity>,
-    RowLevelPermissionPredicateGroup
+  implements Required<RowLevelPermissionPredicateGroupEntity>
 {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true, type: 'uuid' })
-  parentRowLevelPermissionPredicateGroupId: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: Object.values(RowLevelPermissionPredicateGroupLogicalOperator),
-    nullable: false,
-    default: RowLevelPermissionPredicateGroupLogicalOperator.AND,
-  })
-  logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
-
-  @Column({ nullable: true, type: 'double precision' })
-  positionInRowLevelPermissionPredicateGroup: number | null;
-
-  @Column({ nullable: false, type: 'uuid' })
-  roleId: string;
-
   @Column({ nullable: false, type: 'uuid' })
   objectMetadataId: string;
-
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamptz' })
-  deletedAt: Date | null;
-
-  @ManyToOne(() => RoleEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'roleId' })
-  role: Relation<RoleEntity>;
 
   @ManyToOne(() => ObjectMetadataEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'objectMetadataId' })
   objectMetadata: Relation<ObjectMetadataEntity>;
 
+  @Column({
+    type: 'enum',
+    enum: RowLevelPermissionPredicateGroupLogicalOperator,
+    default: RowLevelPermissionPredicateGroupLogicalOperator.AND,
+  })
+  logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator;
+
+  @Column({ nullable: true, type: 'uuid' })
+  parentRowLevelPermissionPredicateGroupId: string | null;
+
   @ManyToOne(
     () => RowLevelPermissionPredicateGroupEntity,
-    (rowLevelPermissionPredicateGroup) =>
-      rowLevelPermissionPredicateGroup.childRowLevelPermissionPredicateGroups,
-    { onDelete: 'CASCADE' },
+    (group) => group.childRowLevelPermissionPredicateGroups,
+    { onDelete: 'CASCADE', nullable: true },
   )
   @JoinColumn({ name: 'parentRowLevelPermissionPredicateGroupId' })
   parentRowLevelPermissionPredicateGroup: Relation<RowLevelPermissionPredicateGroupEntity> | null;
 
   @OneToMany(
     () => RowLevelPermissionPredicateGroupEntity,
-    (rowLevelPermissionPredicateGroup) =>
-      rowLevelPermissionPredicateGroup.parentRowLevelPermissionPredicateGroup,
+    (group) => group.parentRowLevelPermissionPredicateGroup,
   )
   childRowLevelPermissionPredicateGroups: Relation<
     RowLevelPermissionPredicateGroupEntity[]
@@ -101,4 +73,27 @@ export class RowLevelPermissionPredicateGroupEntity
     (predicate) => predicate.rowLevelPermissionPredicateGroup,
   )
   rowLevelPermissionPredicates: Relation<RowLevelPermissionPredicateEntity[]>;
+
+  @Column({ nullable: true, type: 'double precision' })
+  positionInRowLevelPermissionPredicateGroup: number | null;
+
+  @Column({ nullable: false, type: 'uuid' })
+  roleId: string;
+
+  @ManyToOne(
+    () => RoleEntity,
+    (role) => role.rowLevelPermissionPredicateGroups,
+    { onDelete: 'CASCADE' },
+  )
+  @JoinColumn({ name: 'roleId' })
+  role: Relation<RoleEntity>;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamptz' })
+  deletedAt: Date | null;
 }

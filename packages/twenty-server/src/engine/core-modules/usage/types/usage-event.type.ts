@@ -1,20 +1,5 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { type UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
-import { type UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
-import { type UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
-import { type UsageSpenders } from 'src/engine/core-modules/usage/types/usage-spenders.type';
-
-export type UsageEvent = {
-  resourceType: UsageResourceType;
-  operationType: UsageOperationType;
-  creditsUsedMicro: number;
-  userCreditsUsedMicro?: number;
-  quantity: number;
-  unit: UsageUnit;
-  periodStart?: Date;
-  resourceId?: string | null;
-  resourceContext?: string | null;
-  spenders?: UsageSpenders;
-  metadata?: Record<string, unknown>;
-};
+export type UsageEvent = RemovedCommercial;

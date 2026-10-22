@@ -1,12 +1,14 @@
-/* @license Enterprise */
+import { registerEnumType } from '@nestjs/graphql';
 
 export enum SubscriptionStatus {
-  Active = 'active',
-  Canceled = 'canceled',
-  Incomplete = 'incomplete',
-  IncompleteExpired = 'incomplete_expired',
-  PastDue = 'past_due',
-  Paused = 'paused', // TODO: remove this once paused subscriptions are deprecated
-  Trialing = 'trialing',
-  Unpaid = 'unpaid',
+  Active = 'Active',
+  Canceled = 'Canceled',
+  Incomplete = 'Incomplete',
+  IncompleteExpired = 'IncompleteExpired',
+  PastDue = 'PastDue',
+  Paused = 'Paused',
+  Trialing = 'Trialing',
+  Unpaid = 'Unpaid',
 }
+
+registerEnumType(SubscriptionStatus, { name: 'SubscriptionStatus' });

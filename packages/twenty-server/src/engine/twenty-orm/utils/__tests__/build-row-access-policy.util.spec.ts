@@ -193,7 +193,10 @@ describe('buildRowAccessPolicy', () => {
     expect(policy.kind).toBe('gated');
     if (policy.kind !== 'gated') throw new Error('Expected an exception gate');
     expect(policy.condition.sql).toMatch(
-      /^\(NOT EXISTS \(SELECT 1 FROM "workspace"."recordShare" AS "recordShareRestriction_[0-9a-f]{10}"/,
+      /^\(\(EXISTS \(SELECT 1 FROM "workspace"."recordShare" AS "recordShareRestriction_[0-9a-f]{10}"/,
+    );
+    expect(policy.condition.sql).toContain(
+      'OR NOT EXISTS (SELECT 1 FROM "workspace"."recordShare" AS "recordShareEveryone_',
     );
   });
 
@@ -326,8 +329,10 @@ describe('buildRowAccessPolicy', () => {
       });
 
       if (policy.kind !== 'gated') throw new Error('Expected a grant gate');
+      expect(policy.condition.sql).toContain('"company"."title" = :restricted');
+      expect(policy.condition.sql).toContain('OR NOT EXISTS');
       expect(policy.condition.sql).toMatch(
-        /^\(\(\("company"."title" = :restricted\) AND \(NOT EXISTS .*\)\) OR \("company"."id" = ANY\(ARRAY\(SELECT "company_recordShare"."recordId"/,
+        /OR \("company"\."id" = ANY\(ARRAY\(SELECT "company_recordShare"\."recordId"/,
       );
     });
 

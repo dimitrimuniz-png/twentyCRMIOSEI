@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 import { Field, ObjectType } from '@nestjs/graphql';
 
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
@@ -8,10 +6,10 @@ import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billin
 @ObjectType('BillingEndTrialPeriod')
 export class BillingEndTrialPeriodDTO {
   @Field(() => SubscriptionStatus, {
-    description: 'Updated subscription status',
     nullable: true,
+    description: 'Updated subscription status',
   })
-  status: SubscriptionStatus | undefined;
+  status?: SubscriptionStatus | null;
 
   @Field(() => Boolean, {
     description: 'Boolean that confirms if a payment method was found',
@@ -19,21 +17,21 @@ export class BillingEndTrialPeriodDTO {
   hasPaymentMethod: boolean;
 
   @Field(() => String, {
+    nullable: true,
     description:
       'Billing portal URL for payment method update (returned when no payment method exists)',
-    nullable: true,
   })
-  billingPortalUrl?: string;
+  billingPortalUrl?: string | null;
 
   @Field(() => BillingSubscriptionEntity, {
-    description: 'Updated current billing subscription',
     nullable: true,
+    description: 'Updated current billing subscription',
   })
-  currentBillingSubscription?: BillingSubscriptionEntity;
+  currentBillingSubscription?: BillingSubscriptionEntity | null;
 
   @Field(() => [BillingSubscriptionEntity], {
-    description: 'All billing subscriptions',
     nullable: true,
+    description: 'All billing subscriptions',
   })
-  billingSubscriptions?: BillingSubscriptionEntity[];
+  billingSubscriptions?: BillingSubscriptionEntity[] | null;
 }

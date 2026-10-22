@@ -12,6 +12,7 @@ import { AgentChatThreadRecordEventService } from 'src/engine/metadata-modules/a
 import { type AgentChatThreadAccessArgs } from 'src/engine/metadata-modules/ai/ai-chat/types/agent-chat-thread-access-args.type';
 import { type AgentChatThreadActivity } from 'src/engine/metadata-modules/ai/ai-chat/types/agent-chat-thread-activity.type';
 import { buildAgentChatThreadActivitySetClause } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-agent-chat-thread-activity-set-clause.util';
+import { backfillWorkspaceChatThreadOwnerGrants } from 'src/engine/metadata-modules/ai/ai-chat/utils/backfill-workspace-chat-thread-owner-grants.util';
 import { isUniqueViolationError } from 'src/engine/metadata-modules/ai/ai-chat/utils/is-unique-violation-error.util';
 import { throwAgentChatThreadNotFound } from 'src/engine/metadata-modules/ai/ai-chat/utils/throw-agent-chat-thread-not-found.util';
 import { AgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/agent-history-repository';
@@ -120,14 +121,22 @@ export class AgentChatThreadService {
 
     const setUpThreads = await this.threadRepository.query(
       workspaceId,
-      (context) =>
-        this.sharingService.setUpCreatedThreadsInboxState({
+      async (context) => {
+        await backfillWorkspaceChatThreadOwnerGrants({
+          manager: context.manager,
+          workspaceId,
+          threadTableExpression: context.table('agentChatThread'),
+          recordIds: assignedThreadIds,
+        });
+
+        return this.sharingService.setUpCreatedThreadsInboxState({
           ...context,
           workspaceId,
           workspaceMemberId,
           threadIds: assignedThreadIds,
           participantObjectMetadataId,
-        }),
+        });
+      },
     );
 
     // Sent first, so a new thread never shows as unread to its creator

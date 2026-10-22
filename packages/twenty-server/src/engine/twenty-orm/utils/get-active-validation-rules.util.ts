@@ -1,52 +1,30 @@
-/* @license Enterprise */
-
 import { isDefined } from 'twenty-shared/utils';
 
-import { type FlatValidationRule } from 'src/engine/metadata-modules/flat-validation-rule/types/flat-validation-rule.type';
-import { type FlatValidationRuleMaps } from 'src/engine/metadata-modules/flat-validation-rule/types/flat-validation-rule-maps.type';
+type ValidationRuleRecord = {
+  objectMetadataId: string;
+  isActive?: boolean;
+  deletedAt?: string | null;
+  expression: string;
+  message: string;
+  name?: string;
+  errorFieldMetadataId?: string | null;
+};
 
-const activeRulesByObjectIdCache = new WeakMap<
-  FlatValidationRuleMaps,
-  Map<string, FlatValidationRule[]>
->();
+type ValidationRuleMaps = {
+  byUniversalIdentifier?: Partial<Record<string, ValidationRuleRecord>>;
+};
 
 export const getActiveValidationRules = ({
   flatValidationRuleMaps,
   objectMetadataId,
 }: {
-  flatValidationRuleMaps?: FlatValidationRuleMaps;
+  flatValidationRuleMaps?: ValidationRuleMaps;
   objectMetadataId: string;
-}): FlatValidationRule[] => {
-  if (!isDefined(flatValidationRuleMaps)) {
-    return [];
-  }
-
-  let activeRulesByObjectId = activeRulesByObjectIdCache.get(
-    flatValidationRuleMaps,
+}): ValidationRuleRecord[] =>
+  Object.values(flatValidationRuleMaps?.byUniversalIdentifier ?? {}).filter(
+    (rule): rule is ValidationRuleRecord =>
+      isDefined(rule) &&
+      rule.objectMetadataId === objectMetadataId &&
+      rule.isActive !== false &&
+      !isDefined(rule.deletedAt),
   );
-
-  if (!isDefined(activeRulesByObjectId)) {
-    activeRulesByObjectId = new Map<string, FlatValidationRule[]>();
-
-    for (const rule of Object.values(
-      flatValidationRuleMaps.byUniversalIdentifier,
-    )) {
-      if (!isDefined(rule) || !rule.isActive) {
-        continue;
-      }
-
-      const objectRules =
-        activeRulesByObjectId.get(rule.objectMetadataId) ?? [];
-
-      objectRules.push(rule);
-      activeRulesByObjectId.set(rule.objectMetadataId, objectRules);
-    }
-
-    activeRulesByObjectIdCache.set(
-      flatValidationRuleMaps,
-      activeRulesByObjectId,
-    );
-  }
-
-  return activeRulesByObjectId.get(objectMetadataId) ?? [];
-};

@@ -1,18 +1,15 @@
-/* @license Enterprise */
-
 import { Field, ObjectType } from '@nestjs/graphql';
 
-import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
-import { type SsoConfiguration } from 'src/engine/core-modules/sso/types/sso-configurations.type';
+import { IdentityProviderType } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
 
 @ObjectType('GetAuthorizationUrlForSSO')
 export class GetAuthorizationUrlForSsoDTO {
-  @Field(() => String)
-  authorizationURL: string;
-
-  @Field(() => String)
-  type: SsoConfiguration['type'];
-
-  @Field(() => UUIDScalarType)
+  @Field()
   id: string;
+
+  @Field(() => IdentityProviderType)
+  type: IdentityProviderType;
+
+  @Field()
+  authorizationURL: string;
 }

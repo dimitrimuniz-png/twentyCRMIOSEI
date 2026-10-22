@@ -1,14 +1,11 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
-
-import { WorkspaceMigrationRunnerActionHandler } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/interfaces/workspace-migration-runner-action-handler-service.interface';
 
 import { ValidationRuleEntity } from 'src/engine/metadata-modules/validation-rule/entities/validation-rule.entity';
 import {
   FlatDeleteValidationRuleAction,
   UniversalDeleteValidationRuleAction,
 } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/validation-rule/types/workspace-migration-validation-rule-action.type';
+import { WorkspaceMigrationRunnerActionHandler } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/interfaces/workspace-migration-runner-action-handler-service.interface';
 import {
   WorkspaceMigrationActionRunnerArgs,
   WorkspaceMigrationActionRunnerContext,
@@ -29,7 +26,6 @@ export class DeleteValidationRuleActionHandlerService extends WorkspaceMigration
     context: WorkspaceMigrationActionRunnerContext<FlatDeleteValidationRuleAction>,
   ): Promise<void> {
     const { flatAction, queryRunner, workspaceId } = context;
-
     const repository =
       queryRunner.manager.getRepository<ValidationRuleEntity>(
         ValidationRuleEntity,

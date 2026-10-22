@@ -620,7 +620,7 @@ export class ObjectRecordEventPublisher {
 
     return candidateRecords.some((record) =>
       isRecordMatchingRLSRowLevelPermissionPredicate({
-        record,
+        record: record as ObjectRecord,
         filter: queryFilter,
         flatObjectMetadata: objectMetadata,
         flatFieldMetadataMaps,

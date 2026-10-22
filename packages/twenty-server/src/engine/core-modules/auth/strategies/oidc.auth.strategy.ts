@@ -1,120 +1,94 @@
-/* @license Enterprise */
-
-import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 
 import { type Request } from 'express';
-import { Strategy, type StrategyOptions, type TokenSet } from 'openid-client';
+import passport from 'passport';
+import { Strategy } from 'passport-strategy';
+import { isDefined } from 'twenty-shared/utils';
 
-import {
-  AuthException,
-  AuthExceptionCode,
-} from 'src/engine/core-modules/auth/auth.exception';
+import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 
-export type OidcRequest = Omit<
-  Request,
-  'user' | 'workspace' | 'workspaceMetadataVersion'
-> & {
-  user: {
-    identityProviderId: string;
-    email: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    workspaceInviteHash?: string;
-    oidcTokenClaims?: Record<string, unknown>;
-  };
+type OidcStrategyInstance = Strategy & {
+  success: (user: unknown) => void;
+  fail: (challenge: string, status: number) => void;
+  redirect: (url: string) => void;
+  error: (error: Error) => void;
 };
 
-@Injectable()
-export class OidcAuthStrategy extends PassportStrategy(
-  Strategy,
-  'openidconnect',
-) {
-  constructor(
-    private client: StrategyOptions['client'],
-    sessionKey: string,
-  ) {
-    super({
-      params: {
-        scope: 'openid email profile',
-        code_challenge_method: 'S256',
-      },
-      client,
-      usePKCE: true,
-      passReqToCallback: true,
-      sessionKey,
-    });
+class OidcPassportStrategy extends Strategy {
+  name = 'openidconnect';
+
+  constructor(private readonly ssoService: SsoService) {
+    super();
   }
 
-  // oxlint-disable-next-line typescript/no-explicit-any
-  authenticate(req: Request, options: any) {
-    return super.authenticate(req, {
-      ...options,
-      state: JSON.stringify({
-        identityProviderId: req.params.identityProviderId,
-        ...(req.query.workspaceInviteHash
-          ? { workspaceInviteHash: req.query.workspaceInviteHash }
-          : {}),
-      }),
-    });
+  authenticate(request: Request): void {
+    void this.signIn(request, this as unknown as OidcStrategyInstance);
   }
 
-  private extractState(req: Request): {
-    identityProviderId: string;
-    workspaceInviteHash?: string;
-  } {
+  private async signIn(
+    request: Request,
+    strategy: OidcStrategyInstance,
+  ): Promise<void> {
     try {
-      const state = JSON.parse(
-        req.query.state && typeof req.query.state === 'string'
-          ? req.query.state
-          : '{}',
+      const identityProviderId = request.params.identityProviderId;
+      const identityProvider =
+        await this.ssoService.findSsoIdentityProviderById(identityProviderId);
+
+      if (!isDefined(identityProvider)) {
+        strategy.fail('SSO identity provider not found', 401);
+
+        return;
+      }
+
+      const client = await this.ssoService.getOidcClient(identityProvider);
+      const redirectUri = client.metadata.redirect_uris?.[0];
+
+      if (!isDefined(request.query.code)) {
+        strategy.redirect(
+          client.authorizationUrl({
+            scope: 'openid email profile',
+            redirect_uri: redirectUri,
+          }),
+        );
+
+        return;
+      }
+
+      const tokenSet = await client.callback(
+        redirectUri,
+        client.callbackParams(request),
       );
 
-      if (!state.identityProviderId) {
-        throw new Error();
+      if (!isDefined(tokenSet.access_token)) {
+        strategy.fail('OIDC response did not include an access token', 401);
+
+        return;
       }
 
-      return {
-        identityProviderId: state.identityProviderId,
-        workspaceInviteHash: state.workspaceInviteHash,
-      };
-    } catch {
-      throw new AuthException('Invalid state', AuthExceptionCode.INVALID_INPUT);
+      const userInfo = await client.userinfo(tokenSet.access_token);
+      const email = userInfo.email;
+
+      if (typeof email !== 'string') {
+        strategy.fail('OIDC response did not include an email', 401);
+
+        return;
+      }
+
+      strategy.success({
+        email: email.toLowerCase(),
+        identityProviderId,
+      });
+    } catch (error) {
+      strategy.error(error instanceof Error ? error : new Error(String(error)));
     }
   }
+}
 
-  async validate(
-    req: Request,
-    tokenset: TokenSet,
-    // oxlint-disable-next-line typescript/no-explicit-any
-    done: (err: any, user?: OidcRequest['user']) => void,
-  ) {
-    try {
-      const state = this.extractState(req);
+@Injectable()
+export class OidcAuthStrategy implements OnModuleInit {
+  constructor(private readonly ssoService: SsoService) {}
 
-      const userinfo = await this.client.userinfo(tokenset);
-
-      const email = userinfo.email ?? userinfo.upn;
-
-      if (!email || typeof email !== 'string') {
-        return done(
-          new AuthException(
-            'Email not found in identity provider payload',
-            AuthExceptionCode.INVALID_DATA,
-          ),
-        );
-      }
-
-      done(null, {
-        email,
-        workspaceInviteHash: state.workspaceInviteHash,
-        identityProviderId: state.identityProviderId,
-        ...(userinfo.given_name ? { firstName: userinfo.given_name } : {}),
-        ...(userinfo.family_name ? { lastName: userinfo.family_name } : {}),
-        oidcTokenClaims: tokenset.claims() as Record<string, unknown>,
-      });
-    } catch (err) {
-      done(err);
-    }
+  onModuleInit(): void {
+    passport.use(new OidcPassportStrategy(this.ssoService));
   }
 }

@@ -1,27 +1,13 @@
-/* @license Enterprise */
-
-import {
-  type ArgumentsHost,
-  Catch,
-  type ExceptionFilter,
-} from '@nestjs/common';
-import { type GqlContextType } from '@nestjs/graphql';
-
-import Stripe from 'stripe';
+import { Catch, type ExceptionFilter } from '@nestjs/common';
 
 import { BillingException } from 'src/engine/core-modules/billing/billing.exception';
-import { billingGraphqlApiExceptionHandler } from 'src/engine/core-modules/billing/utils/billing-graphql-api-exception-handler.util';
+import { ForbiddenError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
 
-@Catch(BillingException, Stripe.errors.StripeError)
+// Only billing failures belong here. A filter without @Catch matches every
+// exception and, when catch() writes nothing, Nest treats the request as handled.
+@Catch(BillingException)
 export class BillingGraphqlApiExceptionFilter implements ExceptionFilter {
-  catch(
-    exception: BillingException | Stripe.errors.StripeError,
-    host: ArgumentsHost,
-  ) {
-    if (host.getType<GqlContextType>() !== 'graphql') {
-      throw exception;
-    }
-
-    return billingGraphqlApiExceptionHandler(exception);
+  catch(exception: BillingException): void {
+    throw new ForbiddenError(exception);
   }
 }

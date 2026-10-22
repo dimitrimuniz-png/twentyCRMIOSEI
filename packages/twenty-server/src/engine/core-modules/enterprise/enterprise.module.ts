@@ -1,32 +1,15 @@
-/* @license Enterprise */
-
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
-import { EnterpriseKeyValidationCronJob } from 'src/engine/core-modules/enterprise/cron/jobs/organization-key-validation.cron.job';
-import { EnterpriseResolver } from 'src/engine/core-modules/enterprise/enterprise.resolver';
+import { EnterpriseResolver } from 'src/engine/core-modules/enterprise/resolvers/enterprise-schema.resolver';
 import { CustomAiProviderAccessService } from 'src/engine/core-modules/enterprise/services/custom-ai-provider-access.service';
 import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/services/enterprise-plan.service';
-import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
-import { UserEntity } from 'src/engine/core-modules/user/user.entity';
-import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      UserWorkspaceEntity,
-      AppTokenEntity,
-      UserEntity,
-      WorkspaceEntity,
-    ]),
-  ],
   providers: [
-    EnterprisePlanService,
     CustomAiProviderAccessService,
-    EnterpriseKeyValidationCronJob,
+    EnterprisePlanService,
     EnterpriseResolver,
   ],
-  exports: [EnterprisePlanService, CustomAiProviderAccessService],
+  exports: [CustomAiProviderAccessService, EnterprisePlanService],
 })
 export class EnterpriseModule {}

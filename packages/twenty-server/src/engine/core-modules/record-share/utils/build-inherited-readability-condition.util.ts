@@ -1,139 +1,114 @@
-/* @license Enterprise */
+import { type SqlCondition } from 'src/engine/twenty-orm/types/row-access-policy.type';
 
-import { type RecordShareAccessLevel } from 'twenty-shared/types';
-import { type ObjectLiteral } from 'typeorm';
+type CompiledColumnParent = {
+  kind: 'column';
+  joinColumnName: string;
+  parentTableAlias: string;
+  parentTableExpression: string;
+  policy:
+    | { kind: 'open' }
+    | { kind: 'denied' }
+    | { kind: 'gated'; condition: SqlCondition };
+};
 
-import {
-  type CompiledRowAccessPolicy,
-  type SqlCondition,
-} from 'src/engine/twenty-orm/types/row-access-policy.type';
-import { buildRecordShareCondition } from 'src/engine/core-modules/record-share/utils/build-record-share-condition.util';
-import { escapeIdentifier } from 'src/engine/workspace-manager/workspace-migration/utils/remove-sql-injection.util';
-
-export type InheritedReadabilityParentCondition =
-  | {
-      kind: 'column';
-      joinColumnName: string;
-      parentTableAlias: string;
-      parentTableExpression: string;
-      policy: CompiledRowAccessPolicy;
-    }
-  | {
-      kind: 'children';
-      childTableAlias: string;
-      childTableExpression: string;
-      childJoinColumnName: string;
-      policy: CompiledRowAccessPolicy;
-    };
-
-const buildChildLinkBoundCondition = ({
-  quotedTableAlias,
-  quotedChildTableAlias,
-}: {
-  quotedTableAlias: string;
-  quotedChildTableAlias: string;
-}): string =>
-  `(${quotedChildTableAlias}."deletedAt" IS NULL OR (${quotedTableAlias}."deletedAt" IS NOT NULL AND ${quotedChildTableAlias}."deletedAt" >= ${quotedTableAlias}."deletedAt"))`;
-
-const buildDetachedCondition = ({
-  quotedTableAlias,
-  parents,
-}: {
-  quotedTableAlias: string;
-  parents: InheritedReadabilityParentCondition[];
-}): string =>
-  `(${parents
-    .map((parent) => {
-      if (parent.kind === 'column') {
-        return `${quotedTableAlias}.${escapeIdentifier(parent.joinColumnName)} IS NULL`;
-      }
-
-      const quotedChildTableAlias = escapeIdentifier(parent.childTableAlias);
-
-      return `NOT EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS ${quotedChildTableAlias} WHERE ${quotedChildTableAlias}.${escapeIdentifier(parent.childJoinColumnName)} = ${quotedTableAlias}."id" AND ${buildChildLinkBoundCondition({ quotedTableAlias, quotedChildTableAlias })})`;
-    })
-    .join(' AND ')})`;
+type CompiledChildrenParent = {
+  kind: 'children';
+  childTableAlias: string;
+  childJoinColumnName: string;
+  childTableExpression: string;
+  policy:
+    | { kind: 'open' }
+    | { kind: 'denied' }
+    | { kind: 'gated'; condition: SqlCondition };
+};
 
 export const buildInheritedReadabilityCondition = ({
   tableAlias,
-  objectMetadataId,
+  isOpenWhenDetached = false,
   parents,
-  recordShareTableExpression,
-  principalIds,
-  accessLevels,
-  isOpenWhenDetached,
 }: {
   tableAlias: string;
-  objectMetadataId: string;
-  parents: InheritedReadabilityParentCondition[];
-  recordShareTableExpression: string;
-  principalIds: string[];
-  accessLevels: RecordShareAccessLevel[];
-  isOpenWhenDetached: boolean;
+  objectMetadataId?: string;
+  principalIds?: string[];
+  accessLevels?: string[];
+  isOpenWhenDetached?: boolean;
+  recordShareTableExpression?: string;
+  parents: Array<CompiledColumnParent | CompiledChildrenParent>;
 }): SqlCondition => {
-  const parameters: ObjectLiteral = {};
-  const quotedTableAlias = escapeIdentifier(tableAlias);
-
-  // The record's own share rows, its creator's included, grant access on their own, as on a PRIVATE record.
-  const ownRecordShareCondition = buildRecordShareCondition({
-    tableAlias,
-    recordShareTableExpression,
-    objectMetadataId,
-    principalIds,
-    accessLevels,
-  });
-
-  Object.assign(parameters, ownRecordShareCondition.parameters);
-
-  const parentConditions = parents.flatMap((parent) => {
+  const parts = parents.flatMap((parent) => {
     if (parent.policy.kind === 'denied') {
       return [];
     }
 
-    if (parent.kind === 'children') {
-      const quotedChildTableAlias = escapeIdentifier(parent.childTableAlias);
-      const childRowConditions = [
-        `${quotedChildTableAlias}.${escapeIdentifier(parent.childJoinColumnName)} = ${quotedTableAlias}."id"`,
-        buildChildLinkBoundCondition({
-          quotedTableAlias,
-          quotedChildTableAlias,
-        }),
-      ];
-
-      if (parent.policy.kind === 'gated') {
-        Object.assign(parameters, parent.policy.condition.parameters);
-        childRowConditions.push(parent.policy.condition.sql);
-      }
+    if (parent.kind === 'column') {
+      const policySql =
+        parent.policy.kind === 'gated'
+          ? ` AND ${parent.policy.condition.sql}`
+          : '';
 
       return [
-        `EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS ${quotedChildTableAlias} WHERE ${childRowConditions.join(' AND ')})`,
+        {
+          sql: `"${tableAlias}"."${parent.joinColumnName}" IS NOT NULL AND EXISTS (SELECT 1 FROM ${parent.parentTableExpression} AS "${parent.parentTableAlias}" WHERE "${parent.parentTableAlias}"."id" = "${tableAlias}"."${parent.joinColumnName}"${policySql})`,
+          parameters:
+            parent.policy.kind === 'gated'
+              ? parent.policy.condition.parameters
+              : {},
+        },
       ];
     }
 
-    const quotedJoinColumn = `${quotedTableAlias}.${escapeIdentifier(parent.joinColumnName)}`;
-    const notNullCondition = `${quotedJoinColumn} IS NOT NULL`;
-
-    if (parent.policy.kind === 'open') {
-      return [notNullCondition];
-    }
-
-    const quotedParentTableAlias = escapeIdentifier(parent.parentTableAlias);
-
-    Object.assign(parameters, parent.policy.condition.parameters);
+    const policySql =
+      parent.policy.kind === 'gated'
+        ? ` AND ${parent.policy.condition.sql}`
+        : '';
 
     return [
-      `(${notNullCondition} AND EXISTS (SELECT 1 FROM ${parent.parentTableExpression} AS ${quotedParentTableAlias} WHERE ${quotedParentTableAlias}."id" = ${quotedJoinColumn} AND ${parent.policy.condition.sql}))`,
+      {
+        sql: `EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS "${parent.childTableAlias}" WHERE "${parent.childTableAlias}"."${parent.childJoinColumnName}" = "${tableAlias}"."id"${policySql})`,
+        parameters:
+          parent.policy.kind === 'gated'
+            ? parent.policy.condition.parameters
+            : {},
+      },
     ];
   });
 
-  // Every link counts towards being attached, a denied parent's included
-  const detachedConditions =
-    isOpenWhenDetached && parents.length > 0
-      ? [buildDetachedCondition({ quotedTableAlias, parents })]
-      : [];
+  if (isOpenWhenDetached) {
+    const columnParents = parents.filter(
+      (parent): parent is CompiledColumnParent => parent.kind === 'column',
+    );
+
+    if (columnParents.length > 0) {
+      parts.push({
+        sql: columnParents
+          .map((parent) => `"${tableAlias}"."${parent.joinColumnName}" IS NULL`)
+          .join(' AND '),
+        parameters: {},
+      });
+    }
+
+    for (const parent of parents) {
+      if (parent.kind !== 'children') {
+        continue;
+      }
+
+      parts.push({
+        sql: `NOT EXISTS (SELECT 1 FROM ${parent.childTableExpression} AS "${parent.childTableAlias}" WHERE "${parent.childTableAlias}"."${parent.childJoinColumnName}" = "${tableAlias}"."id")`,
+        parameters: {},
+      });
+    }
+  }
+
+  if (parts.length === 0) {
+    return { sql: '1=0', parameters: {} };
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
 
   return {
-    sql: `(${[ownRecordShareCondition.sql, ...parentConditions, ...detachedConditions].join(' OR ')})`,
-    parameters,
+    sql: parts.map((part) => `(${part.sql})`).join(' OR '),
+    parameters: Object.assign({}, ...parts.map((part) => part.parameters)),
   };
 };

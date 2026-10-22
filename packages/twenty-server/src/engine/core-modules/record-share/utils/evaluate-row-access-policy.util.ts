@@ -1,41 +1,32 @@
-/* @license Enterprise */
-
-import { assertUnreachable } from 'twenty-shared/utils';
+import { EVERYONE_PRINCIPAL_ID } from 'twenty-shared/constants';
+import { RecordShareAccessLevel, type ObjectRecord } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
 import { type RecordShareGrant } from 'src/engine/core-modules/record-share/types/record-share-grant.type';
-import { resolveRecordIdsRestrictedForPrincipals } from 'src/engine/core-modules/record-share/utils/resolve-record-ids-restricted-for-principals.util';
-import { resolveRecordIdsSharedWithPrincipals } from 'src/engine/core-modules/record-share/utils/resolve-record-ids-shared-with-principals.util';
-import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
-import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
+
+import { type AccessibleFlatFieldMetadataMaps } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
+import { isRecordMatchingRLSRowLevelPermissionPredicate } from 'src/engine/twenty-orm/utils/is-record-matching-rls-row-level-permission-predicate.util';
 import {
   type RowAccessExpression,
   type RowAccessPolicy,
 } from 'src/engine/twenty-orm/types/row-access-policy.type';
-import { isRecordMatchingRLSRowLevelPermissionPredicate } from 'src/engine/twenty-orm/utils/is-record-matching-rls-row-level-permission-predicate.util';
 
-export type RowAccessRecord = { id: string } & Record<string, unknown>;
+export type RowAccessRecord = ObjectRecord & { id: string };
 
-type InheritedReadabilityExpression = Extract<
-  RowAccessExpression,
-  { kind: 'inheritedReadability' }
->;
-
-export type RowAccessEvaluationContext<TRecord extends RowAccessRecord> = {
-  flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
+export type RowAccessEvaluationContext<
+  TRecord extends RowAccessRecord = RowAccessRecord,
+> = {
+  flatFieldMetadataMaps: AccessibleFlatFieldMetadataMaps;
   shouldIgnoreSoftDeleteDefaultFilter: boolean;
   fetchRecordShares: (args: {
     objectMetadataId: string;
     recordIds: string[];
   }) => Promise<RecordShareGrant[]>;
-  // Parents live in other tables, so whoever holds the records resolves them
-  resolveRecordIdsReadableThroughParents: (args: {
-    expression: InheritedReadabilityExpression;
+  resolveRecordIdsReadableThroughParents?: (args: {
     records: TRecord[];
   }) => Promise<Set<string>>;
 };
 
-// The in-memory counterpart of compileRowAccessPolicy: both read the same
-// policy, so a record admitted by a query is admitted here and vice versa
 export const evaluateRowAccessPolicy = async <TRecord extends RowAccessRecord>({
   policy,
   records,
@@ -45,23 +36,22 @@ export const evaluateRowAccessPolicy = async <TRecord extends RowAccessRecord>({
   records: TRecord[];
   context: RowAccessEvaluationContext<TRecord>;
 }): Promise<Set<string>> => {
-  switch (policy.kind) {
-    case 'open':
-      return new Set(records.map((record) => record.id));
-    case 'denied':
-      return new Set();
-    case 'gated':
-      return evaluateRowAccessExpression({
-        expression: policy.expression,
-        records,
-        context,
-      });
-    default:
-      return assertUnreachable(policy);
+  if (policy.kind === 'denied') {
+    return new Set();
   }
+
+  if (policy.kind === 'open') {
+    return new Set(records.map((record) => record.id));
+  }
+
+  return evaluateExpression({
+    expression: policy.expression,
+    records,
+    context,
+  });
 };
 
-const evaluateRowAccessExpression = async <TRecord extends RowAccessRecord>({
+const evaluateExpression = async <TRecord extends RowAccessRecord>({
   expression,
   records,
   context,
@@ -70,119 +60,157 @@ const evaluateRowAccessExpression = async <TRecord extends RowAccessRecord>({
   records: TRecord[];
   context: RowAccessEvaluationContext<TRecord>;
 }): Promise<Set<string>> => {
-  if (records.length === 0) {
+  switch (expression.kind) {
+    case 'and':
+      return intersect(
+        await Promise.all(
+          expression.operands.map((operand) =>
+            evaluateExpression({ expression: operand, records, context }),
+          ),
+        ),
+      );
+    case 'or':
+      return union(
+        await Promise.all(
+          expression.operands.map((operand) =>
+            evaluateExpression({ expression: operand, records, context }),
+          ),
+        ),
+      );
+    case 'roleFilter':
+      return new Set(
+        records
+          .filter((record) =>
+            isRecordMatchingRLSRowLevelPermissionPredicate({
+              record,
+              filter: expression.recordFilter,
+              flatObjectMetadata: expression.flatObjectMetadata,
+              flatFieldMetadataMaps: context.flatFieldMetadataMaps,
+            }),
+          )
+          .map((record) => record.id),
+      );
+    case 'recordShared':
+      return matchingShareIds({
+        expression,
+        records,
+        context,
+        admits: (grant) =>
+          expression.principalIds.includes(grant.principalId) &&
+          expression.accessLevels.includes(
+            grant.accessLevel as RecordShareAccessLevel,
+          ),
+      });
+    case 'recordNotRestricted':
+      return admittedWhenNotRestricted({ expression, records, context });
+    case 'inheritedReadability': {
+      if (isDefined(context.resolveRecordIdsReadableThroughParents)) {
+        return context.resolveRecordIdsReadableThroughParents({ records });
+      }
+
+      return new Set(records.map((record) => record.id));
+    }
+    default:
+      return new Set();
+  }
+};
+
+const admittedWhenNotRestricted = async <TRecord extends RowAccessRecord>({
+  expression,
+  records,
+  context,
+}: {
+  expression: {
+    objectMetadataId: string;
+    principalIds: string[];
+    accessLevels: RecordShareAccessLevel[];
+  };
+  records: TRecord[];
+  context: RowAccessEvaluationContext<TRecord>;
+}): Promise<Set<string>> => {
+  const recordIds = records.map((record) => record.id);
+  const grants = await context.fetchRecordShares({
+    objectMetadataId: expression.objectMetadataId,
+    recordIds,
+  });
+  const admitted = new Set<string>();
+
+  for (const recordId of recordIds) {
+    const recordGrants = grants.filter((grant) => grant.recordId === recordId);
+    const hasNamedGrant = recordGrants.some(
+      (grant) =>
+        expression.principalIds.includes(grant.principalId) &&
+        expression.accessLevels.includes(
+          grant.accessLevel as RecordShareAccessLevel,
+        ),
+    );
+    const everyoneWithholds = recordGrants.some(
+      (grant) =>
+        grant.principalId === EVERYONE_PRINCIPAL_ID &&
+        !expression.accessLevels.includes(
+          grant.accessLevel as RecordShareAccessLevel,
+        ),
+    );
+
+    if (hasNamedGrant || !everyoneWithholds) {
+      admitted.add(recordId);
+    }
+  }
+
+  return admitted;
+};
+
+const matchingShareIds = async <TRecord extends RowAccessRecord>({
+  expression,
+  records,
+  context,
+  admits,
+  invert = false,
+}: {
+  expression: { objectMetadataId: string };
+  records: TRecord[];
+  context: RowAccessEvaluationContext<TRecord>;
+  admits: (grant: RecordShareGrant) => boolean;
+  invert?: boolean;
+}): Promise<Set<string>> => {
+  const recordIds = records.map((record) => record.id);
+  const grants = await context.fetchRecordShares({
+    objectMetadataId: expression.objectMetadataId,
+    recordIds,
+  });
+  const matched = new Set(grants.filter(admits).map((grant) => grant.recordId));
+
+  if (!invert) {
+    return new Set(recordIds.filter((recordId) => matched.has(recordId)));
+  }
+
+  const restricted = new Set(
+    grants.filter((grant) => !admits(grant)).map((grant) => grant.recordId),
+  );
+
+  return new Set(recordIds.filter((recordId) => !restricted.has(recordId)));
+};
+
+const intersect = (sets: Set<string>[]): Set<string> => {
+  if (sets.length === 0) {
     return new Set();
   }
 
-  const recordIds = records.map((record) => record.id);
+  const [first, ...rest] = sets;
 
-  switch (expression.kind) {
-    case 'and': {
-      let admittedRecords = records;
+  return new Set(
+    [...first].filter((id) => rest.every((candidate) => candidate.has(id))),
+  );
+};
 
-      for (const operand of expression.operands) {
-        const admittedIds = await evaluateRowAccessExpression({
-          expression: operand,
-          records: admittedRecords,
-          context,
-        });
+const union = (sets: Set<string>[]): Set<string> => {
+  const result = new Set<string>();
 
-        admittedRecords = admittedRecords.filter((record) =>
-          admittedIds.has(record.id),
-        );
-      }
-
-      return new Set(admittedRecords.map((record) => record.id));
+  for (const ids of sets) {
+    for (const id of ids) {
+      result.add(id);
     }
-    case 'or': {
-      const admittedIds = new Set<string>();
-
-      for (const operand of expression.operands) {
-        const remainingRecords = records.filter(
-          (record) => !admittedIds.has(record.id),
-        );
-        const operandAdmittedIds = await evaluateRowAccessExpression({
-          expression: operand,
-          records: remainingRecords,
-          context,
-        });
-
-        for (const admittedId of operandAdmittedIds) {
-          admittedIds.add(admittedId);
-        }
-      }
-
-      return admittedIds;
-    }
-    case 'roleFilter': {
-      const matchingRecordIds = records
-        .filter((record) =>
-          isRecordMatchingRLSRowLevelPermissionPredicate({
-            record,
-            filter: expression.recordFilter,
-            flatObjectMetadata: expression.flatObjectMetadata,
-            flatFieldMetadataMaps: context.flatFieldMetadataMaps,
-            shouldIgnoreSoftDeleteDefaultFilter:
-              context.shouldIgnoreSoftDeleteDefaultFilter,
-          }),
-        )
-        .map((record) => record.id);
-
-      return new Set(matchingRecordIds);
-    }
-    case 'recordShared': {
-      const sharedRecordIds = resolveRecordIdsSharedWithPrincipals({
-        recordShares: await context.fetchRecordShares({
-          objectMetadataId: expression.objectMetadataId,
-          recordIds,
-        }),
-        principalIds: expression.principalIds,
-        accessLevels: expression.accessLevels,
-      });
-
-      const admittedRecordIds = recordIds.filter((id) =>
-        sharedRecordIds.has(id),
-      );
-
-      return new Set(admittedRecordIds);
-    }
-    case 'recordNotRestricted': {
-      const restrictedRecordIds = resolveRecordIdsRestrictedForPrincipals({
-        recordShares: await context.fetchRecordShares({
-          objectMetadataId: expression.objectMetadataId,
-          recordIds,
-        }),
-        principalIds: expression.principalIds,
-        accessLevels: expression.accessLevels,
-      });
-
-      const admittedRecordIds = recordIds.filter(
-        (id) => !restrictedRecordIds.has(id),
-      );
-
-      return new Set(admittedRecordIds);
-    }
-    case 'inheritedReadability': {
-      const sharedRecordIds = await evaluateRowAccessExpression({
-        expression: {
-          kind: 'recordShared',
-          tableAlias: expression.tableAlias,
-          objectMetadataId: expression.objectMetadataId,
-          principalIds: expression.principalIds,
-          accessLevels: expression.accessLevels,
-        },
-        records,
-        context,
-      });
-      const readableThroughParentIds =
-        await context.resolveRecordIdsReadableThroughParents({
-          expression,
-          records: records.filter((record) => !sharedRecordIds.has(record.id)),
-        });
-
-      return new Set([...sharedRecordIds, ...readableThroughParentIds]);
-    }
-    default:
-      return assertUnreachable(expression);
   }
+
+  return result;
 };

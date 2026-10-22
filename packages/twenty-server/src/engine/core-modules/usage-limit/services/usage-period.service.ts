@@ -1,77 +1,50 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
 
-import { assertUnreachable, isDefined } from 'twenty-shared/utils';
-
-import { BillingCreditAllowanceService } from 'src/engine/core-modules/billing/services/billing-credit-allowance.service';
-import { type AnchoredPeriodUnit } from 'src/engine/core-modules/usage-limit/types/anchored-period-unit.type';
-import { type CalendarPeriodUnit } from 'src/engine/core-modules/usage-limit/types/calendar-period-unit.type';
-import { type PeriodUnit } from 'src/engine/core-modules/usage-limit/types/period-unit.type';
-import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
 import { getCalendarDayPeriod } from 'src/engine/core-modules/usage-limit/utils/get-calendar-day-period.util';
 import { getCalendarMonthPeriod } from 'src/engine/core-modules/usage-limit/utils/get-calendar-month-period.util';
 import { getCalendarWeekPeriod } from 'src/engine/core-modules/usage-limit/utils/get-calendar-week-period.util';
-import { isAnchoredPeriodUnit } from 'src/engine/core-modules/usage-limit/utils/is-anchored-period-unit.util';
+import { type PeriodUnit } from 'src/engine/core-modules/usage-limit/types/period-unit.type';
+import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
 
 @Injectable()
 export class UsagePeriodService {
-  constructor(
-    private readonly billingCreditAllowanceService: BillingCreditAllowanceService,
-  ) {}
-
-  async hasAllowancePeriod(workspaceId: string): Promise<boolean> {
-    return isDefined(
-      await this.billingCreditAllowanceService.getCreditAllowancePeriod(
-        workspaceId,
-      ),
-    );
-  }
-
-  async findCurrentPeriod({
-    workspaceId,
-    periodUnit,
-  }: {
-    workspaceId: string;
-    periodUnit: AnchoredPeriodUnit;
-  }): Promise<UsagePeriod | null> {
-    if (periodUnit !== 'allowancePeriod') {
-      return this.getCalendarPeriod(periodUnit);
-    }
-
-    return this.billingCreditAllowanceService.getCreditAllowancePeriod(
-      workspaceId,
-    );
-  }
-
   async findCurrentPeriodsByUnit({
-    workspaceId,
     periodUnits,
   }: {
     workspaceId: string;
     periodUnits: PeriodUnit[];
   }): Promise<Partial<Record<PeriodUnit, UsagePeriod>>> {
-    const anchoredPeriodUnits = [
-      ...new Set(periodUnits.filter(isAnchoredPeriodUnit)),
-    ];
+    const now = new Date();
+    const periods: Partial<Record<PeriodUnit, UsagePeriod>> = {};
 
-    const periods = await Promise.all(
-      anchoredPeriodUnits.map(async (periodUnit) => ({
-        periodUnit,
-        period: await this.findCurrentPeriod({ workspaceId, periodUnit }),
-      })),
-    );
+    for (const periodUnit of periodUnits) {
+      const period = this.calendarPeriod(periodUnit, now);
 
-    return Object.fromEntries(
-      periods
-        .filter(({ period }) => isDefined(period))
-        .map(({ periodUnit, period }) => [periodUnit, period]),
-    );
+      if (period) {
+        periods[periodUnit] = period;
+      }
+    }
+
+    return periods;
   }
 
-  private getCalendarPeriod(periodUnit: CalendarPeriodUnit): UsagePeriod {
-    const now = new Date();
+  async findCurrentPeriod({
+    periodUnit,
+  }: {
+    workspaceId: string;
+    periodUnit: PeriodUnit;
+  }): Promise<UsagePeriod | null> {
+    return this.calendarPeriod(periodUnit, new Date());
+  }
 
+  async hasAllowancePeriod(_workspaceId: string): Promise<boolean> {
+    return false;
+  }
+
+  private calendarPeriod(
+    periodUnit: PeriodUnit,
+    now: Date,
+  ): UsagePeriod | null {
     switch (periodUnit) {
       case 'day':
         return getCalendarDayPeriod(now);
@@ -79,11 +52,12 @@ export class UsagePeriodService {
         return getCalendarWeekPeriod(now);
       case 'month':
         return getCalendarMonthPeriod(now);
+      case 'second':
+      case 'allowancePeriod':
+      case 'lifetime':
+        return null;
       default:
-        return assertUnreachable(
-          periodUnit,
-          `Unknown period unit ${periodUnit}`,
-        );
+        return null;
     }
   }
 }

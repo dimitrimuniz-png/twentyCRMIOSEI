@@ -1,13 +1,8 @@
-/* @license Enterprise */
-
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum BillingUsageType {
-  METERED = 'METERED',
   LICENSED = 'LICENSED',
+  METERED = 'METERED',
 }
 
-registerEnumType(BillingUsageType, {
-  name: 'BillingUsageType',
-  description: 'The different billing usage types',
-});
+registerEnumType(BillingUsageType, { name: 'BillingUsageType' });

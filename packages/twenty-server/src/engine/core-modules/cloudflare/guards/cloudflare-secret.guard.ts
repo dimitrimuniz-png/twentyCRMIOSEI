@@ -1,4 +1,4 @@
-/* @license Enterprise */
+import { timingSafeEqual } from 'node:crypto';
 
 import {
   type CanActivate,
@@ -7,7 +7,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 
-import { timingSafeEqual } from 'crypto';
+import { type Request } from 'express';
 
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 
@@ -16,39 +16,26 @@ export class CloudflareSecretMatchGuard implements CanActivate {
   constructor(private readonly twentyConfigService: TwentyConfigService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const cloudflareWebhookSecret = this.twentyConfigService.get(
-      'CLOUDFLARE_WEBHOOK_SECRET',
-    );
+    const secret = this.twentyConfigService.get('CLOUDFLARE_WEBHOOK_SECRET');
 
-    if (!cloudflareWebhookSecret) {
+    if (!secret) {
       throw new InternalServerErrorException(
         'CLOUDFLARE_WEBHOOK_SECRET is not configured',
       );
     }
 
-    try {
-      const request = context.switchToHttp().getRequest();
+    const header = context.switchToHttp().getRequest<Request>().headers[
+      'cf-webhook-auth'
+    ];
 
-      const headerValue = request.headers['cf-webhook-auth'];
-
-      if (typeof headerValue !== 'string' || headerValue.length === 0) {
-        return false;
-      }
-
-      const headerBuffer = Buffer.from(headerValue);
-      const secretBuffer = Buffer.from(cloudflareWebhookSecret);
-
-      if (headerBuffer.length !== secretBuffer.length) {
-        return false;
-      }
-
-      if (timingSafeEqual(headerBuffer, secretBuffer)) {
-        return true;
-      }
-
-      return false;
-    } catch {
+    if (
+      typeof header !== 'string' ||
+      header.length === 0 ||
+      header.length !== secret.length
+    ) {
       return false;
     }
+
+    return timingSafeEqual(Buffer.from(header), Buffer.from(secret));
   }
 }

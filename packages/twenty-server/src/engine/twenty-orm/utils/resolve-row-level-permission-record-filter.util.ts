@@ -1,10 +1,9 @@
-/* @license Enterprise */
-
 import { type RecordGqlOperationFilter } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
-import { isUserAuthContext } from 'src/engine/core-modules/auth/guards/is-user-auth-context.guard';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
+import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
+import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { type WorkspaceInternalContext } from 'src/engine/twenty-orm/interfaces/workspace-internal-context.interface';
 import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-permission-config.type';
@@ -18,7 +17,7 @@ export const resolveRowLevelPermissionRecordFilter = ({
   objectMetadata,
 }: {
   internalContext: WorkspaceInternalContext;
-  authContext: WorkspaceAuthContext;
+  authContext: WorkspaceAuthContext | undefined;
   rolePermissionConfig: RolePermissionConfig;
   objectMetadata: FlatObjectMetadata;
 }): RecordGqlOperationFilter | null => {
@@ -27,18 +26,16 @@ export const resolveRowLevelPermissionRecordFilter = ({
       internalContext.flatRowLevelPermissionPredicateMaps,
     flatRowLevelPermissionPredicateGroupMaps:
       internalContext.flatRowLevelPermissionPredicateGroupMaps,
-    flatFieldMetadataMaps: internalContext.flatFieldMetadataMaps,
+    flatFieldMetadataMaps:
+      internalContext.flatFieldMetadataMaps as FlatEntityMaps<FlatFieldMetadata>,
     flatObjectMetadataMaps: internalContext.flatObjectMetadataMaps,
     objectMetadata,
     roleIds: getRoleIdsFromRolePermissionConfig(rolePermissionConfig),
-    workspaceMember: isUserAuthContext(authContext)
-      ? authContext.workspaceMember
-      : undefined,
+    workspaceMember:
+      authContext?.type === 'user' ? authContext.workspaceMember : undefined,
   });
 
-  if (!isDefined(recordFilter) || Object.keys(recordFilter).length === 0) {
-    return null;
-  }
-
-  return recordFilter;
+  return isDefined(recordFilter) && Object.keys(recordFilter).length > 0
+    ? recordFilter
+    : null;
 };

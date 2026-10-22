@@ -612,11 +612,12 @@ export class AdminPanelResolver {
 
     const useDollarMode = !this.twentyConfigService.get('IS_BILLING_ENABLED');
 
-    const items = await this.usageAnalyticsService.getAdminAiUsageByWorkspace({
-      periodStart: periodStart ?? defaultStart,
-      periodEnd: periodEnd ?? defaultEnd,
-      useDollarMode,
-    });
+    const items: UsageBreakdownItemDTO[] =
+      await this.usageAnalyticsService.getAdminAiUsageByWorkspace({
+        periodStart: periodStart ?? defaultStart,
+        periodEnd: periodEnd ?? defaultEnd,
+        useDollarMode,
+      });
 
     if (items.length === 0) {
       return items;
@@ -636,7 +637,7 @@ export class AdminPanelResolver {
 
     return items.map((item) => ({
       ...item,
-      label: nameMap.get(item.key),
+      label: nameMap.get(item.key) ?? item.label,
     }));
   }
 

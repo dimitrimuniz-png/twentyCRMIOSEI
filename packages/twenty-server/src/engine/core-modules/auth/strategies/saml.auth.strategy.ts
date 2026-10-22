@@ -1,51 +1,18 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { PassportStrategy } from '@nestjs/passport';
 
-import {
-  MultiSamlStrategy,
-  type MultiStrategyConfig,
-  type PassportSamlConfig,
-  type SamlConfig,
-  type VerifyWithRequest,
-} from '@node-saml/passport-saml';
-import { type AuthenticateOptions } from '@node-saml/passport-saml/lib/types';
-import { isEmail } from 'class-validator';
 import { type Request } from 'express';
-import { z } from 'zod';
+import { MultiSamlStrategy } from '@node-saml/passport-saml';
+import { Repository } from 'typeorm';
+import { isDefined } from 'twenty-shared/utils';
 
-import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { WorkspaceSsoIdentityProviderEntity } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
 
-const WORKSPACE_INVITE_HASH_PAYLOAD_SCHEMA = z.object({
-  workspaceInviteHash: z.string().optional(),
-});
-
-const RELAY_STATE_BODY_SCHEMA = z.object({
-  RelayState: z
-    .string()
-    .transform((raw, ctx) => {
-      try {
-        return JSON.parse(raw) as unknown;
-      } catch {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'RelayState is not valid JSON',
-        });
-
-        return z.NEVER;
-      }
-    })
-    .pipe(WORKSPACE_INVITE_HASH_PAYLOAD_SCHEMA),
-});
-
-export type SamlRequest = Omit<
-  Request,
-  'user' | 'workspace' | 'workspaceMetadataVersion'
-> & {
+export type SamlRequest = Request & {
   user: {
     identityProviderId: string;
-    workspaceInviteHash?: string;
     email: string;
   };
 };
@@ -55,99 +22,63 @@ export class SamlAuthStrategy extends PassportStrategy(
   MultiSamlStrategy,
   'saml',
 ) {
-  constructor(private readonly ssoService: SsoService) {
+  constructor(
+    @InjectRepository(WorkspaceSsoIdentityProviderEntity)
+    identityProviderRepository: Repository<WorkspaceSsoIdentityProviderEntity>,
+    twentyConfigService: TwentyConfigService,
+  ) {
     super(
       {
-        getSamlOptions: (req, callback) => {
-          this.ssoService
-            .findSsoIdentityProviderById(req.params.identityProviderId)
+        passReqToCallback: true,
+        getSamlOptions: (request, done) => {
+          const identityProviderId = request.params.identityProviderId;
+
+          void identityProviderRepository
+            .findOne({ where: { id: identityProviderId } })
             .then((identityProvider) => {
               if (
-                identityProvider &&
-                this.ssoService.isSamlIdentityProvider(identityProvider)
+                !isDefined(identityProvider?.ssoUrl) ||
+                !isDefined(identityProvider.certificate)
               ) {
-                // IdP metadata XML typically has whitespace-formatted certificates
-                const sanitizedCertificate =
-                  identityProvider.certificate.replace(/\s/g, '');
+                done(new Error('SAML identity provider is not configured'));
 
-                const config: SamlConfig = {
-                  entryPoint: identityProvider.ssoURL,
-                  issuer: this.ssoService.buildIssuerURL(identityProvider),
-                  callbackUrl:
-                    this.ssoService.buildCallbackUrl(identityProvider),
-                  idpCert: sanitizedCertificate,
-                  wantAssertionsSigned: true,
-                  wantAuthnResponseSigned: false,
-                  disableRequestedAuthnContext: true,
-                  signatureAlgorithm: 'sha256',
-                };
-
-                return callback(null, config);
+                return;
               }
 
-              // TODO: improve error management
-              return callback(new Error('Invalid SAML identity provider'));
+              const serverUrl = twentyConfigService
+                .get('SERVER_URL')
+                .replace(/\/$/, '');
+
+              done(null, {
+                entryPoint: identityProvider.ssoUrl,
+                issuer: identityProvider.issuer,
+                idpCert: identityProvider.certificate,
+                callbackUrl: `${serverUrl}/auth/saml/callback/${identityProvider.id}`,
+                wantAssertionsSigned: true,
+              });
             })
-            .catch((err) => {
-              // TODO: improve error management
-              return callback(err);
-            });
+            .catch((error: Error) => done(error));
         },
-        passReqToCallback: true,
-      } as PassportSamlConfig & MultiStrategyConfig,
-      async (request: Request, profile, done) => {
-        await this.validate(request, profile, done);
+      },
+      (request, profile, done) => {
+        const email = profile?.nameID;
+
+        if (!isDefined(email)) {
+          done(new Error('SAML response did not include an email'));
+
+          return;
+        }
+
+        done(null, {
+          email: email.toLowerCase(),
+          identityProviderId: request.params.identityProviderId,
+        });
       },
     );
   }
 
-  authenticate(req: Request, options: AuthenticateOptions) {
-    const queryParseResult = WORKSPACE_INVITE_HASH_PAYLOAD_SCHEMA.safeParse(
-      req.query,
-    );
-    const workspaceInviteHash = queryParseResult.success
-      ? queryParseResult.data.workspaceInviteHash
-      : undefined;
-
-    super.authenticate(req, {
-      ...options,
-      ...(workspaceInviteHash !== undefined
-        ? {
-            additionalParams: {
-              RelayState: JSON.stringify({ workspaceInviteHash }),
-            },
-          }
-        : {}),
-    });
+  // PassportStrategy appends this as the logout verifier.
+  validate(): null {
+    return null;
   }
-
-  private extractWorkspaceInviteHash(req: Request): string | undefined {
-    const result = RELAY_STATE_BODY_SCHEMA.safeParse(req.body);
-
-    return result.success
-      ? result.data.RelayState.workspaceInviteHash
-      : undefined;
-  }
-
-  validate: VerifyWithRequest = async (request, profile, done) => {
-    try {
-      if (!profile) {
-        return done(new Error('Profile must be provided'));
-      }
-
-      const email = profile.email ?? profile.mail ?? profile.nameID;
-
-      if (!isEmail(email)) {
-        return done(new Error('Invalid email'));
-      }
-
-      done(null, {
-        identityProviderId: request.params.identityProviderId,
-        workspaceInviteHash: this.extractWorkspaceInviteHash(request),
-        email,
-      });
-    } catch (err) {
-      done(err);
-    }
-  };
 }

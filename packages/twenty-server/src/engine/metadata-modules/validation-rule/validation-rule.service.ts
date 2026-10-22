@@ -1,326 +1,178 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
+import { type QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { type Repository } from 'typeorm';
 import { isDefined } from 'twenty-shared/utils';
+import { v4 } from 'uuid';
 
-import { ApplicationService } from 'src/engine/core-modules/application/application.service';
-import { BillingEntitlementKey } from 'src/engine/core-modules/billing/enums/billing-entitlement-key.enum';
-import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
-import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
-import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
-import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
-import { type FlatValidationRule } from 'src/engine/metadata-modules/flat-validation-rule/types/flat-validation-rule.type';
-import { fromCreateValidationRuleInputToFlatValidationRuleToCreate } from 'src/engine/metadata-modules/flat-validation-rule/utils/from-create-validation-rule-input-to-flat-validation-rule-to-create.util';
-import { fromFlatValidationRuleToValidationRuleDto } from 'src/engine/metadata-modules/flat-validation-rule/utils/from-flat-validation-rule-to-validation-rule-dto.util';
-import { fromUpdateValidationRuleInputToFlatValidationRuleToUpdate } from 'src/engine/metadata-modules/flat-validation-rule/utils/from-update-validation-rule-input-to-flat-validation-rule-to-update.util';
-import { type CreateValidationRuleInput } from 'src/engine/metadata-modules/validation-rule/dtos/create-validation-rule.input';
-import { type UpdateValidationRuleInput } from 'src/engine/metadata-modules/validation-rule/dtos/update-validation-rule.input';
-import { type ValidationRuleDTO } from 'src/engine/metadata-modules/validation-rule/dtos/validation-rule.dto';
-import { compileValidationRuleExpressionOrThrow } from 'src/engine/metadata-modules/validation-rule/utils/compile-validation-rule-expression-or-throw.util';
-import { computeValidationRuleBindings } from 'src/engine/metadata-modules/validation-rule/utils/compute-validation-rule-bindings.util';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import {
-  ValidationRuleException,
-  ValidationRuleExceptionCode,
-} from 'src/engine/metadata-modules/validation-rule/validation-rule.exception';
-import { WorkspaceMigrationBuilderException } from 'src/engine/workspace-manager/workspace-migration/exceptions/workspace-migration-builder-exception';
-import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
+  type CreateValidationRuleInput,
+  type UpdateValidationRuleInput,
+  type ValidationRuleDTO,
+} from 'src/engine/metadata-modules/validation-rule/dtos/validation-rule.dto';
+import { ValidationRuleEntity } from 'src/engine/metadata-modules/validation-rule/entities/validation-rule.entity';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { type WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
-type ValidationRuleOperation = {
-  flatEntityToCreate: FlatValidationRule[];
-  flatEntityToUpdate: FlatValidationRule[];
-  flatEntityToDelete: FlatValidationRule[];
-};
+const toDto = (rule: ValidationRuleEntity): ValidationRuleDTO => ({
+  id: rule.id,
+  description: rule.description,
+  errorFieldMetadataId: rule.errorFieldMetadataId,
+  expression: rule.expression,
+  icon: rule.icon,
+  isActive: rule.isActive,
+  message: rule.message,
+  name: rule.name,
+  objectMetadataId: rule.objectMetadataId,
+});
 
 @Injectable()
 export class ValidationRuleService {
   constructor(
-    private readonly workspaceMigrationValidateBuildAndRunService: WorkspaceMigrationValidateBuildAndRunService,
-    private readonly workspaceManyOrAllFlatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
-    private readonly applicationService: ApplicationService,
-    private readonly billingSubscriptionService: BillingSubscriptionService,
+    @InjectWorkspaceScopedRepository(ValidationRuleEntity)
+    private readonly validationRuleRepository: WorkspaceScopedRepository<ValidationRuleEntity>,
+    @InjectRepository(WorkspaceEntity)
+    private readonly workspaceRepository: Repository<WorkspaceEntity>,
+    private readonly workspaceCacheService: WorkspaceCacheService,
   ) {}
 
-  private hasValidationRulesEntitlement(workspaceId: string): Promise<boolean> {
-    return this.billingSubscriptionService.getWorkspaceEntitlementValue(
-      workspaceId,
-      BillingEntitlementKey.VALIDATION_RULES,
-    );
-  }
-
-  private async assertHasValidationRulesEntitlement(
-    workspaceId: string,
-  ): Promise<void> {
-    if (!(await this.hasValidationRulesEntitlement(workspaceId))) {
-      throw new ValidationRuleException(
-        'Validation rules are not included in the workspace plan',
-        ValidationRuleExceptionCode.VALIDATION_RULES_NOT_ENTITLED,
-      );
-    }
-  }
-
-  private getFlatMaps(workspaceId: string) {
-    return this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
-      {
-        workspaceId,
-        flatMapsKeys: [
-          'flatValidationRuleMaps',
-          'flatObjectMetadataMaps',
-          'flatFieldMetadataMaps',
-        ],
-      },
-    );
-  }
-
-  private async runValidationRuleMigration({
+  async findByObject({
     workspaceId,
-    operation,
-    errorMessage,
-  }: {
-    workspaceId: string;
-    operation: ValidationRuleOperation;
-    errorMessage: string;
-  }): Promise<void> {
-    const { workspaceCustomFlatApplication } =
-      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
-        { workspaceId },
-      );
-
-    const validateAndBuildResult =
-      await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
-        {
-          allFlatEntityOperationByMetadataName: { validationRule: operation },
-          workspaceId,
-          applicationUniversalIdentifier:
-            workspaceCustomFlatApplication.universalIdentifier,
-        },
-      );
-
-    if (validateAndBuildResult.status === 'fail') {
-      throw new WorkspaceMigrationBuilderException(
-        validateAndBuildResult,
-        errorMessage,
-      );
-    }
-  }
-
-  private async findDtoByIdOrThrow({
-    id,
-    workspaceId,
-  }: {
-    id: string;
-    workspaceId: string;
-  }): Promise<ValidationRuleDTO> {
-    const { flatValidationRuleMaps } = await this.getFlatMaps(workspaceId);
-
-    return fromFlatValidationRuleToValidationRuleDto(
-      findFlatEntityByIdInFlatEntityMapsOrThrow({
-        flatEntityId: id,
-        flatEntityMaps: flatValidationRuleMaps,
-      }),
-    );
-  }
-
-  private async findExistingFlatValidationRuleOrThrow({
-    id,
-    workspaceId,
-  }: {
-    id: string;
-    workspaceId: string;
-  }) {
-    const flatMaps = await this.getFlatMaps(workspaceId);
-
-    const existingFlatValidationRule = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: id,
-      flatEntityMaps: flatMaps.flatValidationRuleMaps,
-    });
-
-    if (!isDefined(existingFlatValidationRule)) {
-      throw new ValidationRuleException(
-        'Validation rule not found',
-        ValidationRuleExceptionCode.VALIDATION_RULE_NOT_FOUND,
-      );
-    }
-
-    return { existingFlatValidationRule, flatMaps };
-  }
-
-  async findByObjectMetadataId({
     objectMetadataId,
-    workspaceId,
   }: {
-    objectMetadataId: string;
     workspaceId: string;
+    objectMetadataId: string;
   }): Promise<ValidationRuleDTO[]> {
-    if (!(await this.hasValidationRulesEntitlement(workspaceId))) {
-      return [];
-    }
-
-    const { flatValidationRuleMaps } = await this.getFlatMaps(workspaceId);
-
-    return Object.values(flatValidationRuleMaps.byUniversalIdentifier)
-      .filter(isDefined)
-      .filter(
-        (flatValidationRule) =>
-          flatValidationRule.objectMetadataId === objectMetadataId,
-      )
-      .sort(
-        (left, right) =>
-          left.createdAt.localeCompare(right.createdAt) ||
-          left.id.localeCompare(right.id),
-      )
-      .map(fromFlatValidationRuleToValidationRuleDto);
-  }
-
-  async validateExpressionOrThrow({
-    expression,
-    objectMetadataId,
-    workspaceId,
-  }: {
-    expression: string;
-    objectMetadataId: string;
-    workspaceId: string;
-  }): Promise<void> {
-    await this.assertHasValidationRulesEntitlement(workspaceId);
-
-    const { flatObjectMetadataMaps, flatFieldMetadataMaps } =
-      await this.getFlatMaps(workspaceId);
-
-    compileValidationRuleExpressionOrThrow({
-      expression,
-      objectMetadataId,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
+    const rules = await this.validationRuleRepository.find(workspaceId, {
+      where: { objectMetadataId },
+      order: { createdAt: 'ASC' },
     });
+
+    return rules.map(toDto);
   }
 
   async create({
-    input,
     workspaceId,
+    input,
   }: {
-    input: CreateValidationRuleInput;
     workspaceId: string;
+    input: CreateValidationRuleInput;
   }): Promise<ValidationRuleDTO> {
-    await this.assertHasValidationRulesEntitlement(workspaceId);
+    const workspace = await this.workspaceRepository.findOneByOrFail({
+      id: workspaceId,
+    });
+    const id = v4();
 
-    const { flatObjectMetadataMaps, flatFieldMetadataMaps } =
-      await this.getFlatMaps(workspaceId);
-
-    const { workspaceCustomFlatApplication } =
-      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
-        { workspaceId },
-      );
-
-    const bindings = computeValidationRuleBindings({
-      expression: input.expression,
-      isActive: input.isActive ?? true,
+    await this.validationRuleRepository.insert(workspaceId, {
+      id,
+      universalIdentifier: v4(),
+      applicationId: workspace.workspaceCustomApplicationId,
       objectMetadataId: input.objectMetadataId,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
+      errorFieldMetadataId: input.errorFieldMetadataId ?? null,
+      name: input.name,
+      description: input.description ?? null,
+      icon: input.icon ?? null,
+      expression: input.expression,
+      bindings: {},
+      message: input.message,
+      isActive: input.isActive ?? true,
     });
 
-    const flatValidationRuleToCreate =
-      fromCreateValidationRuleInputToFlatValidationRuleToCreate({
-        createValidationRuleInput: input,
-        bindings,
-        workspaceId,
-        flatApplication: workspaceCustomFlatApplication,
-        flatObjectMetadataMaps,
-        flatFieldMetadataMaps,
-      });
-
-    await this.runValidationRuleMigration({
+    const saved = await this.validationRuleRepository.findOneOrFail(
       workspaceId,
-      operation: {
-        flatEntityToCreate: [flatValidationRuleToCreate],
-        flatEntityToUpdate: [],
-        flatEntityToDelete: [],
-      },
-      errorMessage:
-        'Multiple validation errors occurred while creating validation rule',
-    });
+      { where: { id } },
+    );
 
-    return this.findDtoByIdOrThrow({
-      id: flatValidationRuleToCreate.id,
-      workspaceId,
-    });
+    await this.refreshCache(workspaceId);
+
+    return toDto(saved);
   }
 
   async update({
-    input,
     workspaceId,
+    input,
   }: {
-    input: UpdateValidationRuleInput;
     workspaceId: string;
+    input: UpdateValidationRuleInput;
   }): Promise<ValidationRuleDTO> {
-    await this.assertHasValidationRulesEntitlement(workspaceId);
-
-    const {
-      existingFlatValidationRule,
-      flatMaps: { flatObjectMetadataMaps, flatFieldMetadataMaps },
-    } = await this.findExistingFlatValidationRuleOrThrow({
-      id: input.id,
+    const rule = await this.validationRuleRepository.findOneOrFail(
       workspaceId,
-    });
+      { where: { id: input.id } },
+    );
+    const { update } = input;
+    const partial: QueryDeepPartialEntity<ValidationRuleEntity> = {};
 
-    const bindings = computeValidationRuleBindings({
-      expression:
-        input.update.expression ?? existingFlatValidationRule.expression,
-      isActive: input.update.isActive ?? existingFlatValidationRule.isActive,
-      objectMetadataId: existingFlatValidationRule.objectMetadataId,
-      existingFlatValidationRule,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    });
+    if (isDefined(update.name)) {
+      partial.name = update.name;
+    }
 
-    const flatValidationRuleToUpdate =
-      fromUpdateValidationRuleInputToFlatValidationRuleToUpdate({
-        existingFlatValidationRule,
-        update: input.update,
-        bindings,
-        flatObjectMetadataMaps,
-        flatFieldMetadataMaps,
-      });
+    if (isDefined(update.description)) {
+      partial.description = update.description;
+    }
 
-    await this.runValidationRuleMigration({
+    if (isDefined(update.icon)) {
+      partial.icon = update.icon;
+    }
+
+    if (isDefined(update.expression)) {
+      partial.expression = update.expression;
+    }
+
+    if (isDefined(update.message)) {
+      partial.message = update.message;
+    }
+
+    if (isDefined(update.isActive)) {
+      partial.isActive = update.isActive;
+    }
+
+    if (isDefined(update.errorFieldMetadataId)) {
+      partial.errorFieldMetadataId = update.errorFieldMetadataId;
+    }
+
+    if (Object.keys(partial).length > 0) {
+      await this.validationRuleRepository.update(
+        workspaceId,
+        { id: rule.id },
+        partial,
+      );
+    }
+
+    const saved = await this.validationRuleRepository.findOneOrFail(
       workspaceId,
-      operation: {
-        flatEntityToCreate: [],
-        flatEntityToUpdate: [flatValidationRuleToUpdate],
-        flatEntityToDelete: [],
-      },
-      errorMessage:
-        'Multiple validation errors occurred while updating validation rule',
-    });
+      { where: { id: rule.id } },
+    );
 
-    return this.findDtoByIdOrThrow({ id: input.id, workspaceId });
+    await this.refreshCache(workspaceId);
+
+    return toDto(saved);
   }
 
   async delete({
-    id,
     workspaceId,
+    id,
   }: {
-    id: string;
     workspaceId: string;
+    id: string;
   }): Promise<ValidationRuleDTO> {
-    await this.assertHasValidationRulesEntitlement(workspaceId);
-
-    const { existingFlatValidationRule } =
-      await this.findExistingFlatValidationRuleOrThrow({ id, workspaceId });
-
-    await this.runValidationRuleMigration({
+    const rule = await this.validationRuleRepository.findOneOrFail(
       workspaceId,
-      operation: {
-        flatEntityToCreate: [],
-        flatEntityToUpdate: [],
-        flatEntityToDelete: [existingFlatValidationRule],
-      },
-      errorMessage:
-        'Multiple validation errors occurred while deleting validation rule',
-    });
-
-    return fromFlatValidationRuleToValidationRuleDto(
-      existingFlatValidationRule,
+      { where: { id } },
     );
+    const dto = toDto(rule);
+
+    await this.validationRuleRepository.delete(workspaceId, { id });
+    await this.refreshCache(workspaceId);
+
+    return dto;
+  }
+
+  private async refreshCache(workspaceId: string): Promise<void> {
+    await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
+      'flatValidationRuleMaps',
+    ]);
   }
 }

@@ -1,23 +1,33 @@
-/* @license Enterprise */
+import { EVERYONE_PRINCIPAL_ID } from 'twenty-shared/constants';
+import { RecordShareAccessLevel } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
-import { isNonEmptyArray } from 'twenty-shared/utils';
-
-import { resolveNamedPrincipalIds } from 'src/engine/core-modules/record-share/utils/resolve-named-principal-ids.util';
-import { resolveRequiredRecordShareAccessLevels } from 'src/engine/core-modules/record-share/utils/resolve-required-record-share-access-levels.util';
 import {
   type RowAccessExpression,
   type RowAccessPolicyContext,
   type RowAccessPolicyTarget,
 } from 'src/engine/twenty-orm/types/row-access-policy.type';
 
+const READ_ACCESS_LEVELS = [
+  RecordShareAccessLevel.READ,
+  RecordShareAccessLevel.READ_WRITE,
+  RecordShareAccessLevel.FULL,
+];
+
+const WRITE_ACCESS_LEVELS = [
+  RecordShareAccessLevel.READ_WRITE,
+  RecordShareAccessLevel.FULL,
+];
+
 export const buildNamedRecordGrantExpression = (
-  { subject }: Pick<RowAccessPolicyContext, 'subject'>,
+  { subject }: RowAccessPolicyContext,
   { tableAlias, flatObjectMetadata, operationType }: RowAccessPolicyTarget,
 ): RowAccessExpression | undefined => {
-  const principalIds = resolveNamedPrincipalIds(subject);
-  const accessLevels = resolveRequiredRecordShareAccessLevels(operationType);
+  const principalIds = (subject.principalIds ?? []).filter(
+    (principalId) => principalId !== EVERYONE_PRINCIPAL_ID,
+  );
 
-  if (!isNonEmptyArray(principalIds) || !isNonEmptyArray(accessLevels)) {
+  if (principalIds.length === 0) {
     return undefined;
   }
 
@@ -27,6 +37,11 @@ export const buildNamedRecordGrantExpression = (
     tableAlias,
     objectMetadataId: flatObjectMetadata.id,
     principalIds,
-    accessLevels,
+    accessLevels:
+      operationType === 'select' ? READ_ACCESS_LEVELS : WRITE_ACCESS_LEVELS,
   };
 };
+
+export const isNamedRecordGrantDefined = (
+  expression: RowAccessExpression | undefined,
+): expression is RowAccessExpression => isDefined(expression);

@@ -1,26 +1,15 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-// Invoice period stamps are ambiguous (metered items bill in arrears), so use the subscription boundary nearest invoice.created.
-// Only valid for subscription_cycle invoices, which Stripe raises at the handover.
-export const resolveBillingTransitionBoundary = ({
-  invoiceCreatedAt,
-  subscriptionCurrentPeriodStart,
-  subscriptionCurrentPeriodEnd,
-}: {
-  invoiceCreatedAt: Date;
-  subscriptionCurrentPeriodStart: Date;
-  subscriptionCurrentPeriodEnd: Date;
-}): Date => {
-  const createdAt = invoiceCreatedAt.getTime();
-
-  const distanceToPeriodStart = Math.abs(
-    subscriptionCurrentPeriodStart.getTime() - createdAt,
-  );
-  const distanceToPeriodEnd = Math.abs(
-    subscriptionCurrentPeriodEnd.getTime() - createdAt,
-  );
-
-  return distanceToPeriodEnd < distanceToPeriodStart
-    ? subscriptionCurrentPeriodEnd
-    : subscriptionCurrentPeriodStart;
-};
+const removedresolveBillingTransitionBoundary: RemovedCommercial = new Proxy(
+  function resolveBillingTransitionBoundary(..._args: unknown[]) {
+    return removedresolveBillingTransitionBoundary;
+  },
+  {
+    get: () => removedresolveBillingTransitionBoundary,
+    apply: () => removedresolveBillingTransitionBoundary,
+  },
+);
+export const resolveBillingTransitionBoundary =
+  removedresolveBillingTransitionBoundary;

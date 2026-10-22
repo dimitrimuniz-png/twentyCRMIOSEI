@@ -1,51 +1,23 @@
-/* @license Enterprise */
-
 import {
   type ArgumentsHost,
   Catch,
   type ExceptionFilter,
+  HttpStatus,
 } from '@nestjs/common';
 
 import { type Response } from 'express';
-import Stripe from 'stripe';
 
-import {
-  BillingException,
-  BillingExceptionCode,
-} from 'src/engine/core-modules/billing/billing.exception';
-import { HttpExceptionHandlerService } from 'src/engine/core-modules/exception-handler/http-exception-handler.service';
-import { getBillingExceptionStatusCode } from 'src/engine/core-modules/billing/utils/get-billing-exception-status-code.util';
-import { type CustomException } from 'src/utils/custom-exception';
+import { BillingException } from 'src/engine/core-modules/billing/billing.exception';
 
-@Catch(BillingException, Stripe.errors.StripeError)
+@Catch(BillingException)
 export class BillingRestApiExceptionFilter implements ExceptionFilter {
-  constructor(
-    private readonly httpExceptionHandlerService: HttpExceptionHandlerService,
-  ) {}
+  catch(exception: BillingException, host: ArgumentsHost): void {
+    const response = host.switchToHttp().getResponse<Response>();
 
-  catch(
-    exception: BillingException | Stripe.errors.StripeError,
-    host: ArgumentsHost,
-  ) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-
-    if (exception instanceof Stripe.errors.StripeError) {
-      return this.httpExceptionHandlerService.handleError(
-        {
-          code: BillingExceptionCode.BILLING_STRIPE_ERROR,
-          message: exception.message,
-          name: 'StripeError',
-        } as CustomException,
-        response,
-        400,
-      );
-    }
-
-    return this.httpExceptionHandlerService.handleError(
-      exception,
-      response,
-      getBillingExceptionStatusCode(exception),
-    );
+    response.status(HttpStatus.FORBIDDEN).json({
+      statusCode: HttpStatus.FORBIDDEN,
+      error: exception.code,
+      messages: [exception.message],
+    });
   }
 }

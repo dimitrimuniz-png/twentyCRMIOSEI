@@ -1,27 +1,21 @@
-/* @license Enterprise */
-
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum UsageOperationType {
-  ALL = 'ALL',
   AI_CHAT_TOKEN = 'AI_CHAT_TOKEN',
   AI_WORKFLOW_TOKEN = 'AI_WORKFLOW_TOKEN',
-  WORKFLOW_EXECUTION = 'WORKFLOW_EXECUTION',
-  CODE_EXECUTION = 'CODE_EXECUTION',
-  WEB_SEARCH = 'WEB_SEARCH',
   AI_WORKFLOW_WEB_SEARCH = 'AI_WORKFLOW_WEB_SEARCH',
+  ALL = 'ALL',
+  API_REQUEST = 'API_REQUEST',
   CALL_RECORDING = 'CALL_RECORDING',
+  CODE_EXECUTION = 'CODE_EXECUTION',
   EMAIL_SEND = 'EMAIL_SEND',
   MESSAGE_CAMPAIGN_SEND = 'MESSAGE_CAMPAIGN_SEND',
-  // Out of twenty-shared's USAGE_OPERATION_TYPES: the API rate limit reads it, so an app billing under it would spend the request budget.
-  API_REQUEST = 'API_REQUEST',
-  WEBHOOK_CALL = 'WEBHOOK_CALL',
-  STORAGE_FILE = 'STORAGE_FILE',
   RECORD_WRITE = 'RECORD_WRITE',
-  // Platform-raised once per billing period; also out of USAGE_OPERATION_TYPES since apps only declare the amount.
+  STORAGE_FILE = 'STORAGE_FILE',
   SUBSCRIPTION = 'SUBSCRIPTION',
+  WEBHOOK_CALL = 'WEBHOOK_CALL',
+  WEB_SEARCH = 'WEB_SEARCH',
+  WORKFLOW_EXECUTION = 'WORKFLOW_EXECUTION',
 }
 
-registerEnumType(UsageOperationType, {
-  name: 'UsageOperationType',
-});
+registerEnumType(UsageOperationType, { name: 'UsageOperationType' });

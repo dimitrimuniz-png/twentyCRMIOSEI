@@ -1,5 +1,3 @@
-/* @license Enterprise */
-
 export type UsageSpenders = {
   userWorkspaceId?: string | null;
   apiKeyId?: string | null;

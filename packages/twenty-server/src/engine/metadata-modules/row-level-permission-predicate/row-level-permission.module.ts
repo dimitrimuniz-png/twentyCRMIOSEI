@@ -1,33 +1,30 @@
-/* @license Enterprise */
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
-import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
-import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
-import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.module';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate-group.entity';
+import { RowLevelPermissionPredicateEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate.entity';
 import { RowLevelPermissionPredicateGroupService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate-group.service';
 import { RowLevelPermissionPredicateService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate.service';
 import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
-import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RowLevelPermissionPredicateGroupEntity]),
+    TypeOrmModule.forFeature([
+      RowLevelPermissionPredicateEntity,
+      RowLevelPermissionPredicateGroupEntity,
+      WorkspaceEntity,
+      FieldMetadataEntity,
+    ]),
     WorkspaceCacheModule,
-    WorkspaceManyOrAllFlatEntityMapsCacheModule,
-    WorkspaceMigrationModule,
-    BillingModule,
-    ApplicationModule,
-    EnterpriseModule,
   ],
   providers: [
+    provideWorkspaceScopedRepository(RowLevelPermissionPredicateEntity),
+    provideWorkspaceScopedRepository(RowLevelPermissionPredicateGroupEntity),
     RowLevelPermissionPredicateService,
     RowLevelPermissionPredicateGroupService,
-    provideWorkspaceScopedRepository(RowLevelPermissionPredicateGroupEntity),
   ],
   exports: [
     RowLevelPermissionPredicateService,

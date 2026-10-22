@@ -1,8 +1,12 @@
-/* @license Enterprise */
+export const getCalendarMonthPeriod = (
+  date: Date,
+): { periodStart: Date; periodEnd: Date } => {
+  const periodStart = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
+  );
+  const periodEnd = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1),
+  );
 
-import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
-
-export const getCalendarMonthPeriod = (now: Date): UsagePeriod => ({
-  periodStart: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
-  periodEnd: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)),
-});
+  return { periodStart, periodEnd };
+};

@@ -1,30 +1,17 @@
-/* @license Enterprise */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
+type RemovedCommercial = any;
 
-import { Command } from 'nest-commander';
-
-import { ProvisionedWorkspaceCommandRunner } from 'src/database/commands/command-runners/provisioned-workspace.command-runner';
-import { WorkspaceIteratorService } from 'src/database/commands/command-runners/workspace-iterator.service';
-import { type RunOnWorkspaceArgs } from 'src/database/commands/command-runners/workspace.command-runner';
-import { RegisteredWorkspaceCommand } from 'src/engine/core-modules/upgrade/decorators/registered-workspace-command.decorator';
-
-@RegisteredWorkspaceCommand('2.4.0', 1797000001000)
-@Command({
-  name: 'upgrade:2-4:migrate-to-billing-v2',
-  description:
-    'No-op: all workspaces are now on the resource-credit billing model',
-})
-export class MigrateToBillingV2Command extends ProvisionedWorkspaceCommandRunner {
-  constructor(
-    protected readonly workspaceIteratorService: WorkspaceIteratorService,
-  ) {
-    super(workspaceIteratorService);
+export class MigrateToBillingV2Command {
+  constructor(..._args: unknown[]) {
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (property === 'then') return undefined;
+        const own = Reflect.get(target, property, receiver);
+        if (own !== undefined) return own;
+        return (..._ignored: unknown[]) => undefined;
+      },
+    });
   }
-
-  override async runOnWorkspace({
-    workspaceId,
-  }: RunOnWorkspaceArgs): Promise<void> {
-    this.logger.debug(
-      `Workspace ${workspaceId}: already on resource-credit billing, nothing to do`,
-    );
-  }
+  [key: string]: RemovedCommercial;
 }

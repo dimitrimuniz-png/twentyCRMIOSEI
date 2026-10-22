@@ -635,6 +635,7 @@ export class UserWorkspaceService {
     return {
       id: workspace.id,
       displayName: workspace.displayName,
+      inviteHash: workspace.inviteHash,
       workspaceUrls: this.workspaceDomainsService.getWorkspaceUrls(workspace),
       logo: isDefined(workspace.logoFileId)
         ? await this.fileUrlService.signFileByIdUrl({

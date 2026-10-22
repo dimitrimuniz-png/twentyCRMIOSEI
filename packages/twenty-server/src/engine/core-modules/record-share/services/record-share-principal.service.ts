@@ -1,39 +1,39 @@
-/* @license Enterprise */
-
 import { Injectable } from '@nestjs/common';
 
 import { msg } from '@lingui/core/macro';
 import { RecordSharePrincipalType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
+import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import {
   RecordShareException,
   RecordShareExceptionCode,
 } from 'src/engine/core-modules/record-share/record-share.exception';
-import { type RecordShareInput } from 'src/engine/core-modules/record-share/types/record-share-input.type';
-import { buildRoleRowAccessPolicySubject } from 'src/engine/core-modules/record-share/utils/build-role-row-access-policy-subject.util';
-import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
+import { buildRowLevelPermissionRecordFilter } from 'src/engine/twenty-orm/utils/build-row-level-permission-record-filter.util';
+import { isObjectOperationPermitted } from 'src/engine/twenty-orm/utils/is-object-operation-permitted.util';
+import { isRecordMatchingRLSRowLevelPermissionPredicate } from 'src/engine/twenty-orm/utils/is-record-matching-rls-row-level-permission-predicate.util';
 import { type WorkspaceTransactionScope } from 'src/engine/twenty-orm/types/workspace-transaction-scope.type';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
-import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
-type RecordSharePrincipal = Pick<
-  RecordShareInput,
-  'principalId' | 'principalType'
->;
+type ReachPrincipal = {
+  principalId: string;
+  principalType: RecordSharePrincipalType;
+};
 
 @Injectable()
 export class RecordSharePrincipalService {
   constructor(private readonly workspaceCacheService: WorkspaceCacheService) {}
 
-  // Undefined for everyone, and for a member who left or whose membership is gone
   async resolveRoleIds({
     workspaceId,
     principals,
   }: {
     workspaceId: string;
-    principals: RecordSharePrincipal[];
-  }): Promise<(string | undefined)[]> {
+    principals: Array<{
+      principalId: string;
+      principalType: RecordSharePrincipalType;
+    }>;
+  }): Promise<Array<string | null>> {
     const { flatWorkspaceMemberMaps, userWorkspaceRoleMap } =
       await this.workspaceCacheService.getOrRecompute(workspaceId, [
         'flatWorkspaceMemberMaps',
@@ -41,38 +41,29 @@ export class RecordSharePrincipalService {
       ]);
 
     return principals.map((principal) => {
-      switch (principal.principalType) {
-        case RecordSharePrincipalType.ROLE:
-          return principal.principalId;
-        case RecordSharePrincipalType.WORKSPACE_MEMBER: {
-          const flatWorkspaceMember =
-            flatWorkspaceMemberMaps.byId[principal.principalId];
-
-          if (
-            !isDefined(flatWorkspaceMember) ||
-            isDefined(flatWorkspaceMember.deletedAt)
-          ) {
-            return undefined;
-          }
-
-          const userWorkspaceId =
-            flatWorkspaceMemberMaps.userWorkspaceIdByUserId[
-              flatWorkspaceMember.userId
-            ];
-
-          return isDefined(userWorkspaceId)
-            ? userWorkspaceRoleMap[userWorkspaceId]
-            : undefined;
-        }
-        default:
-          return undefined;
+      if (
+        principal.principalType !== RecordSharePrincipalType.WORKSPACE_MEMBER
+      ) {
+        return null;
       }
+
+      const member = flatWorkspaceMemberMaps.byId[principal.principalId];
+      const userWorkspaceId = isDefined(member)
+        ? flatWorkspaceMemberMaps.userWorkspaceIdByUserId[member.userId]
+        : undefined;
+
+      if (!isDefined(userWorkspaceId)) {
+        return null;
+      }
+
+      return userWorkspaceRoleMap[userWorkspaceId] ?? null;
     });
   }
 
-  // Without reach beyond roles, a grant the recipient's role cannot use would
-  // be stored without ever taking effect. Runs after the grants are written:
-  // they satisfy the share gate, so only the role and its row filter are tested
+  // A workspace-wide share may name someone the object role cannot read.
+  // Role-only reach still has to see the object, and a member share also has
+  // to survive that member's row filter. A role share does not: each member
+  // is filtered again when they read.
   async assertPrincipalsReachRecordsOrThrow({
     workspaceId,
     transactionScope,
@@ -82,123 +73,119 @@ export class RecordSharePrincipalService {
     recordIds,
   }: {
     workspaceId: string;
-    transactionScope: WorkspaceTransactionScope;
-    flatObjectMetadata: FlatObjectMetadata;
-    canShareBeyondRole: boolean;
-    principals: RecordSharePrincipal[];
+    principals: ReachPrincipal[];
     recordIds: string[];
+    transactionScope?: WorkspaceTransactionScope;
+    flatObjectMetadata?: FlatObjectMetadata;
+    canShareBeyondRole?: boolean;
   }): Promise<void> {
-    const namedPrincipals = principals.filter(
-      (principal) =>
-        principal.principalType !== RecordSharePrincipalType.EVERYONE,
-    );
-
-    if (
-      namedPrincipals.length === 0 ||
-      recordIds.length === 0 ||
-      canShareBeyondRole
-    ) {
+    if (canShareBeyondRole === true || !isDefined(flatObjectMetadata)) {
       return;
     }
 
-    const roleIds = await this.resolveRoleIds({
-      workspaceId,
-      principals: namedPrincipals,
-    });
     const {
       rolesPermissions,
-      roleIdsWithAllRecordsAccess,
       flatRowLevelPermissionPredicateMaps,
       flatRowLevelPermissionPredicateGroupMaps,
       flatFieldMetadataMaps,
       flatObjectMetadataMaps,
     } = await this.workspaceCacheService.getOrRecompute(workspaceId, [
       'rolesPermissions',
-      'roleIdsWithAllRecordsAccess',
       'flatRowLevelPermissionPredicateMaps',
       'flatRowLevelPermissionPredicateGroupMaps',
       'flatFieldMetadataMaps',
       'flatObjectMetadataMaps',
     ]);
-    const repository = transactionScope.getRepository(
-      flatObjectMetadata.nameSingular,
-      { shouldBypassPermissionChecks: true },
-    );
+    const roleIds = await this.resolveRoleIds({ workspaceId, principals });
 
-    for (const [index, principal] of namedPrincipals.entries()) {
-      const roleId = roleIds[index];
-
-      if (!isDefined(roleId)) {
-        continue;
-      }
-
-      const roleObjectsPermissions = rolesPermissions[roleId];
+    for (const [index, principal] of principals.entries()) {
+      const roleId =
+        principal.principalType === RecordSharePrincipalType.ROLE
+          ? principal.principalId
+          : roleIds[index];
+      const objectsPermissions = isDefined(roleId)
+        ? rolesPermissions[roleId]
+        : undefined;
 
       if (
-        isDefined(roleObjectsPermissions) &&
-        !(
-          roleObjectsPermissions[flatObjectMetadata.id]?.canReadObjectRecords ??
-          false
-        )
+        !isDefined(objectsPermissions) ||
+        !isObjectOperationPermitted({
+          objectMetadata: flatObjectMetadata,
+          operationType: 'select',
+          objectsPermissions,
+        })
       ) {
         throw new RecordShareException(
-          `Principal ${principal.principalId} cannot access ${flatObjectMetadata.nameSingular} records through its role`,
+          `Principal ${principal.principalId} cannot read this object`,
           RecordShareExceptionCode.INVALID_SHARE_WITH,
           {
-            userFriendlyMessage: msg`Their role cannot access these records, and this object is only shared with roles that can.`,
+            userFriendlyMessage: msg`Choose someone who can already see this record.`,
           },
         );
       }
 
-      // A role's row filter can depend on which member reads, so a share with
-      // a role is only held to object access here and filtered per member on read
-      if (principal.principalType === RecordSharePrincipalType.ROLE) {
+      if (
+        principal.principalType !== RecordSharePrincipalType.WORKSPACE_MEMBER ||
+        !isDefined(roleId)
+      ) {
         continue;
       }
 
-      const workspaceMember = await transactionScope
-        .getRepository<WorkspaceMemberWorkspaceEntity>('workspaceMember', {
-          shouldBypassPermissionChecks: true,
-        })
-        .findOne({ where: { id: principal.principalId } });
-      const roleSubject = buildRoleRowAccessPolicySubject({
-        roleId,
-        owningApplicationId: undefined,
-        rolesPermissions,
-        roleIdsWithAllRecordsAccess,
+      const recordFilter = buildRowLevelPermissionRecordFilter({
+        roleIds: [roleId],
+        objectMetadata: flatObjectMetadata,
         flatRowLevelPermissionPredicateMaps,
         flatRowLevelPermissionPredicateGroupMaps,
         flatFieldMetadataMaps,
         flatObjectMetadataMaps,
-        workspaceMember: workspaceMember ?? undefined,
       });
-      const policy = repository.buildRowAccessPolicy({
-        subject: {
-          ...roleSubject,
-          principalIds: [
-            ...(roleSubject.principalIds ?? []),
-            principal.principalId,
-          ],
-        },
-        operationType: 'select',
-      });
-      const reachableRecordIds =
-        await repository.findRecordIdsAdmittedByRowAccessPolicy({
-          recordIds,
-          policy,
-        });
-      const unreachableRecordId = recordIds.find(
-        (recordId) => !reachableRecordIds.has(recordId),
-      );
 
-      if (isDefined(unreachableRecordId)) {
+      if (!isDefined(recordFilter)) {
+        continue;
+      }
+
+      if (!isDefined(transactionScope)) {
         throw new RecordShareException(
-          `Principal ${principal.principalId} cannot see record ${unreachableRecordId} through its role`,
+          `Principal ${principal.principalId} cannot be checked against the row filter`,
           RecordShareExceptionCode.INVALID_SHARE_WITH,
           {
-            userFriendlyMessage: msg`Their role cannot see this record, and this object is only shared with people who can.`,
+            userFriendlyMessage: msg`Choose someone who can already see this record.`,
           },
         );
+      }
+
+      const records = [];
+
+      for (const recordId of recordIds) {
+        const [record] = await transactionScope
+          .getRepository(flatObjectMetadata.nameSingular, {
+            shouldBypassPermissionChecks: true,
+          })
+          .find({ where: { id: recordId } });
+
+        records.push(record);
+      }
+
+      for (const [recordIndex, recordId] of recordIds.entries()) {
+        const record = records[recordIndex];
+
+        if (
+          !isDefined(record) ||
+          !isRecordMatchingRLSRowLevelPermissionPredicate({
+            record,
+            filter: recordFilter,
+            flatObjectMetadata,
+            flatFieldMetadataMaps,
+          })
+        ) {
+          throw new RecordShareException(
+            `Principal ${principal.principalId} cannot see record ${recordId}`,
+            RecordShareExceptionCode.INVALID_SHARE_WITH,
+            {
+              userFriendlyMessage: msg`Choose someone who can already see this record.`,
+            },
+          );
+        }
       }
     }
   }
