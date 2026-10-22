@@ -19,6 +19,7 @@ import {
 } from 'src/engine/core-modules/app-token/app-token.entity';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { isEmailInApprovedAccessDomains } from 'src/engine/core-modules/approved-access-domain/utils/is-email-in-approved-access-domains.util';
+import { assertEmailDomainIsAllowed } from 'src/engine/core-modules/auth/utils/assert-email-domain-is-allowed.util';
 import {
   AuthException,
   AuthExceptionCode,
@@ -187,6 +188,8 @@ export class AuthService {
   }
 
   async validateLoginWithPassword(input: UserCredentialsInput) {
+    this.assertAllowedEmailDomain(input.email);
+
     const user = await this.findUserByEmailOrThrow(input.email);
 
     await this.validatePasswordCredentialsOrThrow(user, input.password);
@@ -198,6 +201,8 @@ export class AuthService {
     input: UserCredentialsInput,
     workspace: WorkspaceEntity,
   ): Promise<UserEntity> {
+    this.assertAllowedEmailDomain(input.email);
+
     const user = await this.findUserByEmailOrThrow(input.email);
 
     await this.assertPasswordAuthAllowedOnWorkspaceOrThrow(user, workspace);
@@ -255,6 +260,13 @@ export class AuthService {
       workspace,
       castAppTokenToWorkspaceInvitationUtil(invitation).roleId,
     );
+  }
+
+  private assertAllowedEmailDomain(email: string): void {
+    assertEmailDomainIsAllowed({
+      email,
+      allowedDomains: this.twentyConfigService.get('SSO_ALLOWED_EMAIL_DOMAINS'),
+    });
   }
 
   async checkIsEmailVerified(isEmailVerified: boolean) {
@@ -1019,6 +1031,8 @@ export class AuthService {
     authProvider: AuthProviderEnum.Google | AuthProviderEnum.Microsoft,
   ): Promise<string> {
     const email = rawEmail.toLowerCase();
+
+    this.assertAllowedEmailDomain(email);
 
     const existingUser =
       await this.userService.findUserByEmailWithWorkspaces(email);

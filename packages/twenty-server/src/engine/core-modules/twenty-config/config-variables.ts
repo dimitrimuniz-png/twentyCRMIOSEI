@@ -100,6 +100,16 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     description:
+      'Comma-separated email domains allowed to sign in and sign up. Exact match after @ (user@iosei.co is allowed, user@sub.iosei.co is not). Empty allows every domain. Checked on the SSO callback, password sign-in and sign-up. Env-only so the admin panel cannot widen it.',
+    type: ConfigVariableType.ARRAY,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  SSO_ALLOWED_EMAIL_DOMAINS: string[] = [];
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
       'Hostnames or IP literals on a private network that outbound connections may reach, e.g. an on-premise mail server or identity provider (keycloak, mail.internal, 192.168.1.10). Exact hostname match, no patterns; a full URL is reduced to its hostname. Every other private address is blocked (SSRF protection) for HTTP workflow actions, webhooks, SSO and IMAP/SMTP/CalDAV connections. Set to * to allow all.',
     type: ConfigVariableType.ARRAY,
   })

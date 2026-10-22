@@ -18,6 +18,7 @@ import { OidcAuthGuard } from 'src/engine/core-modules/auth/guards/oidc-auth.gua
 import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.guard';
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
 import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
+import { assertEmailDomainIsAllowed } from 'src/engine/core-modules/auth/utils/assert-email-domain-is-allowed.util';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
@@ -96,6 +97,12 @@ export class SsoAuthController {
     response: Response,
   ): Promise<void> {
     const email = request.user.email.toLowerCase();
+
+    assertEmailDomainIsAllowed({
+      email,
+      allowedDomains: this.twentyConfigService.get('SSO_ALLOWED_EMAIL_DOMAINS'),
+    });
+
     const existingUser = await this.userService.findUserByEmail(email);
     const formattedUser = this.authService.formatUserDataPayload(
       { email, isEmailAlreadyVerified: true },
