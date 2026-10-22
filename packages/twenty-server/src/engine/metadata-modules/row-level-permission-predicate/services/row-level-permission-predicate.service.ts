@@ -109,6 +109,38 @@ const relationSelectionCompiles = (value: unknown): boolean => {
   );
 };
 
+// A child group row fails its parent FK when it is inserted before the parent.
+const orderGroupsParentsFirst = <
+  TGroup extends {
+    id: string;
+    parentRowLevelPermissionPredicateGroupId: string | null;
+  },
+>(
+  groups: TGroup[],
+): TGroup[] => {
+  const pending = [...groups];
+  const ordered: TGroup[] = [];
+  const placedIds = new Set<string>();
+
+  while (pending.length > 0) {
+    const readyIndex = pending.findIndex((group) => {
+      const parentId = group.parentRowLevelPermissionPredicateGroupId;
+
+      return (
+        !isDefined(parentId) ||
+        placedIds.has(parentId) ||
+        pending.every((candidate) => candidate.id !== parentId)
+      );
+    });
+    const [group] = pending.splice(readyIndex === -1 ? 0 : readyIndex, 1);
+
+    ordered.push(group);
+    placedIds.add(group.id);
+  }
+
+  return ordered;
+};
+
 const orderById = <TRow extends { id: string }>(
   rows: TRow[],
   ids: string[],
@@ -265,16 +297,18 @@ export class RowLevelPermissionPredicateService {
       };
     });
 
-    const [persistedGroups, persistedPredicates] = await Promise.all([
-      this.predicateGroupRepository.upsertReturning(workspaceId, groupRows, [
-        'id',
-      ]),
-      this.predicateRepository.upsertReturning(
-        workspaceId,
-        predicateRows as QueryDeepPartialEntity<RowLevelPermissionPredicateEntity>[],
-        ['id'],
-      ),
-    ]);
+    // The predicate foreign key is checked when its statement runs, so the
+    // group row has to be committed first.
+    const persistedGroups = await this.predicateGroupRepository.upsertReturning(
+      workspaceId,
+      orderGroupsParentsFirst(groupRows),
+      ['id'],
+    );
+    const persistedPredicates = await this.predicateRepository.upsertReturning(
+      workspaceId,
+      predicateRows as QueryDeepPartialEntity<RowLevelPermissionPredicateEntity>[],
+      ['id'],
+    );
 
     await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
       'flatRowLevelPermissionPredicateMaps',
@@ -356,9 +390,12 @@ export class RowLevelPermissionPredicateService {
         );
       }
 
+      // Comparing two relations (the record's field and the current member's
+      // field) has no static record selection; the member field supplies it.
       if (
         isRelationField(field) &&
         predicate.operand === RowLevelPermissionPredicateOperand.IS &&
+        !isDefined(predicate.workspaceMemberFieldMetadataId) &&
         !relationSelectionCompiles(predicate.value)
       ) {
         throw new RowLevelPermissionPredicateException(
