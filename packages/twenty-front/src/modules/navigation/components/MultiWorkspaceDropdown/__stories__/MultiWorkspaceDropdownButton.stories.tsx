@@ -23,24 +23,28 @@ const AVAILABLE_WORKSPACES: AvailableWorkspace[] = [
   {
     id: mockCurrentWorkspace.id,
     displayName: 'Twenty',
+    logo: '',
     sso: [],
     workspaceUrls: { subdomainUrl: 'https://twenty.example.com' },
   },
   {
     id: 'acme',
     displayName: 'Acme',
+    logo: '',
     sso: [],
     workspaceUrls: { subdomainUrl: 'https://acme.example.com' },
   },
   {
     id: 'venture',
     displayName: 'Venture',
+    logo: '',
     sso: [],
     workspaceUrls: { subdomainUrl: 'https://venture.example.com' },
   },
   {
     id: 'studio',
     displayName: 'Studio',
+    logo: '',
     sso: [],
     workspaceUrls: { subdomainUrl: 'https://studio.example.com' },
   },
@@ -48,6 +52,7 @@ const AVAILABLE_WORKSPACES: AvailableWorkspace[] = [
 const INVITED_WORKSPACE: AvailableWorkspace = {
   id: 'invited',
   displayName: 'Invited workspace',
+  logo: '',
   inviteHash: 'workspace-invite',
   personalInviteToken: 'personal-invite',
   sso: [],

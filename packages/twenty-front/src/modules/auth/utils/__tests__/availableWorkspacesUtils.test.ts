@@ -15,7 +15,7 @@ const createMockAvailableWorkspace = (
   __typename: 'AvailableWorkspace',
   id: 'workspace-1',
   displayName: 'Test Workspace',
-  logo: null,
+  logo: '',
   sso: [],
   workspaceUrls: {
     customUrl: null,

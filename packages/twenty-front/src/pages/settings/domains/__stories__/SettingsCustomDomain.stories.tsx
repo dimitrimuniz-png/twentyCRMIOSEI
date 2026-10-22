@@ -12,6 +12,8 @@ import { SettingsCustomDomainPage } from '~/pages/settings/domains/SettingsCusto
 const meta: Meta<PageDecoratorArgs> = {
   title: 'Pages/Settings/Domains/SettingsCustomDomain',
   component: SettingsCustomDomainPage,
+  // Custom domains are not in this fork. The page is a stub, so the play cannot find the form.
+  tags: ['!test'],
   decorators: [PageDecorator],
   args: { routePath: '/settings/domains/custom-domain' },
   parameters: {
