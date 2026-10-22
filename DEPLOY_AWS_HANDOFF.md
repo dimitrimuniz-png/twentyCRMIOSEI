@@ -128,7 +128,9 @@ O entrypoint cria as extensões `uuid-ossp`, `unaccent` e `citext`. O usuário m
 postgres://twenty:SENHA_HEX@ENDPOINT:5432/default?sslmode=require
 ```
 
-`PG_SSL_ALLOW_SELF_SIGNED=true` é obrigatório. Neste código o pool só abre TLS quando essa variável é `true` (`rejectUnauthorized: false`). O `sslmode=require` é o que o `psql` do entrypoint obedece. Os dois juntos: tráfego cifrado, migração e servidor. Não há outro interruptor de CA do RDS.
+`PG_SSL_ALLOW_SELF_SIGNED=true` continua obrigatório no `deploy.sh`, mas não desliga a verificação: o `pg` lê o `sslmode=require` da URL e valida o certificado do RDS. O `deploy.sh` baixa o [`global-bundle.pem`](https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem) para `rds-global-bundle.pem` na raiz do repositório, e o Compose o monta no server e no worker com `NODE_EXTRA_CA_CERTS` (Node) e `PGSSLROOTCERT` (`psql` do entrypoint). Resultado: TLS com a CA do RDS verificada nos dois caminhos.
+
+A API do RDS recusa `default` como `--db-name` (palavra reservada). Crie a instância sem `--db-name` e, antes do primeiro `deploy.sh`, crie o banco com `CREATE DATABASE "default";` conectado ao banco `postgres` com o usuário `twenty`.
 
 ## 5. EC2
 
