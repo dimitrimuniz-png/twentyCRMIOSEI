@@ -5,6 +5,7 @@ import {
 import { isDefined } from 'twenty-shared/utils';
 
 import { resolveInheritedReadabilityParents } from 'src/engine/core-modules/record-share/utils/resolve-inherited-readability-parents.util';
+import { buildPostgresSafeAlias } from 'src/engine/twenty-orm/sql/utils/build-postgres-safe-alias.util';
 import { resolveObjectSharing } from 'src/engine/core-modules/record-share/utils/resolve-object-sharing.util';
 import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
 import { isMetadataWritePermitted } from 'src/engine/twenty-orm/utils/is-metadata-write-permitted.util';
@@ -156,7 +157,9 @@ const buildInheritedGate = ({
       }
 
       if (parent.kind === 'column') {
-        const parentTableAlias = `${target.tableAlias}_${parent.joinColumnName}`;
+        const parentTableAlias = buildPostgresSafeAlias(
+          `${target.tableAlias}_${parent.joinColumnName}`,
+        );
         const expression: InheritedReadabilityParentExpression = {
           kind: 'column',
           joinColumnName: parent.joinColumnName,
@@ -173,7 +176,9 @@ const buildInheritedGate = ({
         return expression.policy.kind === 'denied' ? [] : [expression];
       }
 
-      const childTableAlias = `${target.tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`;
+      const childTableAlias = buildPostgresSafeAlias(
+        `${target.tableAlias}_${parent.childFlatObjectMetadata.nameSingular}`,
+      );
       const expression: InheritedReadabilityParentExpression = {
         kind: 'children',
         childTableAlias,

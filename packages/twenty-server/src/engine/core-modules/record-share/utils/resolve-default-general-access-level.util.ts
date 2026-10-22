@@ -1,15 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { RecordShareAccessLevel } from 'twenty-shared/types';
 
-const removedresolveDefaultGeneralAccessLevel: RemovedCommercial = new Proxy(
-  function resolveDefaultGeneralAccessLevel(..._args: unknown[]) {
-    return removedresolveDefaultGeneralAccessLevel;
-  },
-  {
-    get: () => removedresolveDefaultGeneralAccessLevel,
-    apply: () => removedresolveDefaultGeneralAccessLevel,
-  },
-);
-export const resolveDefaultGeneralAccessLevel =
-  removedresolveDefaultGeneralAccessLevel;
+import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
+
+// A record open by default is editable by the workspace until a row lowers it.
+export const resolveDefaultGeneralAccessLevel = (
+  sharingMode: RecordSharingMode,
+): RecordShareAccessLevel =>
+  sharingMode === RecordSharingMode.OPEN_BY_DEFAULT
+    ? RecordShareAccessLevel.READ_WRITE
+    : RecordShareAccessLevel.NONE;

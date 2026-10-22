@@ -45,6 +45,9 @@ export class AvailableWorkspace {
   personalInviteToken?: string;
 
   @Field(() => String, { nullable: true })
+  inviteHash?: string;
+
+  @Field(() => String, { nullable: true })
   loginToken?: string;
 }
 

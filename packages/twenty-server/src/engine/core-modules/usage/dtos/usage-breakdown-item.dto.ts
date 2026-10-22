@@ -5,8 +5,8 @@ export class UsageBreakdownItemDTO {
   @Field(() => String)
   key: string;
 
-  @Field(() => String)
-  label: string;
+  @Field(() => String, { nullable: true })
+  label?: string | null;
 
   @Field(() => Float)
   creditsUsed: number;

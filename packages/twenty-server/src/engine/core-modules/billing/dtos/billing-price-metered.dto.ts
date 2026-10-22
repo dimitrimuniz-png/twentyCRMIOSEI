@@ -1,17 +1,31 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Field, Float, ObjectType } from '@nestjs/graphql';
 
+import { BillingUsageType } from 'src/engine/core-modules/billing/enums/billing-usage-type.enum';
+import { SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
+
+@ObjectType('BillingPriceTier')
+export class BillingPriceTierDTO {
+  @Field(() => Float, { nullable: true })
+  flatAmount?: number | null;
+
+  @Field(() => Float, { nullable: true })
+  unitAmount?: number | null;
+
+  @Field(() => Float, { nullable: true })
+  upTo?: number | null;
+}
+
+@ObjectType('BillingPriceMetered')
 export class BillingPriceMeteredDTO {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
-  }
-  [key: string]: RemovedCommercial;
+  @Field(() => BillingUsageType)
+  priceUsageType: BillingUsageType;
+
+  @Field(() => SubscriptionInterval)
+  recurringInterval: SubscriptionInterval;
+
+  @Field(() => String)
+  stripePriceId: string;
+
+  @Field(() => [BillingPriceTierDTO])
+  tiers: BillingPriceTierDTO[];
 }

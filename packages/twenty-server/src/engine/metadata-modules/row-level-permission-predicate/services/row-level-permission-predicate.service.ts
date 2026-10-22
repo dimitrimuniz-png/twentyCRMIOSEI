@@ -187,46 +187,55 @@ export class RowLevelPermissionPredicateService {
       });
     }
 
-    const groupRows = input.predicateGroups.map((group) => ({
-      id: group.id ?? v4(),
-      universalIdentifier:
-        existingGroups.find((existing) => existing.id === group.id)
-          ?.universalIdentifier ?? v4(),
-      applicationId:
-        existingGroups.find((existing) => existing.id === group.id)
-          ?.applicationId ?? workspace.workspaceCustomApplicationId,
-      roleId: input.roleId,
-      objectMetadataId: group.objectMetadataId,
-      logicalOperator: group.logicalOperator,
-      parentRowLevelPermissionPredicateGroupId:
-        group.parentRowLevelPermissionPredicateGroupId ?? null,
-      positionInRowLevelPermissionPredicateGroup:
-        group.positionInRowLevelPermissionPredicateGroup ?? null,
-    }));
-    const predicateRows = input.predicates.map((predicate) => ({
-      id: predicate.id ?? v4(),
-      universalIdentifier:
-        existingPredicates.find((existing) => existing.id === predicate.id)
-          ?.universalIdentifier ?? v4(),
-      applicationId:
-        existingPredicates.find((existing) => existing.id === predicate.id)
-          ?.applicationId ?? workspace.workspaceCustomApplicationId,
-      roleId: input.roleId,
-      objectMetadataId: input.objectMetadataId,
-      fieldMetadataId: predicate.fieldMetadataId,
-      operand: predicate.operand,
-      value: (predicate.value ??
-        null) as RowLevelPermissionPredicateEntity['value'],
-      subFieldName: predicate.subFieldName ?? null,
-      workspaceMemberFieldMetadataId:
-        predicate.workspaceMemberFieldMetadataId ?? null,
-      workspaceMemberSubFieldName:
-        predicate.workspaceMemberSubFieldName ?? null,
-      rowLevelPermissionPredicateGroupId:
-        predicate.rowLevelPermissionPredicateGroupId ?? null,
-      positionInRowLevelPermissionPredicateGroup:
-        predicate.positionInRowLevelPermissionPredicateGroup ?? null,
-    }));
+    const groupRows = input.predicateGroups.map((group) => {
+      const id = group.id ?? v4();
+
+      return {
+        id,
+        // A new group is addressed by the id the caller sent, including on export.
+        universalIdentifier:
+          existingGroups.find((existing) => existing.id === id)
+            ?.universalIdentifier ?? id,
+        applicationId:
+          existingGroups.find((existing) => existing.id === group.id)
+            ?.applicationId ?? workspace.workspaceCustomApplicationId,
+        roleId: input.roleId,
+        objectMetadataId: group.objectMetadataId,
+        logicalOperator: group.logicalOperator,
+        parentRowLevelPermissionPredicateGroupId:
+          group.parentRowLevelPermissionPredicateGroupId ?? null,
+        positionInRowLevelPermissionPredicateGroup:
+          group.positionInRowLevelPermissionPredicateGroup ?? null,
+      };
+    });
+    const predicateRows = input.predicates.map((predicate) => {
+      const id = predicate.id ?? v4();
+
+      return {
+        id,
+        universalIdentifier:
+          existingPredicates.find((existing) => existing.id === id)
+            ?.universalIdentifier ?? id,
+        applicationId:
+          existingPredicates.find((existing) => existing.id === predicate.id)
+            ?.applicationId ?? workspace.workspaceCustomApplicationId,
+        roleId: input.roleId,
+        objectMetadataId: input.objectMetadataId,
+        fieldMetadataId: predicate.fieldMetadataId,
+        operand: predicate.operand,
+        value: (predicate.value ??
+          null) as RowLevelPermissionPredicateEntity['value'],
+        subFieldName: predicate.subFieldName ?? null,
+        workspaceMemberFieldMetadataId:
+          predicate.workspaceMemberFieldMetadataId ?? null,
+        workspaceMemberSubFieldName:
+          predicate.workspaceMemberSubFieldName ?? null,
+        rowLevelPermissionPredicateGroupId:
+          predicate.rowLevelPermissionPredicateGroupId ?? null,
+        positionInRowLevelPermissionPredicateGroup:
+          predicate.positionInRowLevelPermissionPredicateGroup ?? null,
+      };
+    });
 
     if (groupRows.length > 0) {
       await this.predicateGroupRepository.upsert(workspaceId, groupRows, [

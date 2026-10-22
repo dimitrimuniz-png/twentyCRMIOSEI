@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 
 import { type RecordShareAccessLevel } from 'twenty-shared/types';
 
+import { buildPostgresSafeAlias } from 'src/engine/twenty-orm/sql/utils/build-postgres-safe-alias.util';
 import { type SqlCondition } from 'src/engine/twenty-orm/types/row-access-policy.type';
 
 export const buildRecordShareCondition = ({
@@ -19,7 +20,7 @@ export const buildRecordShareCondition = ({
   recordShareTableExpression: string;
   isUncorrelated?: boolean;
 }): SqlCondition => {
-  const shareAlias = `${tableAlias}_recordShare`;
+  const shareAlias = buildPostgresSafeAlias(`${tableAlias}_recordShare`);
   const objectKey = parameterKey('recordShareObject');
   const principalKey = parameterKey('recordSharePrincipals');
   const accessKey = parameterKey('recordShareAccess');

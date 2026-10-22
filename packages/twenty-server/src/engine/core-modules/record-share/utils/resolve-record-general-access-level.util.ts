@@ -1,15 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { EVERYONE_PRINCIPAL_ID } from 'twenty-shared/constants';
+import {
+  RecordShareAccessLevel,
+  RecordSharePrincipalType,
+} from 'twenty-shared/types';
 
-const removedresolveRecordGeneralAccessLevel: RemovedCommercial = new Proxy(
-  function resolveRecordGeneralAccessLevel(..._args: unknown[]) {
-    return removedresolveRecordGeneralAccessLevel;
-  },
-  {
-    get: () => removedresolveRecordGeneralAccessLevel,
-    apply: () => removedresolveRecordGeneralAccessLevel,
-  },
-);
-export const resolveRecordGeneralAccessLevel =
-  removedresolveRecordGeneralAccessLevel;
+import { type RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
+import { resolveDefaultGeneralAccessLevel } from 'src/engine/core-modules/record-share/utils/resolve-default-general-access-level.util';
+
+type GeneralAccessShare = {
+  principalId: string;
+  principalType: RecordSharePrincipalType;
+  accessLevel: RecordShareAccessLevel;
+};
+
+export const resolveRecordGeneralAccessLevel = ({
+  sharingMode,
+  recordShares,
+}: {
+  sharingMode: RecordSharingMode;
+  recordShares: GeneralAccessShare[];
+}): RecordShareAccessLevel => {
+  const everyoneShare = recordShares.find(
+    (share) =>
+      share.principalType === RecordSharePrincipalType.EVERYONE ||
+      share.principalId === EVERYONE_PRINCIPAL_ID,
+  );
+
+  return (
+    everyoneShare?.accessLevel ?? resolveDefaultGeneralAccessLevel(sharingMode)
+  );
+};

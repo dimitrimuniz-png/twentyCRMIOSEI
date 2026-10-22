@@ -12,6 +12,7 @@ import { BillingCreditGrantService } from 'src/engine/core-modules/billing/servi
 import { BillingSubscriptionItemService } from 'src/engine/core-modules/billing/services/billing-subscription-item.service';
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
 import { ResourceCreditService } from 'src/engine/core-modules/billing/services/resource-credit.service';
+import { BillingSchemaResolver } from 'src/engine/core-modules/billing/resolvers/billing-schema.resolver';
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
 
 @Module({
@@ -29,6 +30,7 @@ import { BillingSubscriptionService } from 'src/engine/core-modules/billing/serv
     BillingUsageService,
     ResourceCreditService,
     BillingSubscriptionService,
+    BillingSchemaResolver,
   ],
   exports: [
     UpdateSubscriptionQuantityJob,

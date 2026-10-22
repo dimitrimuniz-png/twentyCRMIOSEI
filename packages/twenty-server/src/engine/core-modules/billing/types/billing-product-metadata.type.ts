@@ -1,17 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Field, ObjectType } from '@nestjs/graphql';
 
+import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
+import { BillingProductKey } from 'src/engine/core-modules/billing/enums/billing-product-key.enum';
+import { BillingUsageType } from 'src/engine/core-modules/billing/enums/billing-usage-type.enum';
+
+@ObjectType('BillingProductMetadata')
 export class BillingProductMetadata {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
-  }
-  [key: string]: RemovedCommercial;
+  @Field(() => BillingProductKey)
+  productKey: BillingProductKey;
+
+  @Field(() => BillingPlanKey)
+  planKey: BillingPlanKey;
+
+  @Field(() => BillingUsageType)
+  priceUsageBased: BillingUsageType;
+
+  @Field(() => String, { nullable: true })
+  isLegacy?: string | null;
 }

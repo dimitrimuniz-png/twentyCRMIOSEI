@@ -376,9 +376,10 @@ export class WorkspaceResolver {
 
   @ResolveField(() => [BillingEntitlementDTO])
   billingEntitlements(@Parent() workspace: WorkspaceEntity) {
-    return this.billingSubscriptionService.getWorkspaceEntitlements(
-      workspace.id,
-    );
+    const entitlements =
+      this.billingSubscriptionService.getWorkspaceEntitlements(workspace.id);
+
+    return Array.isArray(entitlements) ? entitlements : [];
   }
 
   @ResolveField(() => Boolean)
