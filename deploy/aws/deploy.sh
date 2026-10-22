@@ -7,6 +7,8 @@ export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_FILE="${ENV_FILE:-$ROOT/.env.production}"
 COMPOSE_FILE="$ROOT/packages/twenty-docker/docker-compose.prod.yml"
+RDS_CA_URL="https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem"
+RDS_CA_FILE="$ROOT/rds-global-bundle.pem"
 EXPECTED_DOMAINS=$'i-rad.co\niosei.co\nmstecnologia.med.br'
 
 die() {
@@ -148,6 +150,23 @@ validate_env() {
   echo "ambiente válido para ${CRM_DOMAIN} (imagem ${TAG})"
 }
 
+fetch_rds_ca() {
+  local tmp
+  tmp="$(mktemp)"
+
+  if curl --fail --silent --show-error --max-time 30 "$RDS_CA_URL" -o "$tmp" &&
+    grep -q 'BEGIN CERTIFICATE' "$tmp"; then
+    install -m 0644 "$tmp" "$RDS_CA_FILE"
+    rm -f "$tmp"
+    return
+  fi
+
+  rm -f "$tmp"
+  grep -qs 'BEGIN CERTIFICATE' "$RDS_CA_FILE" ||
+    die "não foi possível baixar o CA bundle do RDS de $RDS_CA_URL"
+  echo "aviso: download do CA bundle do RDS falhou; usando a cópia em $RDS_CA_FILE" >&2
+}
+
 wait_for_healthz() {
   local compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 
@@ -196,4 +215,5 @@ if [[ "${VALIDATE_ONLY:-}" == "1" ]]; then
   exit 0
 fi
 
+fetch_rds_ca
 wait_for_healthz

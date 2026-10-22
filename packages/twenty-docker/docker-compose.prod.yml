@@ -18,6 +18,14 @@ x-twenty-image: &twenty-image
       max-size: "10m"
       max-file: "5"
 
+x-rds-ca: &rds-ca
+  type: bind
+  source: ../../rds-global-bundle.pem
+  target: /etc/ssl/rds/global-bundle.pem
+  read_only: true
+  bind:
+    create_host_path: false
+
 x-app-env: &app-env
   NODE_ENV: "production"
   # Composed here so it cannot drift from CRM_DOMAIN.
@@ -25,6 +33,10 @@ x-app-env: &app-env
   TRUST_PROXY: "${TRUST_PROXY:-loopback, linklocal, uniquelocal}"
   PG_DATABASE_URL: "${PG_DATABASE_URL:?Set PG_DATABASE_URL}"
   PG_SSL_ALLOW_SELF_SIGNED: "${PG_SSL_ALLOW_SELF_SIGNED:?Set PG_SSL_ALLOW_SELF_SIGNED}"
+  # pg turns sslmode=require in the URL into ssl:{} and verifies the RDS cert,
+  # overriding rejectUnauthorized; deploy.sh fetches the RDS bundle mounted here.
+  NODE_EXTRA_CA_CERTS: "/etc/ssl/rds/global-bundle.pem"
+  PGSSLROOTCERT: "/etc/ssl/rds/global-bundle.pem"
   REDIS_URL: "redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379"
   ENCRYPTION_KEY: "${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}"
   FALLBACK_ENCRYPTION_KEY: "${FALLBACK_ENCRYPTION_KEY:-}"
@@ -63,6 +75,7 @@ services:
       DISABLE_CRON_JOBS_REGISTRATION: "false"
     volumes:
       - server-local-data:/app/packages/twenty-server/.local-storage
+      - *rds-ca
     depends_on:
       redis:
         condition: service_healthy
@@ -90,6 +103,7 @@ services:
       DISABLE_CRON_JOBS_REGISTRATION: "true"
     volumes:
       - server-local-data:/app/packages/twenty-server/.local-storage
+      - *rds-ca
     depends_on:
       redis:
         condition: service_healthy

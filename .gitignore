@@ -1,6 +1,7 @@
 **/**/.env
 .env.production
 **/.env.production
+rds-global-bundle.pem
 .DS_Store
 /.idea
 .claude/*
