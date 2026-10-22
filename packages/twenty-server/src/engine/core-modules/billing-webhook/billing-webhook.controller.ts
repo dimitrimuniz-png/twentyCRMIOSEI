@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 
+import { ApiPath } from 'twenty-shared/types';
+
+import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
+import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
+
+@Controller()
 export class BillingWebhookController {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+  @Post(`${ApiPath.Webhooks}/stripe`)
+  @HttpCode(200)
+  @UseGuards(PublicEndpointGuard, NoPermissionGuard)
+  async handleWebhooks(): Promise<{ received: true }> {
+    return { received: true };
   }
-  [key: string]: RemovedCommercial;
 }

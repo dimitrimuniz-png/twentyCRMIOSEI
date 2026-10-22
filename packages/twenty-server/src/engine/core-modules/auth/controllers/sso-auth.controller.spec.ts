@@ -20,6 +20,7 @@ import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.gua
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
 import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
 import { GuardRedirectService } from 'src/engine/core-modules/guard-redirect/services/guard-redirect.service';
 import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
@@ -94,6 +95,12 @@ describe('SsoAuthController', () => {
             generateLoginToken: jest
               .fn()
               .mockResolvedValue({ token: 'login-token' }),
+          },
+        },
+        {
+          provide: TwentyConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('http://localhost:3000'),
           },
         },
         { provide: GuardRedirectService, useValue: {} },

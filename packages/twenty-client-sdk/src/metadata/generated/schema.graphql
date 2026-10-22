@@ -647,13 +647,21 @@ type AutocompleteResult {
 
 type AvailableWorkspace {
   displayName: String
-  id: UUID!
+  id: ID!
   inviteHash: String
   loginToken: String
-  logo: String
+  logo: String!
   personalInviteToken: String
-  sso: [SSOConnection!]!
+  sso: [AvailableWorkspaceSso!]!
   workspaceUrls: WorkspaceUrls!
+}
+
+type AvailableWorkspaceSso {
+  id: ID!
+  issuer: String!
+  name: String!
+  status: SsoIdentityProviderStatus!
+  type: IdentityProviderType!
 }
 
 type AvailableWorkspaces {
@@ -796,7 +804,7 @@ enum BillingEntitlementKey {
   VALIDATION_RULES
 }
 
-type BillingLicensedProduct implements BillingProductDTO {
+type BillingLicensedProduct implements BillingProductDto {
   description: String!
   images: [String!]
   metadata: BillingProductMetadata!
@@ -804,7 +812,7 @@ type BillingLicensedProduct implements BillingProductDTO {
   prices: [BillingPriceLicensed!]
 }
 
-type BillingMeteredProduct implements BillingProductDTO {
+type BillingMeteredProduct implements BillingProductDto {
   description: String!
   images: [String!]
   metadata: BillingProductMetadata!
@@ -827,7 +835,6 @@ type BillingPlan {
   upgradePlanKeys: [BillingPlanKey!]!
 }
 
-"""The different billing plans available"""
 enum BillingPlanKey {
   ENTERPRISE
   ORGANIZATION_V2
@@ -864,14 +871,13 @@ type BillingProduct {
   name: String!
 }
 
-interface BillingProductDTO {
+interface BillingProductDto {
   description: String!
   images: [String!]
   metadata: BillingProductMetadata!
   name: String!
 }
 
-"""The different billing products available"""
 enum BillingProductKey {
   BASE_PRODUCT
   RESOURCE_CREDIT
@@ -920,7 +926,7 @@ enum BillingSubscriptionCollectionMethod {
 }
 
 type BillingSubscriptionItem {
-  billingProduct: BillingProductDTO!
+  billingProduct: BillingProductDto!
   creditAmount: Float
   hasReachedCurrentPeriodCap: Boolean!
   id: UUID!
@@ -941,7 +947,7 @@ type BillingSubscriptionSchedulePhaseItem {
 }
 
 type BillingTrialPeriod {
-  duration: Float!
+  duration: Int!
   isCreditCardRequired: Boolean!
 }
 
@@ -1681,6 +1687,7 @@ input CreateWebhookInput {
 
 type CreditUsedItem {
   creditsUsed: Float!
+  key: String
   label: String
   operation: UsageOperationType
   resource: UsageResourceType
@@ -1735,11 +1742,11 @@ input DeleteOneObjectInput {
 }
 
 type DeleteSso {
-  identityProviderId: UUID!
+  identityProviderId: String!
 }
 
 input DeleteSsoInput {
-  identityProviderId: UUID!
+  identityProviderId: String!
 }
 
 type DeleteTwoFactorAuthenticationMethod {
@@ -1845,16 +1852,16 @@ type DuplicatedMessageList {
 }
 
 type EditSso {
-  id: UUID!
+  id: String!
   issuer: String!
   name: String!
-  status: SSOIdentityProviderStatus!
+  status: SsoIdentityProviderStatus!
   type: IdentityProviderType!
 }
 
 input EditSsoInput {
-  id: UUID!
-  status: SSOIdentityProviderStatus!
+  id: String!
+  status: SsoIdentityProviderStatus!
 }
 
 input EmailAccountConnectionParameters {
@@ -2325,10 +2332,10 @@ type FilesConfiguration {
 }
 
 type FindAvailableSSOIDP {
-  id: UUID!
+  id: String!
   issuer: String!
   name: String!
-  status: SSOIdentityProviderStatus!
+  status: SsoIdentityProviderStatus!
   type: IdentityProviderType!
   workspace: WorkspaceNameAndId!
 }
@@ -2390,12 +2397,12 @@ input GetApiKeyInput {
 
 type GetAuthorizationUrlForSSO {
   authorizationURL: String!
-  id: UUID!
-  type: String!
+  id: String!
+  type: IdentityProviderType!
 }
 
 input GetAuthorizationUrlForSSOInput {
-  identityProviderId: UUID!
+  identityProviderId: String!
   workspaceInviteHash: String
 }
 
@@ -3038,7 +3045,7 @@ type Mutation {
   cancelSwitchResourceCreditPrice: BillingUpdate!
   checkCustomDomainValidRecords: DomainValidRecords
   checkPublicDomainValidRecords(domain: String!): DomainValidRecords
-  checkoutSession(plan: BillingPlanKey! = PRO, recurringInterval: SubscriptionInterval!, requirePaymentMethod: Boolean! = true, successUrlPath: String): BillingSession!
+  checkoutSession(plan: BillingPlanKey, recurringInterval: SubscriptionInterval!, requirePaymentMethod: Boolean, successUrlPath: String): BillingSession!
   claimApplicationRegistrationOwnership(applicationRegistrationId: String!): ApplicationRegistration!
   completeAppTarballUpload(fileId: UUID!): ApplicationRegistration!
   completeApplicationFileUploads(applicationUniversalIdentifier: String!, fileIds: [UUID!]!): CompleteApplicationFileUploadsResult!
@@ -3082,7 +3089,7 @@ type Mutation {
   createPublicDomain(applicationId: String!, domain: String!): PublicDomain!
   createSAMLIdentityProvider(input: SetupSAMLSsoInput!): SetupSso!
   createSkill(input: CreateSkillInput!): Skill!
-  createSubscriptionPaymentIntent(idempotencyKey: String!, plan: BillingPlanKey! = PRO, recurringInterval: SubscriptionInterval!, requirePaymentMethod: Boolean! = true, successUrlPath: String): BillingPaymentIntent!
+  createSubscriptionPaymentIntent(idempotencyKey: String!, plan: BillingPlanKey!, recurringInterval: SubscriptionInterval!): BillingPaymentIntent!
   createUnsubscribeTopic(input: CreateUnsubscribeTopicInput!): UnsubscribeTopic!
   createUsageLimit(input: CreateUsageLimitInput!): UsageLimit!
   createValidationRule(input: CreateValidationRuleInput!): ValidationRule!
@@ -4052,9 +4059,6 @@ type RecordSharingGrantDTO {
   rowCause: RecordShareRowCause!
 }
 
-"""
-How records of an object are shared: only through roles, private until shared, readable through linked records, or open by default with per-record exceptions
-"""
 enum RecordSharingMode {
   INHERITED
   OPEN_BY_DEFAULT
@@ -4157,23 +4161,23 @@ type RotateClientSecret {
 
 type RowLevelPermissionPredicate {
   fieldMetadataId: String!
-  id: String!
+  id: ID!
   objectMetadataId: String!
   operand: RowLevelPermissionPredicateOperand!
   positionInRowLevelPermissionPredicateGroup: Float
   roleId: String!
-  rowLevelPermissionPredicateGroupId: String
+  rowLevelPermissionPredicateGroupId: ID
   subFieldName: String
   value: JSON
-  workspaceMemberFieldMetadataId: String
+  workspaceMemberFieldMetadataId: ID
   workspaceMemberSubFieldName: String
 }
 
 type RowLevelPermissionPredicateGroup {
-  id: String!
+  id: ID!
   logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator!
   objectMetadataId: String!
-  parentRowLevelPermissionPredicateGroupId: String
+  parentRowLevelPermissionPredicateGroupId: ID
   positionInRowLevelPermissionPredicateGroup: Float
   roleId: String!
 }
@@ -4199,7 +4203,7 @@ input RowLevelPermissionPredicateInput {
   rowLevelPermissionPredicateGroupId: UUID
   subFieldName: String
   value: JSON
-  workspaceMemberFieldMetadataId: String
+  workspaceMemberFieldMetadataId: ID
   workspaceMemberSubFieldName: String
 }
 
@@ -4263,26 +4267,12 @@ input RunAgentThreadInput {
   title: String
 }
 
-type SSOConnection {
-  id: UUID!
-  issuer: String!
-  name: String!
-  status: SSOIdentityProviderStatus!
-  type: IdentityProviderType!
-}
-
 type SSOIdentityProvider {
   id: UUID!
   issuer: String!
   name: String!
-  status: SSOIdentityProviderStatus!
+  status: SsoIdentityProviderStatus!
   type: IdentityProviderType!
-}
-
-enum SSOIdentityProviderStatus {
-  Active
-  Error
-  Inactive
 }
 
 type SdkClientChecksums {
@@ -4415,17 +4405,17 @@ input SetupOIDCSsoInput {
 input SetupSAMLSsoInput {
   certificate: String!
   fingerprint: String
-  id: UUID!
+  id: String!
   issuer: String!
   name: String!
   ssoURL: String!
 }
 
 type SetupSso {
-  id: UUID!
+  id: String!
   issuer: String!
   name: String!
-  status: SSOIdentityProviderStatus!
+  status: SsoIdentityProviderStatus!
   type: IdentityProviderType!
 }
 
@@ -4453,6 +4443,12 @@ type Skill {
   label: String!
   name: String!
   updatedAt: DateTime!
+}
+
+enum SsoIdentityProviderStatus {
+  Active
+  Error
+  Inactive
 }
 
 type StandaloneRichTextConfiguration {
@@ -5585,7 +5581,7 @@ type ValidationRule {
   errorFieldMetadataId: UUID
   expression: String!
   icon: String
-  id: UUID!
+  id: ID!
   isActive: Boolean!
   message: String!
   name: String!
@@ -6059,7 +6055,7 @@ type WorkspaceMigration {
 
 type WorkspaceNameAndId {
   displayName: String
-  id: UUID!
+  id: String!
 }
 
 enum WorkspacePersonEnrichmentOutcome {

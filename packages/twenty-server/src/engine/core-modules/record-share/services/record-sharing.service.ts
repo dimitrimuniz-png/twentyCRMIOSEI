@@ -395,13 +395,18 @@ export class RecordSharingService {
         share.principalType !== RecordSharePrincipalType.EVERYONE &&
         share.accessLevel !== RecordShareAccessLevel.NONE,
     );
+    // Role-only objects have no general-access row, even if one was written
+    // while sharing was enabled.
+    const exposesGeneralAccess = sharingMode !== RecordSharingMode.ROLE_ONLY;
 
     return {
       sharingMode,
       canManageSharing,
       permissions,
-      generalAccessLevel,
-      defaultGeneralAccessLevel: resolveDefaultGeneralAccessLevel(sharingMode),
+      generalAccessLevel: exposesGeneralAccess ? generalAccessLevel : null,
+      defaultGeneralAccessLevel: exposesGeneralAccess
+        ? resolveDefaultGeneralAccessLevel(sharingMode)
+        : null,
       hasManagedGeneralAccess: shares.some(
         (share) =>
           share.principalType === RecordSharePrincipalType.EVERYONE &&

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Param,
   Post,
   Req,
   Res,
@@ -18,6 +19,7 @@ import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.gua
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
 import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
 import { AuthProviderEnum } from 'src/engine/core-modules/workspace/types/workspace.type';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
@@ -30,12 +32,39 @@ export class SsoAuthController {
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly loginTokenService: LoginTokenService,
+    private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
   @Get('saml/login/:identityProviderId')
   @UseGuards(SamlAuthGuard, PublicEndpointGuard, NoPermissionGuard)
-  async samlLogin(): Promise<void> {
+  async samlAuth(): Promise<void> {
     return;
+  }
+
+  @Get('saml/metadata/:identityProviderId')
+  @UseGuards(PublicEndpointGuard, NoPermissionGuard)
+  async generateMetadata(
+    @Param('identityProviderId') identityProviderId: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    const serverUrl = this.twentyConfigService
+      .get('SERVER_URL')
+      .replace(/\/$/, '');
+    const entityId = escapeXml(
+      `${serverUrl}/auth/saml/metadata/${identityProviderId}`,
+    );
+    const assertionConsumerUrl = escapeXml(
+      `${serverUrl}/auth/saml/callback/${identityProviderId}`,
+    );
+
+    response.type('application/samlmetadata+xml').send(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<EntityDescriptor entityID="${entityId}" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+  <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" AuthnRequestsSigned="false" WantAssertionsSigned="true">
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${assertionConsumerUrl}" index="0" isDefault="true"/>
+  </SPSSODescriptor>
+</EntityDescriptor>`,
+    );
   }
 
   @Post('saml/callback/:identityProviderId')
@@ -49,7 +78,7 @@ export class SsoAuthController {
 
   @Get('oidc/login/:identityProviderId')
   @UseGuards(OidcAuthGuard, PublicEndpointGuard, NoPermissionGuard)
-  async oidcLogin(): Promise<void> {
+  async oidcAuth(): Promise<void> {
     return;
   }
 
@@ -111,3 +140,21 @@ export class SsoAuthController {
     );
   }
 }
+
+const escapeXml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&apos;';
+      default:
+        return character;
+    }
+  });

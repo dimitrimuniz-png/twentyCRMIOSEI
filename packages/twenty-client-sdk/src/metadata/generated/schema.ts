@@ -576,14 +576,23 @@ export interface AutocompleteResult {
 
 export interface AvailableWorkspace {
     displayName?: Scalars['String']
-    id: Scalars['UUID']
+    id: Scalars['ID']
     inviteHash?: Scalars['String']
     loginToken?: Scalars['String']
-    logo?: Scalars['String']
+    logo: Scalars['String']
     personalInviteToken?: Scalars['String']
-    sso: SSOConnection[]
+    sso: AvailableWorkspaceSso[]
     workspaceUrls: WorkspaceUrls
     __typename: 'AvailableWorkspace'
+}
+
+export interface AvailableWorkspaceSso {
+    id: Scalars['ID']
+    issuer: Scalars['String']
+    name: Scalars['String']
+    status: SsoIdentityProviderStatus
+    type: IdentityProviderType
+    __typename: 'AvailableWorkspaceSso'
 }
 
 export interface AvailableWorkspaces {
@@ -737,8 +746,6 @@ export interface BillingPlan {
     __typename: 'BillingPlan'
 }
 
-
-/** The different billing plans available */
 export type BillingPlanKey = 'ENTERPRISE' | 'ORGANIZATION_V2' | 'PRO' | 'PRO_V2'
 
 export interface BillingPriceLicensed {
@@ -774,10 +781,8 @@ export interface BillingProduct {
     __typename: 'BillingProduct'
 }
 
-export type BillingProductDTO = (BillingLicensedProduct | BillingMeteredProduct) & { __isUnion?: true }
+export type BillingProductDto = (BillingLicensedProduct | BillingMeteredProduct) & { __isUnion?: true }
 
-
-/** The different billing products available */
 export type BillingProductKey = 'BASE_PRODUCT' | 'RESOURCE_CREDIT'
 
 export interface BillingProductMetadata {
@@ -824,7 +829,7 @@ export interface BillingSubscription {
 export type BillingSubscriptionCollectionMethod = 'CHARGE_AUTOMATICALLY' | 'SEND_INVOICE'
 
 export interface BillingSubscriptionItem {
-    billingProduct: BillingProductDTO
+    billingProduct: BillingProductDto
     creditAmount?: Scalars['Float']
     hasReachedCurrentPeriodCap: Scalars['Boolean']
     id: Scalars['UUID']
@@ -848,7 +853,7 @@ export interface BillingSubscriptionSchedulePhaseItem {
 }
 
 export interface BillingTrialPeriod {
-    duration: Scalars['Float']
+    duration: Scalars['Int']
     isCreditCardRequired: Scalars['Boolean']
     __typename: 'BillingTrialPeriod'
 }
@@ -1188,6 +1193,7 @@ export interface CreateEmailGroupChannelOutput {
 
 export interface CreditUsedItem {
     creditsUsed: Scalars['Float']
+    key?: Scalars['String']
     label?: Scalars['String']
     operation?: UsageOperationType
     resource?: UsageResourceType
@@ -1199,7 +1205,7 @@ export interface CreditUsedItem {
 export type DatabaseEventAction = 'CREATED' | 'DELETED' | 'DESTROYED' | 'RESTORED' | 'UPDATED' | 'UPSERTED'
 
 export interface DeleteSso {
-    identityProviderId: Scalars['UUID']
+    identityProviderId: Scalars['String']
     __typename: 'DeleteSso'
 }
 
@@ -1263,10 +1269,10 @@ export interface DuplicatedMessageList {
 }
 
 export interface EditSso {
-    id: Scalars['UUID']
+    id: Scalars['String']
     issuer: Scalars['String']
     name: Scalars['String']
-    status: SSOIdentityProviderStatus
+    status: SsoIdentityProviderStatus
     type: IdentityProviderType
     __typename: 'EditSso'
 }
@@ -1508,10 +1514,10 @@ export interface FilesConfiguration {
 }
 
 export interface FindAvailableSSOIDP {
-    id: Scalars['UUID']
+    id: Scalars['String']
     issuer: Scalars['String']
     name: Scalars['String']
-    status: SSOIdentityProviderStatus
+    status: SsoIdentityProviderStatus
     type: IdentityProviderType
     workspace: WorkspaceNameAndId
     __typename: 'FindAvailableSSOIDP'
@@ -1568,8 +1574,8 @@ export interface FullName {
 
 export interface GetAuthorizationUrlForSSO {
     authorizationURL: Scalars['String']
-    id: Scalars['UUID']
-    type: Scalars['String']
+    id: Scalars['String']
+    type: IdentityProviderType
     __typename: 'GetAuthorizationUrlForSSO'
 }
 
@@ -2988,8 +2994,6 @@ export interface RecordSharingGrantDTO {
     __typename: 'RecordSharingGrantDTO'
 }
 
-
-/** How records of an object are shared: only through roles, private until shared, readable through linked records, or open by default with per-record exceptions */
 export type RecordSharingMode = 'INHERITED' | 'OPEN_BY_DEFAULT' | 'PRIVATE' | 'ROLE_ONLY'
 
 export interface RecordSharingRoleDTO {
@@ -3074,24 +3078,24 @@ export interface RotateClientSecret {
 
 export interface RowLevelPermissionPredicate {
     fieldMetadataId: Scalars['String']
-    id: Scalars['String']
+    id: Scalars['ID']
     objectMetadataId: Scalars['String']
     operand: RowLevelPermissionPredicateOperand
     positionInRowLevelPermissionPredicateGroup?: Scalars['Float']
     roleId: Scalars['String']
-    rowLevelPermissionPredicateGroupId?: Scalars['String']
+    rowLevelPermissionPredicateGroupId?: Scalars['ID']
     subFieldName?: Scalars['String']
     value?: Scalars['JSON']
-    workspaceMemberFieldMetadataId?: Scalars['String']
+    workspaceMemberFieldMetadataId?: Scalars['ID']
     workspaceMemberSubFieldName?: Scalars['String']
     __typename: 'RowLevelPermissionPredicate'
 }
 
 export interface RowLevelPermissionPredicateGroup {
-    id: Scalars['String']
+    id: Scalars['ID']
     logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator
     objectMetadataId: Scalars['String']
-    parentRowLevelPermissionPredicateGroupId?: Scalars['String']
+    parentRowLevelPermissionPredicateGroupId?: Scalars['ID']
     positionInRowLevelPermissionPredicateGroup?: Scalars['Float']
     roleId: Scalars['String']
     __typename: 'RowLevelPermissionPredicateGroup'
@@ -3112,25 +3116,14 @@ export interface RunAgentResult {
     __typename: 'RunAgentResult'
 }
 
-export interface SSOConnection {
-    id: Scalars['UUID']
-    issuer: Scalars['String']
-    name: Scalars['String']
-    status: SSOIdentityProviderStatus
-    type: IdentityProviderType
-    __typename: 'SSOConnection'
-}
-
 export interface SSOIdentityProvider {
     id: Scalars['UUID']
     issuer: Scalars['String']
     name: Scalars['String']
-    status: SSOIdentityProviderStatus
+    status: SsoIdentityProviderStatus
     type: IdentityProviderType
     __typename: 'SSOIdentityProvider'
 }
-
-export type SSOIdentityProviderStatus = 'Active' | 'Error' | 'Inactive'
 
 export interface SdkClientChecksums {
     core?: Scalars['String']
@@ -3213,10 +3206,10 @@ export interface SettingsMenuItem {
 export type SettingsMenuItemScope = 'USER' | 'WORKSPACE'
 
 export interface SetupSso {
-    id: Scalars['UUID']
+    id: Scalars['String']
     issuer: Scalars['String']
     name: Scalars['String']
-    status: SSOIdentityProviderStatus
+    status: SsoIdentityProviderStatus
     type: IdentityProviderType
     __typename: 'SetupSso'
 }
@@ -3242,6 +3235,8 @@ export interface Skill {
     updatedAt: Scalars['DateTime']
     __typename: 'Skill'
 }
+
+export type SsoIdentityProviderStatus = 'Active' | 'Error' | 'Inactive'
 
 export interface StandaloneRichTextConfiguration {
     body: RichTextBody
@@ -3626,7 +3621,7 @@ export interface ValidationRule {
     errorFieldMetadataId?: Scalars['UUID']
     expression: Scalars['String']
     icon?: Scalars['String']
-    id: Scalars['UUID']
+    id: Scalars['ID']
     isActive: Scalars['Boolean']
     message: Scalars['String']
     name: Scalars['String']
@@ -4000,7 +3995,7 @@ export interface WorkspaceMigration {
 
 export interface WorkspaceNameAndId {
     displayName?: Scalars['String']
-    id: Scalars['UUID']
+    id: Scalars['String']
     __typename: 'WorkspaceNameAndId'
 }
 
@@ -4629,8 +4624,18 @@ export interface AvailableWorkspaceGenqlSelection{
     loginToken?: boolean | number
     logo?: boolean | number
     personalInviteToken?: boolean | number
-    sso?: SSOConnectionGenqlSelection
+    sso?: AvailableWorkspaceSsoGenqlSelection
     workspaceUrls?: WorkspaceUrlsGenqlSelection
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface AvailableWorkspaceSsoGenqlSelection{
+    id?: boolean | number
+    issuer?: boolean | number
+    name?: boolean | number
+    status?: boolean | number
+    type?: boolean | number
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -4824,7 +4829,7 @@ export interface BillingProductGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface BillingProductDTOGenqlSelection{
+export interface BillingProductDtoGenqlSelection{
     description?: boolean | number
     images?: boolean | number
     metadata?: BillingProductMetadataGenqlSelection
@@ -4881,7 +4886,7 @@ export interface BillingSubscriptionGenqlSelection{
 }
 
 export interface BillingSubscriptionItemGenqlSelection{
-    billingProduct?: BillingProductDTOGenqlSelection
+    billingProduct?: BillingProductDtoGenqlSelection
     creditAmount?: boolean | number
     hasReachedCurrentPeriodCap?: boolean | number
     id?: boolean | number
@@ -5348,6 +5353,7 @@ export interface CreateWebhookInput {description?: (Scalars['String'] | null),id
 
 export interface CreditUsedItemGenqlSelection{
     creditsUsed?: boolean | number
+    key?: boolean | number
     label?: boolean | number
     operation?: boolean | number
     resource?: boolean | number
@@ -5385,7 +5391,7 @@ export interface DeleteSsoGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface DeleteSsoInput {identityProviderId: Scalars['UUID']}
+export interface DeleteSsoInput {identityProviderId: Scalars['String']}
 
 export interface DeleteTwoFactorAuthenticationMethodGenqlSelection{
     /** Boolean that confirms query was dispatched */
@@ -5503,7 +5509,7 @@ export interface EditSsoGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface EditSsoInput {id: Scalars['UUID'],status: SSOIdentityProviderStatus}
+export interface EditSsoInput {id: Scalars['String'],status: SsoIdentityProviderStatus}
 
 export interface EmailAccountConnectionParameters {CALDAV?: (ConnectionParametersInput | null),IMAP?: (ConnectionParametersInput | null),SMTP?: (ConnectionParametersInput | null),name?: (Scalars['String'] | null)}
 
@@ -5846,7 +5852,7 @@ export interface GetAuthorizationUrlForSSOGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface GetAuthorizationUrlForSSOInput {identityProviderId: Scalars['UUID'],workspaceInviteHash?: (Scalars['String'] | null)}
+export interface GetAuthorizationUrlForSSOInput {identityProviderId: Scalars['String'],workspaceInviteHash?: (Scalars['String'] | null)}
 
 export interface GrantApplicationCapabilitiesInput {applicationId: Scalars['UUID'],capabilities: Scalars['String'][]}
 
@@ -6364,7 +6370,7 @@ export interface MutationGenqlSelection{
     cancelSwitchResourceCreditPrice?: BillingUpdateGenqlSelection
     checkCustomDomainValidRecords?: DomainValidRecordsGenqlSelection
     checkPublicDomainValidRecords?: (DomainValidRecordsGenqlSelection & { __args: {domain: Scalars['String']} })
-    checkoutSession?: (BillingSessionGenqlSelection & { __args: {plan: BillingPlanKey, recurringInterval: SubscriptionInterval, requirePaymentMethod: Scalars['Boolean'], successUrlPath?: (Scalars['String'] | null)} })
+    checkoutSession?: (BillingSessionGenqlSelection & { __args: {plan?: (BillingPlanKey | null), recurringInterval: SubscriptionInterval, requirePaymentMethod?: (Scalars['Boolean'] | null), successUrlPath?: (Scalars['String'] | null)} })
     claimApplicationRegistrationOwnership?: (ApplicationRegistrationGenqlSelection & { __args: {applicationRegistrationId: Scalars['String']} })
     completeAppTarballUpload?: (ApplicationRegistrationGenqlSelection & { __args: {fileId: Scalars['UUID']} })
     completeApplicationFileUploads?: (CompleteApplicationFileUploadsResultGenqlSelection & { __args: {applicationUniversalIdentifier: Scalars['String'], fileIds: Scalars['UUID'][]} })
@@ -6408,7 +6414,7 @@ export interface MutationGenqlSelection{
     createPublicDomain?: (PublicDomainGenqlSelection & { __args: {applicationId: Scalars['String'], domain: Scalars['String']} })
     createSAMLIdentityProvider?: (SetupSsoGenqlSelection & { __args: {input: SetupSAMLSsoInput} })
     createSkill?: (SkillGenqlSelection & { __args: {input: CreateSkillInput} })
-    createSubscriptionPaymentIntent?: (BillingPaymentIntentGenqlSelection & { __args: {idempotencyKey: Scalars['String'], plan: BillingPlanKey, recurringInterval: SubscriptionInterval, requirePaymentMethod: Scalars['Boolean'], successUrlPath?: (Scalars['String'] | null)} })
+    createSubscriptionPaymentIntent?: (BillingPaymentIntentGenqlSelection & { __args: {idempotencyKey: Scalars['String'], plan: BillingPlanKey, recurringInterval: SubscriptionInterval} })
     createUnsubscribeTopic?: (UnsubscribeTopicGenqlSelection & { __args: {input: CreateUnsubscribeTopicInput} })
     createUsageLimit?: (UsageLimitGenqlSelection & { __args: {input: CreateUsageLimitInput} })
     createValidationRule?: (ValidationRuleGenqlSelection & { __args: {input: CreateValidationRuleInput} })
@@ -7446,7 +7452,7 @@ export interface RowLevelPermissionPredicateGroupGenqlSelection{
 
 export interface RowLevelPermissionPredicateGroupInput {id?: (Scalars['UUID'] | null),logicalOperator: RowLevelPermissionPredicateGroupLogicalOperator,objectMetadataId: Scalars['UUID'],parentRowLevelPermissionPredicateGroupId?: (Scalars['UUID'] | null),positionInRowLevelPermissionPredicateGroup?: (Scalars['Float'] | null)}
 
-export interface RowLevelPermissionPredicateInput {fieldMetadataId: Scalars['UUID'],id?: (Scalars['UUID'] | null),operand: RowLevelPermissionPredicateOperand,positionInRowLevelPermissionPredicateGroup?: (Scalars['Float'] | null),rowLevelPermissionPredicateGroupId?: (Scalars['UUID'] | null),subFieldName?: (Scalars['String'] | null),value?: (Scalars['JSON'] | null),workspaceMemberFieldMetadataId?: (Scalars['String'] | null),workspaceMemberSubFieldName?: (Scalars['String'] | null)}
+export interface RowLevelPermissionPredicateInput {fieldMetadataId: Scalars['UUID'],id?: (Scalars['UUID'] | null),operand: RowLevelPermissionPredicateOperand,positionInRowLevelPermissionPredicateGroup?: (Scalars['Float'] | null),rowLevelPermissionPredicateGroupId?: (Scalars['UUID'] | null),subFieldName?: (Scalars['String'] | null),value?: (Scalars['JSON'] | null),workspaceMemberFieldMetadataId?: (Scalars['ID'] | null),workspaceMemberSubFieldName?: (Scalars['String'] | null)}
 
 export interface RunAgentInput {additionalInstructions?: (Scalars['String'] | null),agentUniversalIdentifier: Scalars['String'],input?: (RunAgentMessageInput[] | null),messages?: (RunAgentMessageInput[] | null),prompt?: (Scalars['String'] | null),responseFormat?: (Scalars['JSON'] | null),runAsWorkspaceMemberId?: (Scalars['UUID'] | null),thread?: (RunAgentThreadInput | null),waitForCompletion?: (Scalars['Boolean'] | null)}
 
@@ -7465,16 +7471,6 @@ export interface RunAgentResultGenqlSelection{
 }
 
 export interface RunAgentThreadInput {key: Scalars['String'],title?: (Scalars['String'] | null)}
-
-export interface SSOConnectionGenqlSelection{
-    id?: boolean | number
-    issuer?: boolean | number
-    name?: boolean | number
-    status?: boolean | number
-    type?: boolean | number
-    __typename?: boolean | number
-    __scalar?: boolean | number
-}
 
 export interface SSOIdentityProviderGenqlSelection{
     id?: boolean | number
@@ -7588,7 +7584,7 @@ export interface SettingsMenuItemGenqlSelection{
 
 export interface SetupOIDCSsoInput {clientID: Scalars['String'],clientSecret: Scalars['String'],issuer: Scalars['String'],name: Scalars['String']}
 
-export interface SetupSAMLSsoInput {certificate: Scalars['String'],fingerprint?: (Scalars['String'] | null),id: Scalars['UUID'],issuer: Scalars['String'],name: Scalars['String'],ssoURL: Scalars['String']}
+export interface SetupSAMLSsoInput {certificate: Scalars['String'],fingerprint?: (Scalars['String'] | null),id: Scalars['String'],issuer: Scalars['String'],name: Scalars['String'],ssoURL: Scalars['String']}
 
 export interface SetupSsoGenqlSelection{
     id?: boolean | number
@@ -9093,6 +9089,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     
 
 
+    const AvailableWorkspaceSso_possibleTypes: string[] = ['AvailableWorkspaceSso']
+    export const isAvailableWorkspaceSso = (obj?: { __typename?: any } | null): obj is AvailableWorkspaceSso => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isAvailableWorkspaceSso"')
+      return AvailableWorkspaceSso_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
     const AvailableWorkspaces_possibleTypes: string[] = ['AvailableWorkspaces']
     export const isAvailableWorkspaces = (obj?: { __typename?: any } | null): obj is AvailableWorkspaces => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isAvailableWorkspaces"')
@@ -9229,10 +9233,10 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     
 
 
-    const BillingProductDTO_possibleTypes: string[] = ['BillingLicensedProduct','BillingMeteredProduct']
-    export const isBillingProductDTO = (obj?: { __typename?: any } | null): obj is BillingProductDTO => {
-      if (!obj?.__typename) throw new Error('__typename is missing in "isBillingProductDTO"')
-      return BillingProductDTO_possibleTypes.includes(obj.__typename)
+    const BillingProductDto_possibleTypes: string[] = ['BillingLicensedProduct','BillingMeteredProduct']
+    export const isBillingProductDto = (obj?: { __typename?: any } | null): obj is BillingProductDto => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isBillingProductDto"')
+      return BillingProductDto_possibleTypes.includes(obj.__typename)
     }
     
 
@@ -10677,14 +10681,6 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     
 
 
-    const SSOConnection_possibleTypes: string[] = ['SSOConnection']
-    export const isSSOConnection = (obj?: { __typename?: any } | null): obj is SSOConnection => {
-      if (!obj?.__typename) throw new Error('__typename is missing in "isSSOConnection"')
-      return SSOConnection_possibleTypes.includes(obj.__typename)
-    }
-    
-
-
     const SSOIdentityProvider_possibleTypes: string[] = ['SSOIdentityProvider']
     export const isSSOIdentityProvider = (obj?: { __typename?: any } | null): obj is SSOIdentityProvider => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isSSOIdentityProvider"')
@@ -12097,15 +12093,15 @@ export const enumRunAgentMessageRole = {
    user: 'user' as const
 }
 
+export const enumSettingsMenuItemScope = {
+   USER: 'USER' as const,
+   WORKSPACE: 'WORKSPACE' as const
+}
+
 export const enumSsoIdentityProviderStatus = {
    Active: 'Active' as const,
    Error: 'Error' as const,
    Inactive: 'Inactive' as const
-}
-
-export const enumSettingsMenuItemScope = {
-   USER: 'USER' as const,
-   WORKSPACE: 'WORKSPACE' as const
 }
 
 export const enumSubscriptionInterval = {

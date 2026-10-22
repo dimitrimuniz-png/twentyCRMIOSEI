@@ -16,6 +16,8 @@ import {
 } from 'src/modules/workflow/workflow-executor/exceptions/workflow-step-executor.exception';
 import { UsageLimitQuotaService } from 'src/engine/core-modules/usage-limit/services/usage-limit-quota.service';
 import { UsageQuotaAdmissionService } from 'src/engine/core-modules/usage-limit/services/usage-quota-admission.service';
+import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
+import { buildUsageRefusalException } from 'src/engine/core-modules/billing/utils/build-usage-refusal-exception.util';
 import { isUsageRefusedError } from 'src/engine/core-modules/billing/utils/is-usage-refused-error.util';
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
 import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
@@ -72,6 +74,7 @@ export class WorkflowExecutorWorkspaceService {
     private readonly workflowActionFactory: WorkflowActionFactory,
     private readonly workflowRunWorkspaceService: WorkflowRunWorkspaceService,
     private readonly usageQuotaAdmissionService: UsageQuotaAdmissionService,
+    private readonly billingUsageService: BillingUsageService,
     private readonly usageLimitQuotaService: UsageLimitQuotaService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly exceptionHandlerService: ExceptionHandlerService,
@@ -414,6 +417,21 @@ export class WorkflowExecutorWorkspaceService {
     billingSpenders: WorkflowBillingSpenders;
   }): Promise<WorkflowActionOutput | undefined> {
     try {
+      const subscriptionInactiveReason =
+        await this.billingUsageService.getSubscriptionInactiveReason(
+          workspaceId,
+        );
+
+      if (isDefined(subscriptionInactiveReason)) {
+        throw buildUsageRefusalException({
+          usageRefusal: {
+            kind: 'subscriptionInactive',
+            reason: subscriptionInactiveReason,
+          },
+          workspaceId,
+        });
+      }
+
       await this.usageQuotaAdmissionService.assertUsageAllowed({
         workspaceId,
         resourceType: UsageResourceType.WORKFLOW,

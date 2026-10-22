@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
-
-export type UsagePeriod = RemovedCommercial;
+export type UsagePeriod = {
+  periodStart: Date;
+  periodEnd: Date;
+};

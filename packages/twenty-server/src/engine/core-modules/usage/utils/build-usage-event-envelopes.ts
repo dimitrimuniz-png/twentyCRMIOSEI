@@ -1,10 +1,8 @@
+import { formatDateTimeForClickHouse } from 'src/database/clickhouse/utils/format-date-time-for-clickhouse.util';
 import { type UsageEventRow } from 'src/engine/core-modules/event-logs/types/workspace-event-envelope.type';
 import { type UsageEvent } from 'src/engine/core-modules/usage/types/usage-event.type';
 
 const blank = (value: string | null | undefined): string => value ?? '';
-
-const formatPeriodStart = (periodStart: Date): string =>
-  periodStart.toISOString().replace('T', ' ').replace('Z', '');
 
 export const buildUsageEventEnvelopes = (
   workspaceId: string,
@@ -13,7 +11,7 @@ export const buildUsageEventEnvelopes = (
   events.map((event) => {
     const spenders = event.spenders ?? {};
     const row = {
-      timestamp: new Date().toISOString(),
+      timestamp: formatDateTimeForClickHouse(new Date()),
       workspaceId,
       userWorkspaceId: blank(spenders.userWorkspaceId),
       apiKeyId: blank(spenders.apiKeyId),
@@ -31,7 +29,7 @@ export const buildUsageEventEnvelopes = (
       resourceContext: blank(event.resourceContext),
       metadata: {},
       ...(event.periodStart
-        ? { periodStart: formatPeriodStart(event.periodStart) }
+        ? { periodStart: formatDateTimeForClickHouse(event.periodStart) }
         : {}),
     };
 

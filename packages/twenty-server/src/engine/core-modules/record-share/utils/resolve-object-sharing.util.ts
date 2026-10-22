@@ -32,7 +32,6 @@ export const resolveObjectSharing = ({
     readability: flatObjectMetadata.readability,
     isSystem: flatObjectMetadata.isSystem,
     sharingEnabled,
-    sharingReach,
   });
 
   const grantsNamedRecords =
@@ -51,12 +50,10 @@ const resolveSharingMode = ({
   readability,
   isSystem,
   sharingEnabled,
-  sharingReach,
 }: {
   readability: MetadataReadability | undefined;
   isSystem: boolean | undefined;
   sharingEnabled: boolean;
-  sharingReach: ObjectSharingReach;
 }): RecordSharingMode => {
   if (readability === MetadataReadability.PRIVATE) {
     return RecordSharingMode.PRIVATE;
@@ -70,8 +67,7 @@ const resolveSharingMode = ({
     readability === MetadataReadability.APPLICATION ||
     readability === MetadataReadability.SYSTEM ||
     isSystem === true ||
-    !sharingEnabled ||
-    sharingReach === ObjectSharingReach.ROLE_ACCESS
+    !sharingEnabled
   ) {
     return RecordSharingMode.ROLE_ONLY;
   }

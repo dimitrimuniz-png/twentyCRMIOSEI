@@ -1,17 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Catch, type ExceptionFilter } from '@nestjs/common';
 
-export class BillingGraphqlApiExceptionFilter {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+import { BillingException } from 'src/engine/core-modules/billing/billing.exception';
+import { ForbiddenError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
+
+// Only billing failures belong here. A filter without @Catch matches every
+// exception and, when catch() writes nothing, Nest treats the request as handled.
+@Catch(BillingException)
+export class BillingGraphqlApiExceptionFilter implements ExceptionFilter {
+  catch(exception: BillingException): void {
+    throw new ForbiddenError(exception);
   }
-  [key: string]: RemovedCommercial;
 }

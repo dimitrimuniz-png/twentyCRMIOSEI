@@ -1,4 +1,5 @@
 import {
+  compositeTypeDefinitions,
   FieldMetadataType,
   RelationType,
   RowLevelPermissionPredicateGroupLogicalOperator,
@@ -259,10 +260,21 @@ const predicateToFilter = ({
     });
   }
 
+  const compositePresence = compositePresenceFilter({
+    field,
+    operand: predicate.operand,
+    subFieldName: predicate.subFieldName,
+  });
+
+  if (isDefined(compositePresence)) {
+    return compositePresence;
+  }
+
   const leaf = operandToLeaf({
     operand: predicate.operand,
     value: resolvedValue,
     field,
+    workspaceMember,
   });
 
   if (!isDefined(leaf)) {
@@ -366,10 +378,12 @@ const operandToLeaf = ({
   operand,
   value,
   field,
+  workspaceMember,
 }: {
   operand: string;
   value: unknown;
   field: FieldLike;
+  workspaceMember: UserWorkspaceAuthContext['workspaceMember'] | undefined;
 }): Record<string, unknown> | undefined => {
   switch (operand) {
     case RowLevelPermissionPredicateOperand.CONTAINS:
@@ -377,10 +391,12 @@ const operandToLeaf = ({
     case RowLevelPermissionPredicateOperand.DOES_NOT_CONTAIN:
       return { not: { ilike: `%${String(value)}%` } };
     case RowLevelPermissionPredicateOperand.IS: {
-      const selectedRecordIds = readSelectedRecordIds(value);
+      const selectedRecordIds = readSelectedRecordIds(value, workspaceMember);
 
       if (isDefined(selectedRecordIds)) {
-        return { in: selectedRecordIds };
+        return selectedRecordIds.length === 0
+          ? undefined
+          : { in: selectedRecordIds };
       }
 
       if (
@@ -408,6 +424,44 @@ const operandToLeaf = ({
   }
 };
 
+// Emptiness on a composite is the presence of any property, which the SQL
+// filter compiler only accepts as a sub-field comparison.
+const compositePresenceFilter = ({
+  field,
+  operand,
+  subFieldName,
+}: {
+  field: FieldLike;
+  operand: string;
+  subFieldName: string | null;
+}): RecordGqlOperationFilter | undefined => {
+  if (isDefined(subFieldName)) {
+    return undefined;
+  }
+
+  const isPresent =
+    operand === RowLevelPermissionPredicateOperand.IS_NOT_EMPTY ||
+    operand === RowLevelPermissionPredicateOperand.IS_NOT_NULL;
+  const isAbsent = operand === RowLevelPermissionPredicateOperand.IS_EMPTY;
+
+  if (!isPresent && !isAbsent) {
+    return undefined;
+  }
+
+  const composite = compositeTypeDefinitions.get(field.type);
+
+  if (!isDefined(composite) || composite.properties.length === 0) {
+    return undefined;
+  }
+
+  const presence = isPresent ? 'NOT_NULL' : 'NULL';
+  const nodes = composite.properties.map((property) => ({
+    [field.name]: { [property.name]: { is: presence } },
+  }));
+
+  return isPresent ? { or: nodes } : { and: nodes };
+};
+
 const valueFitsField = (value: unknown, field: FieldLike): boolean => {
   if (
     field.type !== FieldMetadataType.SELECT &&
@@ -421,14 +475,27 @@ const valueFitsField = (value: unknown, field: FieldLike): boolean => {
   return options.some((option) => option.value === value);
 };
 
-const readSelectedRecordIds = (value: unknown): string[] | undefined => {
+const readSelectedRecordIds = (
+  value: unknown,
+  workspaceMember?: UserWorkspaceAuthContext['workspaceMember'],
+): string[] | undefined => {
   if (!isRecord(value) || !Array.isArray(value.selectedRecordIds)) {
     return undefined;
   }
 
-  return value.selectedRecordIds.filter(
+  const selectedRecordIds = value.selectedRecordIds.filter(
     (recordId): recordId is string => typeof recordId === 'string',
   );
+
+  if (
+    value.isCurrentWorkspaceMemberSelected === true &&
+    isDefined(workspaceMember?.id) &&
+    !selectedRecordIds.includes(workspaceMember.id)
+  ) {
+    selectedRecordIds.push(workspaceMember.id);
+  }
+
+  return selectedRecordIds;
 };
 
 const isMorphField = (field: FieldLike): boolean =>

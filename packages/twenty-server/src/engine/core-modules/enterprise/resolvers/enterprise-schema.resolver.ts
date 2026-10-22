@@ -13,7 +13,7 @@ import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 // The key is not stored. Validity stays whatever EnterprisePlanService reports,
 // which is closed on this fork, so the workspace cap is unchanged.
 @MetadataResolver()
-export class EnterpriseSchemaResolver {
+export class EnterpriseResolver {
   constructor(private readonly enterprisePlanService: EnterprisePlanService) {}
 
   @UseGuards(
@@ -24,9 +24,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )
@@ -46,9 +46,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )
@@ -65,9 +65,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )
@@ -84,9 +84,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )
@@ -106,9 +106,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )
@@ -128,9 +128,9 @@ export class EnterpriseSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     NoPermissionGuard,
   )

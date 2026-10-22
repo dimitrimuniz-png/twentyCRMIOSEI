@@ -28,7 +28,7 @@ const emptyUsageAnalytics = (
 };
 
 @MetadataResolver()
-export class UsageAnalyticsResolver {
+export class UsageResolver {
   @UseGuards(
     AuthPrincipalGuard({
       userSession: {

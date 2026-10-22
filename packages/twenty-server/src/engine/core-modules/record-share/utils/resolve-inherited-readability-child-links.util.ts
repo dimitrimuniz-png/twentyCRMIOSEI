@@ -1,16 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type InheritedReadabilityParentLink } from 'src/engine/core-modules/record-share/types/inherited-readability-parent-link.type';
 
-const removedresolveInheritedReadabilityChildLinks: RemovedCommercial =
-  new Proxy(
-    function resolveInheritedReadabilityChildLinks(..._args: unknown[]) {
-      return removedresolveInheritedReadabilityChildLinks;
-    },
-    {
-      get: () => removedresolveInheritedReadabilityChildLinks,
-      apply: () => removedresolveInheritedReadabilityChildLinks,
-    },
-  );
-export const resolveInheritedReadabilityChildLinks =
-  removedresolveInheritedReadabilityChildLinks;
+export const resolveInheritedReadabilityChildLinks = (_args: {
+  flatObjectMetadata: unknown;
+  flatFieldMetadataMaps: unknown;
+  flatObjectMetadataMaps: unknown;
+}): InheritedReadabilityParentLink[] => [];

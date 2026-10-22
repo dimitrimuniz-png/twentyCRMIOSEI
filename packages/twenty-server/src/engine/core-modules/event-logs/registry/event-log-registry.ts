@@ -51,6 +51,8 @@ export const EVENT_LOG_TYPES: Record<EventLogTable, EventLogTypeDefinition> = {
       userId: row.userId as string | undefined,
       recordId: row.recordId as string | undefined,
       objectMetadataId: row.objectMetadataId as string | undefined,
+      isCustom:
+        row.isCustom === true || row.isCustom === 1 || row.isCustom === '1',
       properties: asRecord(row.properties),
     }),
   },
@@ -62,7 +64,12 @@ export const EVENT_LOG_TYPES: Record<EventLogTable, EventLogTypeDefinition> = {
       event: String(row.resourceType ?? ''),
       userId: row.userWorkspaceId as string | undefined,
       properties: {
+        operationType: row.operationType,
         quantity: row.quantity,
+        unit: row.unit,
+        creditsUsedMicro: row.creditsUsedMicro,
+        resourceId: row.resourceId,
+        resourceContext: row.resourceContext,
         ...asRecord(row.metadata),
       },
     }),
@@ -76,6 +83,9 @@ export const EVENT_LOG_TYPES: Record<EventLogTable, EventLogTypeDefinition> = {
       properties: {
         level: row.level,
         message: row.message,
+        executionId: row.executionId,
+        applicationId: row.applicationId,
+        logicFunctionId: row.logicFunctionId,
       },
     }),
   },

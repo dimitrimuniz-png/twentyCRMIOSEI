@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ClickHouseModule } from 'src/database/clickhouse/clickhouse.module';
 import { WorkspaceAuditLogEntity } from 'src/engine/core-modules/event-logs/entities/workspace-audit-log.entity';
 import { EventLogsLiveResolver } from 'src/engine/core-modules/event-logs/event-logs-live.resolver';
 import { EventLogsResolver } from 'src/engine/core-modules/event-logs/event-logs.resolver';
@@ -15,6 +16,7 @@ import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspac
     TypeOrmModule.forFeature([WorkspaceAuditLogEntity, WorkspaceEntity]),
     PermissionsModule,
     EventLogLiveModule,
+    ClickHouseModule,
   ],
   providers: [
     provideWorkspaceScopedRepository(WorkspaceAuditLogEntity),

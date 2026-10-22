@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { EnterpriseSchemaResolver } from 'src/engine/core-modules/enterprise/resolvers/enterprise-schema.resolver';
+import { EnterpriseResolver } from 'src/engine/core-modules/enterprise/resolvers/enterprise-schema.resolver';
 import { CustomAiProviderAccessService } from 'src/engine/core-modules/enterprise/services/custom-ai-provider-access.service';
 import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/services/enterprise-plan.service';
 
@@ -8,7 +8,7 @@ import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/servic
   providers: [
     CustomAiProviderAccessService,
     EnterprisePlanService,
-    EnterpriseSchemaResolver,
+    EnterpriseResolver,
   ],
   exports: [CustomAiProviderAccessService, EnterprisePlanService],
 })

@@ -83,6 +83,32 @@ const isRelationField = (field: Pick<FieldMetadataEntity, 'type'>): boolean =>
   field.type === FieldMetadataType.RELATION ||
   field.type === FieldMetadataType.MORPH_RELATION;
 
+// An IS comparison on a relation compiles only when it names records or the
+// current workspace member. An empty selection, including "current record",
+// matches nothing and must be refused before it is stored.
+const relationSelectionCompiles = (value: unknown): boolean => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const selection = value as {
+    selectedRecordIds?: unknown;
+    isCurrentWorkspaceMemberSelected?: unknown;
+  };
+
+  if (!Array.isArray(selection.selectedRecordIds)) {
+    return false;
+  }
+
+  const hasSelectedRecord = selection.selectedRecordIds.some(
+    (recordId) => typeof recordId === 'string' && recordId.length > 0,
+  );
+
+  return (
+    hasSelectedRecord || selection.isCurrentWorkspaceMemberSelected === true
+  );
+};
+
 const orderById = <TRow extends { id: string }>(
   rows: TRow[],
   ids: string[],
@@ -206,6 +232,7 @@ export class RowLevelPermissionPredicateService {
           group.parentRowLevelPermissionPredicateGroupId ?? null,
         positionInRowLevelPermissionPredicateGroup:
           group.positionInRowLevelPermissionPredicateGroup ?? null,
+        deletedAt: null,
       };
     });
     const predicateRows = input.predicates.map((predicate) => {
@@ -234,35 +261,19 @@ export class RowLevelPermissionPredicateService {
           predicate.rowLevelPermissionPredicateGroupId ?? null,
         positionInRowLevelPermissionPredicateGroup:
           predicate.positionInRowLevelPermissionPredicateGroup ?? null,
+        deletedAt: null,
       };
     });
 
-    if (groupRows.length > 0) {
-      await this.predicateGroupRepository.upsert(workspaceId, groupRows, [
+    const [persistedGroups, persistedPredicates] = await Promise.all([
+      this.predicateGroupRepository.upsertReturning(workspaceId, groupRows, [
         'id',
-      ]);
-    }
-
-    if (predicateRows.length > 0) {
-      // TypeORM's deep partial distributes over the jsonb value union.
-      await this.predicateRepository.upsert(
+      ]),
+      this.predicateRepository.upsertReturning(
         workspaceId,
         predicateRows as QueryDeepPartialEntity<RowLevelPermissionPredicateEntity>[],
         ['id'],
-      );
-    }
-
-    const [persistedGroups, persistedPredicates] = await Promise.all([
-      groupRows.length === 0
-        ? []
-        : this.predicateGroupRepository.find(workspaceId, {
-            where: { id: In(groupRows.map((group) => group.id)) },
-          }),
-      predicateRows.length === 0
-        ? []
-        : this.predicateRepository.find(workspaceId, {
-            where: { id: In(predicateRows.map((predicate) => predicate.id)) },
-          }),
+      ),
     ]);
 
     await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
@@ -341,6 +352,17 @@ export class RowLevelPermissionPredicateService {
       ) {
         throw new RowLevelPermissionPredicateException(
           `Operand ${predicate.operand} cannot be applied to relation field ${field.name}`,
+          RowLevelPermissionPredicateExceptionCode.INVALID_ROW_LEVEL_PERMISSION_PREDICATE_DATA,
+        );
+      }
+
+      if (
+        isRelationField(field) &&
+        predicate.operand === RowLevelPermissionPredicateOperand.IS &&
+        !relationSelectionCompiles(predicate.value)
+      ) {
+        throw new RowLevelPermissionPredicateException(
+          `Predicate on relation field ${field.name} does not select any record`,
           RowLevelPermissionPredicateExceptionCode.INVALID_ROW_LEVEL_PERMISSION_PREDICATE_DATA,
         );
       }

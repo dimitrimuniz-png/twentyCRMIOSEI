@@ -1,3 +1,4 @@
+import { EVERYONE_PRINCIPAL_ID } from 'twenty-shared/constants';
 import { RecordShareAccessLevel, type ObjectRecord } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -101,13 +102,7 @@ const evaluateExpression = async <TRecord extends RowAccessRecord>({
           ),
       });
     case 'recordNotRestricted':
-      return matchingShareIds({
-        expression,
-        records,
-        context,
-        admits: (grant) => grant.accessLevel !== RecordShareAccessLevel.NONE,
-        invert: true,
-      });
+      return admittedWhenNotRestricted({ expression, records, context });
     case 'inheritedReadability': {
       if (isDefined(context.resolveRecordIdsReadableThroughParents)) {
         return context.resolveRecordIdsReadableThroughParents({ records });
@@ -118,6 +113,51 @@ const evaluateExpression = async <TRecord extends RowAccessRecord>({
     default:
       return new Set();
   }
+};
+
+const admittedWhenNotRestricted = async <TRecord extends RowAccessRecord>({
+  expression,
+  records,
+  context,
+}: {
+  expression: {
+    objectMetadataId: string;
+    principalIds: string[];
+    accessLevels: RecordShareAccessLevel[];
+  };
+  records: TRecord[];
+  context: RowAccessEvaluationContext<TRecord>;
+}): Promise<Set<string>> => {
+  const recordIds = records.map((record) => record.id);
+  const grants = await context.fetchRecordShares({
+    objectMetadataId: expression.objectMetadataId,
+    recordIds,
+  });
+  const admitted = new Set<string>();
+
+  for (const recordId of recordIds) {
+    const recordGrants = grants.filter((grant) => grant.recordId === recordId);
+    const hasNamedGrant = recordGrants.some(
+      (grant) =>
+        expression.principalIds.includes(grant.principalId) &&
+        expression.accessLevels.includes(
+          grant.accessLevel as RecordShareAccessLevel,
+        ),
+    );
+    const everyoneWithholds = recordGrants.some(
+      (grant) =>
+        grant.principalId === EVERYONE_PRINCIPAL_ID &&
+        !expression.accessLevels.includes(
+          grant.accessLevel as RecordShareAccessLevel,
+        ),
+    );
+
+    if (hasNamedGrant || !everyoneWithholds) {
+      admitted.add(recordId);
+    }
+  }
+
+  return admitted;
 };
 
 const matchingShareIds = async <TRecord extends RowAccessRecord>({

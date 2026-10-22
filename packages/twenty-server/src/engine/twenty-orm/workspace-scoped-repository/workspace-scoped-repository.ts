@@ -271,6 +271,55 @@ export class WorkspaceScopedRepository<T extends WorkspaceScopedEntity> {
     );
   }
 
+  // repository.upsert() does not return rows, and a follow-up find misses a
+  // generated primary key. RETURNING keeps the id the caller asked to store.
+  async upsertReturning(
+    workspaceId: string,
+    entities: QueryDeepPartialEntity<T>[],
+    conflictPaths: string[],
+  ): Promise<T[]> {
+    if (entities.length === 0) {
+      return [];
+    }
+
+    this.assertWorkspaceId(workspaceId);
+
+    await this.assertConflictTargetsBelongToWorkspace(
+      workspaceId,
+      entities,
+      conflictPaths,
+    );
+
+    const stamped = this.stampWorkspaceIdOnEntities(workspaceId, entities);
+    const metadata = this.repository.metadata;
+    const conflictColumns = metadata.mapPropertyPathsToColumns(conflictPaths);
+    const entityList = Array.isArray(stamped) ? stamped : [stamped];
+    const overwriteColumns = metadata.columns.filter(
+      (column) =>
+        !conflictColumns.includes(column) &&
+        entityList.some(
+          (entity) => column.getEntityValue(entity) !== undefined,
+        ),
+    );
+    const { raw } = await this.repository
+      .createQueryBuilder()
+      .insert()
+      .into(metadata.target)
+      .values(stamped)
+      .orUpdate(
+        [...conflictColumns, ...overwriteColumns].map(
+          (column) => column.databaseName,
+        ),
+        conflictColumns.map((column) => column.databaseName),
+      )
+      .returning('*')
+      .execute();
+
+    return ((raw ?? []) as Record<string, unknown>[]).map((row) =>
+      this.repository.create(this.hydrateRawRow(row)),
+    );
+  }
+
   async upsertAndReturnOne(
     workspaceId: string,
     entity: QueryDeepPartialEntity<T>,

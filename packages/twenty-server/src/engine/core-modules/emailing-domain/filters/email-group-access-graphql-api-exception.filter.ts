@@ -1,17 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Catch, type ExceptionFilter } from '@nestjs/common';
 
-export class EmailGroupAccessGraphqlApiExceptionFilter {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+// Nothing raises this. The class used to be a catch-all proxy whose catch()
+// returned without a response, so the request waited until the test timed out.
+class EmailGroupAccessException extends Error {}
+
+@Catch(EmailGroupAccessException)
+export class EmailGroupAccessGraphqlApiExceptionFilter implements ExceptionFilter {
+  catch(_exception: EmailGroupAccessException): void {
+    return;
   }
-  [key: string]: RemovedCommercial;
 }

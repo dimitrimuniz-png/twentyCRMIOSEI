@@ -1,14 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { isNonEmptyArray } from 'twenty-shared/utils';
 
-const removedresolveShareWithToWrite: RemovedCommercial = new Proxy(
-  function resolveShareWithToWrite(..._args: unknown[]) {
-    return removedresolveShareWithToWrite;
-  },
-  {
-    get: () => removedresolveShareWithToWrite,
-    apply: () => removedresolveShareWithToWrite,
-  },
-);
-export const resolveShareWithToWrite = removedresolveShareWithToWrite;
+import { RecordSharingMode } from 'src/engine/core-modules/record-share/enums/record-sharing-mode.enum';
+import { type ShareWithInput } from 'src/engine/core-modules/record-share/types/share-with-input.type';
+
+export const resolveShareWithToWrite = ({
+  sharingMode,
+  shareWith,
+}: {
+  sharingMode: RecordSharingMode;
+  shareWith?: ShareWithInput[];
+}): ShareWithInput[] | undefined => {
+  if (
+    sharingMode === RecordSharingMode.PRIVATE ||
+    sharingMode === RecordSharingMode.INHERITED
+  ) {
+    return shareWith ?? [];
+  }
+
+  return isNonEmptyArray(shareWith) ? shareWith : undefined;
+};

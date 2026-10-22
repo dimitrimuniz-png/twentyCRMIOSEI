@@ -1,5 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Injectable } from '@nestjs/common';
 
-export type AppBillingService = RemovedCommercial;
+@Injectable()
+export class AppBillingService {
+  async emitChargeEvent(_event: {
+    workspaceId: string;
+    applicationId: string;
+    creditsUsedMicro?: number;
+    quantity?: number;
+    operationType?: string;
+  }): Promise<void> {
+    return;
+  }
+}

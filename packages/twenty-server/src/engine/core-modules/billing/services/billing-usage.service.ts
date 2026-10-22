@@ -1,17 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { Injectable } from '@nestjs/common';
 
+import { type SubscriptionInactiveReason } from 'src/engine/core-modules/billing/types/subscription-inactive-reason.type';
+
+@Injectable()
 export class BillingUsageService {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
-    });
+  async getSubscriptionInactiveReason(
+    _workspaceId: string,
+  ): Promise<SubscriptionInactiveReason | null> {
+    return null;
   }
-  [key: string]: RemovedCommercial;
+
+  async getWorkspaceCreditsUsedMicroBetweenOrNull(_args: {
+    workspaceId: string;
+    periodStart: Date;
+    periodEnd: Date;
+  }): Promise<number | null> {
+    return null;
+  }
 }

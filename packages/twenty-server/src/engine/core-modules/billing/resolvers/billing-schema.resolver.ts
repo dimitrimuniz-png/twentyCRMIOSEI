@@ -1,6 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
+import { PermissionFlagType } from 'twenty-shared/constants';
+
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { BillingEndTrialPeriodDTO } from 'src/engine/core-modules/billing/dtos/billing-end-trial-period.dto';
 import { BillingPaymentIntentDTO } from 'src/engine/core-modules/billing/dtos/billing-payment-intent.dto';
@@ -8,17 +10,21 @@ import { BillingPlanDTO } from 'src/engine/core-modules/billing/dtos/billing-pla
 import { BillingResourceCreditUsageDTO } from 'src/engine/core-modules/billing/dtos/billing-resource-credit-usage.dto';
 import { BillingSessionDTO } from 'src/engine/core-modules/billing/dtos/billing-session.dto';
 import { BillingUpdateDTO } from 'src/engine/core-modules/billing/dtos/billing-update.dto';
+import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
 import { SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
 import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
+import { UserCreditsFallback } from 'src/engine/core-modules/billing/enums/billing-user-credits-fallback.enum';
+import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
+import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
+import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 const INACTIVE_SUBSCRIPTION_ID = '00000000-0000-0000-0000-000000000000';
 
-// Commercial checkout is not part of this fork. The fields stay on the schema
-// so the front documents validate, and every call reports an inactive account.
 const inactiveSubscription = (): BillingSubscriptionEntity => ({
   id: INACTIVE_SUBSCRIPTION_ID,
   status: SubscriptionStatus.Canceled,
@@ -38,7 +44,9 @@ const inactivePaymentIntent = (): BillingPaymentIntentDTO => ({
 });
 
 @MetadataResolver()
-export class BillingSchemaResolver {
+export class BillingResolver {
+  constructor(private readonly billingService: BillingService) {}
+
   @UseGuards(
     AuthPrincipalGuard({
       userSession: {
@@ -48,8 +56,8 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: true, withoutUser: true },
     }),
     NoPermissionGuard,
   )
@@ -67,10 +75,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Query(() => BillingSessionDTO)
   billingPortalSession(
@@ -91,8 +99,8 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: true, withoutUser: true },
     }),
     NoPermissionGuard,
   )
@@ -110,10 +118,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   cancelSwitchBillingInterval(): BillingUpdateDTO {
@@ -129,10 +137,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   cancelSwitchBillingPlan(): BillingUpdateDTO {
@@ -148,10 +156,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   cancelSwitchResourceCreditPrice(): BillingUpdateDTO {
@@ -166,22 +174,22 @@ export class BillingSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: { withUser: true, withoutUser: false },
+      application: { withUser: true, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingSessionDTO)
   checkoutSession(
     @Args('recurringInterval', { type: () => SubscriptionInterval })
     _recurringInterval: SubscriptionInterval,
     @Args('successUrlPath', { type: () => String, nullable: true })
-    _successUrlPath: string | null,
-    @Args('plan', { type: () => BillingPlanKey })
-    _plan: BillingPlanKey,
-    @Args('requirePaymentMethod', { type: () => Boolean })
-    _requirePaymentMethod: boolean,
+    _successUrlPath?: string | null,
+    @Args('plan', { type: () => BillingPlanKey, nullable: true })
+    _plan?: BillingPlanKey | null,
+    @Args('requirePaymentMethod', { type: () => Boolean, nullable: true })
+    _requirePaymentMethod?: boolean | null,
   ): BillingSessionDTO {
     return { url: null };
   }
@@ -195,10 +203,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingPaymentIntentDTO)
   createBillingPaymentMethodSetupIntent(): BillingPaymentIntentDTO {
@@ -213,11 +221,11 @@ export class BillingSchemaResolver {
         playground: true,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: { withUser: true, withoutUser: false },
+      application: { withUser: true, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingPaymentIntentDTO)
   createSubscriptionPaymentIntent(
@@ -240,10 +248,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingEndTrialPeriodDTO)
   endSubscriptionTrialPeriod(): BillingEndTrialPeriodDTO {
@@ -265,10 +273,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   setResourceCreditSubscriptionPrice(
@@ -287,10 +295,10 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   switchBillingPlan(
@@ -309,13 +317,39 @@ export class BillingSchemaResolver {
         workspaceAgnostic: false,
       },
       apiKey: true,
-      oauthClient: true,
-      application: true,
+      oauthClient: { withUser: true, withoutUser: true },
+      application: { withUser: false, withoutUser: false },
     }),
-    NoPermissionGuard,
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   @Mutation(() => BillingUpdateDTO)
   switchSubscriptionInterval(): BillingUpdateDTO {
     return inactiveBillingUpdate();
+  }
+
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: { withUser: false, withoutUser: false },
+      application: { withUser: false, withoutUser: false },
+    }),
+    SettingsPermissionGuard(PermissionFlagType.BILLING),
+  )
+  @Mutation(() => BillingCustomerEntity)
+  updateUserCreditsFallback(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('userCreditsFallback', { type: () => UserCreditsFallback })
+    userCreditsFallback: UserCreditsFallback,
+  ): BillingCustomerEntity {
+    return this.billingService.setUserCreditsFallback(
+      workspace.id,
+      userCreditsFallback,
+    );
   }
 }

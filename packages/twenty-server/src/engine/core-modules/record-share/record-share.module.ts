@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { RecordShareStorageModule } from 'src/engine/core-modules/record-share/record-share-storage.module';
 import { RecordSharePrincipalService } from 'src/engine/core-modules/record-share/services/record-share-principal.service';
 import { RecordPermissionsModule } from 'src/engine/metadata-modules/record-permissions/record-permissions.module';
 import { UserRoleModule } from 'src/engine/metadata-modules/user-role/user-role.module';
@@ -8,18 +9,21 @@ import { RecordAccessPolicyService } from 'src/engine/core-modules/record-share/
 import { RecordSharingService } from 'src/engine/core-modules/record-share/services/record-sharing.service';
 import { ShareWithService } from 'src/engine/core-modules/record-share/services/share-with.service';
 import { RecordShareOwnershipTransferService } from 'src/engine/core-modules/record-share/services/record-share-ownership-transfer.service';
-import { RecordShareStorageService } from 'src/engine/core-modules/record-share/services/record-share-storage.service';
 import { RecordSharingResolver } from 'src/engine/core-modules/record-share/resolvers/record-sharing.resolver';
 
 @Module({
-  imports: [WorkspaceCacheModule, RecordPermissionsModule, UserRoleModule],
+  imports: [
+    WorkspaceCacheModule,
+    RecordPermissionsModule,
+    UserRoleModule,
+    RecordShareStorageModule,
+  ],
   providers: [
     RecordSharePrincipalService,
     RecordAccessPolicyService,
     RecordSharingService,
     ShareWithService,
     RecordShareOwnershipTransferService,
-    RecordShareStorageService,
     RecordSharingResolver,
   ],
   exports: [
@@ -28,7 +32,7 @@ import { RecordSharingResolver } from 'src/engine/core-modules/record-share/reso
     RecordSharingService,
     ShareWithService,
     RecordShareOwnershipTransferService,
-    RecordShareStorageService,
+    RecordShareStorageModule,
   ],
 })
 export class RecordShareModule {}

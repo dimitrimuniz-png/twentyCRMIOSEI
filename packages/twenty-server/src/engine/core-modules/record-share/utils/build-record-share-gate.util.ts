@@ -93,11 +93,14 @@ const buildOpenGate = (
     return { kind: 'open' };
   }
 
+  const accessLevels =
+    operationType === 'select' ? READ_ACCESS_LEVELS : WRITE_ACCESS_LEVELS;
+
   return {
     kind: 'gated',
     expression: {
       kind: 'recordNotRestricted',
-      ...shareTarget(context, target, READ_ACCESS_LEVELS),
+      ...shareTarget(context, target, accessLevels),
     },
   };
 };
@@ -115,7 +118,9 @@ const buildPrivateGate = (
   const accessLevels =
     target.operationType === 'select' || target.operationType === 'insert'
       ? READ_ACCESS_LEVELS
-      : WRITE_ACCESS_LEVELS;
+      : target.operationType === 'update'
+        ? WRITE_ACCESS_LEVELS
+        : [RecordShareAccessLevel.FULL];
 
   return {
     kind: 'gated',

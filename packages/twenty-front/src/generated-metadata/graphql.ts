@@ -3447,6 +3447,7 @@ export type Mutation = {
   updateTimelineActivityType: TimelineActivityType;
   updateUnsubscribeTopic: UnsubscribeTopic;
   updateUsageLimit: UsageLimit;
+  updateUserCreditsFallback: BillingCustomer;
   updateUserEmail: Scalars['Boolean']['output'];
   updateValidationRule: ValidationRule;
   updateView: View;
@@ -3548,9 +3549,9 @@ export type MutationCheckPublicDomainValidRecordsArgs = {
 
 
 export type MutationCheckoutSessionArgs = {
-  plan: BillingPlanKey;
+  plan?: InputMaybe<BillingPlanKey>;
   recurringInterval: SubscriptionInterval;
-  requirePaymentMethod: Scalars['Boolean']['input'];
+  requirePaymentMethod?: InputMaybe<Scalars['Boolean']['input']>;
   successUrlPath?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -4696,6 +4697,11 @@ export type MutationUpdateUnsubscribeTopicArgs = {
 
 export type MutationUpdateUsageLimitArgs = {
   input: UpdateUsageLimitInput;
+};
+
+
+export type MutationUpdateUserCreditsFallbackArgs = {
+  userCreditsFallback: UserCreditsFallback;
 };
 
 

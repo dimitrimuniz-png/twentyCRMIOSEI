@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type RecordShareAccessLevel } from 'twenty-shared/types';
 
-export type ShareWithInput = RemovedCommercial;
+export type ShareWithInput = {
+  workspaceMemberId?: string;
+  roleId?: string;
+  accessLevel: RecordShareAccessLevel;
+};

@@ -1,16 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { type RowAccessExpression } from 'src/engine/twenty-orm/types/row-access-policy.type';
 
-const removedisRowAccessExpressionReadingRoleFilter: RemovedCommercial =
-  new Proxy(
-    function isRowAccessExpressionReadingRoleFilter(..._args: unknown[]) {
-      return removedisRowAccessExpressionReadingRoleFilter;
-    },
-    {
-      get: () => removedisRowAccessExpressionReadingRoleFilter,
-      apply: () => removedisRowAccessExpressionReadingRoleFilter,
-    },
-  );
-export const isRowAccessExpressionReadingRoleFilter =
-  removedisRowAccessExpressionReadingRoleFilter;
+export const isRowAccessExpressionReadingRoleFilter = (
+  expression: RowAccessExpression,
+): boolean => {
+  switch (expression.kind) {
+    case 'roleFilter':
+      return true;
+    case 'and':
+    case 'or':
+      return expression.operands.some(isRowAccessExpressionReadingRoleFilter);
+    case 'inheritedReadability':
+      return expression.parents.some(
+        (parent) =>
+          parent.policy.kind === 'gated' &&
+          isRowAccessExpressionReadingRoleFilter(parent.policy.expression),
+      );
+    case 'recordShared':
+    case 'recordNotRestricted':
+      return false;
+    default:
+      return false;
+  }
+};

@@ -1,18 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import { UserInputError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
+import { RecordValidationRuleException } from 'src/engine/metadata-modules/validation-rule/exceptions/record-validation-rule.exception';
 
-const removedrecordValidationRuleGraphqlApiExceptionHandler: RemovedCommercial =
-  new Proxy(
-    function recordValidationRuleGraphqlApiExceptionHandler(
-      ..._args: unknown[]
-    ) {
-      return removedrecordValidationRuleGraphqlApiExceptionHandler;
-    },
-    {
-      get: () => removedrecordValidationRuleGraphqlApiExceptionHandler,
-      apply: () => removedrecordValidationRuleGraphqlApiExceptionHandler,
-    },
-  );
-export const recordValidationRuleGraphqlApiExceptionHandler =
-  removedrecordValidationRuleGraphqlApiExceptionHandler;
+export const recordValidationRuleGraphqlApiExceptionHandler = (
+  error: RecordValidationRuleException,
+): never => {
+  throw new UserInputError(error.message, {
+    subCode: 'RECORD_VALIDATION_RULE',
+  });
+};

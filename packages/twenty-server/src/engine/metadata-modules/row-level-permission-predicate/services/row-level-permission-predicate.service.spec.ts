@@ -27,14 +27,18 @@ describe('RowLevelPermissionPredicateService', () => {
         return persistedPredicates;
       }),
       softDelete: jest.fn().mockResolvedValue(undefined),
-      upsert: jest.fn(async (_workspaceId: string, rows: unknown[]) => {
-        persistedPredicates.splice(0, persistedPredicates.length, ...rows);
-      }),
+      upsertReturning: jest.fn(
+        async (_workspaceId: string, rows: unknown[]) => {
+          persistedPredicates.splice(0, persistedPredicates.length, ...rows);
+
+          return rows;
+        },
+      ),
     };
     const predicateGroupRepository = {
       find: jest.fn().mockResolvedValue([]),
       softDelete: jest.fn(),
-      upsert: jest.fn(),
+      upsertReturning: jest.fn().mockResolvedValue([]),
     };
     const workspaceRepository = {
       findOneByOrFail: jest

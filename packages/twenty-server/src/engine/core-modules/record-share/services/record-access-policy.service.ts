@@ -47,7 +47,9 @@ export class RecordAccessPolicyService {
     // System rows are not an everyone-visible stream unless the caller is the system or the owner.
     if (
       (flatObjectMetadata.readability === MetadataReadability.SYSTEM ||
-        flatObjectMetadata.isSystem === true) &&
+        (flatObjectMetadata.isSystem === true &&
+          flatObjectMetadata.readability !== MetadataReadability.PRIVATE &&
+          flatObjectMetadata.readability !== MetadataReadability.INHERITED)) &&
       !subject.isSystemContext &&
       !subject.isOwningApplication(flatObjectMetadata)
     ) {

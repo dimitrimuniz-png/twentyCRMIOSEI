@@ -344,7 +344,6 @@ export type ApplicationRegistrationVariable = {
   value?: Maybe<Scalars['String']['output']>;
 };
 
-/** The origin of a batch of credits granted to a workspace */
 export enum BillingCreditGrantType {
   COMPENSATION = 'COMPENSATION',
   ONBOARDING_REWARD = 'ONBOARDING_REWARD',
@@ -432,6 +431,7 @@ export type CreateUsageLimitInput = {
 export type CreditUsedItem = {
   __typename?: 'CreditUsedItem';
   creditsUsed: Scalars['Float']['output'];
+  key?: Maybe<Scalars['String']['output']>;
   label?: Maybe<Scalars['String']['output']>;
   operation?: Maybe<UsageOperationType>;
   resource?: Maybe<UsageResourceType>;

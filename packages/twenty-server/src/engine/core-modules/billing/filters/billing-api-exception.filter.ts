@@ -1,17 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+import {
+  type ArgumentsHost,
+  Catch,
+  type ExceptionFilter,
+  HttpStatus,
+} from '@nestjs/common';
 
-export class BillingRestApiExceptionFilter {
-  constructor(..._args: unknown[]) {
-    return new Proxy(this, {
-      get(target, property, receiver) {
-        if (property === 'then') return undefined;
-        const own = Reflect.get(target, property, receiver);
-        if (own !== undefined) return own;
-        return (..._ignored: unknown[]) => undefined;
-      },
+import { type Response } from 'express';
+
+import { BillingException } from 'src/engine/core-modules/billing/billing.exception';
+
+@Catch(BillingException)
+export class BillingRestApiExceptionFilter implements ExceptionFilter {
+  catch(exception: BillingException, host: ArgumentsHost): void {
+    const response = host.switchToHttp().getResponse<Response>();
+
+    response.status(HttpStatus.FORBIDDEN).json({
+      statusCode: HttpStatus.FORBIDDEN,
+      error: exception.code,
+      messages: [exception.message],
     });
   }
-  [key: string]: RemovedCommercial;
 }
