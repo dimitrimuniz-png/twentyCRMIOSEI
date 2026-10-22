@@ -55,6 +55,8 @@ TAG=latest docker compose --env-file .env pull
 TAG=latest docker compose --env-file .env up -d
 ```
 
+A imagem no GHCR é multi-arch (`linux/amd64` e `linux/arm64`). Em um Mac Apple Silicon o Docker puxa a variante `arm64` e o processo roda nativo, sem Rosetta.
+
 O workflow `.github/workflows/publish-image.yaml` publica essa imagem em push para `main`, para a branch deste trabalho, em tags `v*` e em execução manual. O pacote precisa estar com visibilidade que a sua conta consiga puxar.
 
 Podman usa o mesmo Dockerfile em `packages/twenty-docker/podman/podman-compose.yml`.
