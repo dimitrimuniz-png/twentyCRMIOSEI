@@ -1,3 +1,7 @@
+import { IoseiAuthSecondaryButton } from '@/auth/components/iosei-auth/IoseiAuthSecondaryButton';
+import { IoseiAuthTextLink } from '@/auth/components/iosei-auth/IoseiAuthTextLink';
+import { type SsoIdentityProviderLike } from '@/auth/components/iosei-auth/is-google-oidc-identity-provider.util';
+import { StyledIoseiAuthCenteredLinkRow } from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { useHasMultipleAuthMethods } from '@/auth/sign-in-up/hooks/useHasMultipleAuthMethods';
 import { useSso } from '@/auth/sign-in-up/hooks/useSso';
 import { lastAuthenticatedMethodState } from '@/auth/states/lastAuthenticatedMethodState';
@@ -7,38 +11,39 @@ import {
 } from '@/auth/states/signInUpStepState';
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { workspaceAuthProvidersState } from '@/workspace/states/workspaceAuthProvidersState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { MainButton } from 'twenty-ui/components/input';
 import { IconLock } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
-import { useTheme } from 'twenty-ui/theme';
-import { SignInUpSeparator } from './SignInUpSeparator';
 
-export const SignInUpWithSso = () => {
-  const theme = useTheme();
-  const { t } = useLingui();
+export const SignInUpWithSso = ({
+  identityProviders,
+  appearance = 'link',
+}: {
+  identityProviders?: SsoIdentityProviderLike[];
+  appearance?: 'link' | 'button';
+}) => {
+  const { t, i18n } = useLingui();
   const setSignInUpStep = useSetAtomState(signInUpStepState);
   const workspaceAuthProviders = useAtomStateValue(workspaceAuthProvidersState);
-  const signInUpStep = useAtomStateValue(signInUpStepState);
   const [lastAuthenticatedMethod, setLastAuthenticatedMethod] = useAtomState(
     lastAuthenticatedMethodState,
   );
   const hasMultipleAuthMethods = useHasMultipleAuthMethods();
-
   const { redirectToSsoLoginPage } = useSso();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
+  const providers = identityProviders ?? workspaceAuthProviders?.sso ?? [];
+  const label = isPortuguese ? 'Entrar com SSO' : t`Single sign-on (SSO)`;
 
   const signInWithSso = () => {
     setLastAuthenticatedMethod(AuthenticatedMethod.SSO);
-    if (
-      isDefined(workspaceAuthProviders) &&
-      workspaceAuthProviders.sso.length === 1
-    ) {
-      return redirectToSsoLoginPage(workspaceAuthProviders.sso[0].id);
+
+    if (providers.length === 1 && isDefined(providers[0])) {
+      return redirectToSsoLoginPage(providers[0].id);
     }
 
     setSignInUpStep(SignInUpStep.SsoIdentityProviderSelection);
@@ -46,18 +51,21 @@ export const SignInUpWithSso = () => {
 
   const isLastUsed = lastAuthenticatedMethod === AuthenticatedMethod.SSO;
 
+  if (appearance === 'link') {
+    return (
+      <StyledIoseiAuthCenteredLinkRow>
+        <IoseiAuthTextLink onClick={signInWithSso}>{label}</IoseiAuthTextLink>
+      </StyledIoseiAuthCenteredLinkRow>
+    );
+  }
+
   return (
-    <>
-      <StyledSsoButtonContainer>
-        <MainButton
-          startIcon={<IconLock size={theme.icon.size.md} />}
-          onClick={signInWithSso}
-          fullWidth
-          variant={signInUpStep === SignInUpStep.Init ? 'solid' : 'outline'}
-        >{t`Single sign-on (SSO)`}</MainButton>
-        {isLastUsed && hasMultipleAuthMethods && <LastUsedPill />}
-      </StyledSsoButtonContainer>
-      <SignInUpSeparator />
-    </>
+    <StyledSsoButtonContainer>
+      <IoseiAuthSecondaryButton onClick={signInWithSso}>
+        <IconLock size={18} />
+        {label}
+      </IoseiAuthSecondaryButton>
+      {isLastUsed && hasMultipleAuthMethods && <LastUsedPill />}
+    </StyledSsoButtonContainer>
   );
 };

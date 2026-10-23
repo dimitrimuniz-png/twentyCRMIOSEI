@@ -1,4 +1,5 @@
 import { MockedProvider } from '@apollo/client/testing/react';
+import { type ReactNode } from 'react';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -59,7 +60,16 @@ jest.mock('@/auth/sign-in-up/hooks/useHandleResetPassword', () => ({
 jest.mock(
   '@/auth/sign-in-up/components/internal/SignInUpWithCredentials',
   () => ({
-    SignInUpWithCredentials: () => <div>credentials-form</div>,
+    SignInUpWithCredentials: ({
+      beforeSubmit,
+    }: {
+      beforeSubmit?: ReactNode;
+    }) => (
+      <div>
+        credentials-form
+        {beforeSubmit}
+      </div>
+    ),
   }),
 );
 

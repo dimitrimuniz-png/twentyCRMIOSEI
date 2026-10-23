@@ -1,4 +1,4 @@
-import { StyledAuthContent } from '@/auth/components/StyledAuthContent';
+import { IoseiAuthShell } from '@/auth/components/iosei-auth/IoseiAuthShell';
 import { useSignInUp } from '@/auth/sign-in-up/hooks/useSignInUp';
 import { useSignInUpForm } from '@/auth/sign-in-up/hooks/useSignInUpForm';
 import { isCreatingWorkspaceState } from '@/auth/states/isCreatingWorkspaceState';
@@ -47,15 +47,6 @@ const StyledLoaderContainer = styled.div`
   justify-content: center;
   margin-bottom: ${themeCssVariables.spacing[8]};
   margin-top: ${themeCssVariables.spacing[8]};
-  width: 100%;
-`;
-
-const StyledBackground = styled.div`
-  background: ${themeCssVariables.background.secondary};
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh / var(--t-zoom, 1));
-  overflow-y: auto;
   width: 100%;
 `;
 
@@ -222,22 +213,17 @@ export const SignInUp = () => {
         >
           <StyledOnboardingStepPage>{signInUpForm}</StyledOnboardingStepPage>
         </OnboardingLayout>
+      ) : signInUpStep === SignInUpStep.EmailVerification ? (
+        <IoseiAuthShell>
+          <EmailVerificationSent email={searchParams.get('email')} />
+        </IoseiAuthShell>
       ) : (
-        <StyledBackground>
-          {signInUpStep === SignInUpStep.EmailVerification ? (
-            <StyledAuthContent>
-              <EmailVerificationSent email={searchParams.get('email')} />
-            </StyledAuthContent>
-          ) : (
-            <SignInUpStandardContent
-              workspacePublicData={workspacePublicData}
-              signInUpForm={signInUpForm}
-              signInUpStep={signInUpStep}
-              title={title}
-              onClickOnLogo={onClickOnLogo}
-            />
-          )}
-        </StyledBackground>
+        <SignInUpStandardContent
+          signInUpForm={signInUpForm}
+          signInUpStep={signInUpStep}
+          title={title}
+          onClickOnLogo={onClickOnLogo}
+        />
       )}
     </>
   );

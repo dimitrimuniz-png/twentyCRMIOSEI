@@ -1,60 +1,56 @@
-import { Logo } from '@/auth/components/Logo';
-import { StyledAuthContent } from '@/auth/components/StyledAuthContent';
-import { Title } from '@/auth/components/Title';
-import { AnimatedEaseIn } from '@/auth/components/internal/AnimatedEaseIn/AnimatedEaseIn';
+import { IoseiAuthShell } from '@/auth/components/iosei-auth/IoseiAuthShell';
 import { FooterNote } from '@/auth/sign-in-up/components/FooterNote';
 import { WorkspaceSelectionFooter } from '@/auth/sign-in-up/components/WorkspaceSelectionFooter';
+import { useWorkspaceFromInviteHash } from '@/auth/sign-in-up/hooks/useWorkspaceFromInviteHash';
 import { SignInUpStep } from '@/auth/states/signInUpStepState';
-import { styled } from '@linaria/react';
+import { useLingui } from '@lingui/react/macro';
 import { type JSX } from 'react';
-import { AppPath } from 'twenty-shared/types';
-import { themeCssVariables } from 'twenty-ui/theme';
-import { type PublicWorkspaceData } from '~/generated-metadata/graphql';
-
-const StyledTitleContainer = styled.div`
-  line-height: 1.2;
-  margin-top: ${themeCssVariables.spacing[10]};
-`;
-
-const StyledFormContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: ${themeCssVariables.spacing[6]};
-  margin-top: ${themeCssVariables.spacing[6]};
-  min-width: 0;
-  width: 100%;
-`;
+import { isDefined } from 'twenty-shared/utils';
 
 type SignInUpStandardContentProps = {
-  workspacePublicData: PublicWorkspaceData | null;
   signInUpForm: JSX.Element | null;
   signInUpStep: SignInUpStep;
   title: string;
   onClickOnLogo: () => void;
 };
 
+const CREDENTIAL_STEPS = [
+  SignInUpStep.Init,
+  SignInUpStep.Email,
+  SignInUpStep.Password,
+];
+
 export const SignInUpStandardContent = ({
-  workspacePublicData,
   signInUpForm,
   signInUpStep,
   title,
   onClickOnLogo,
 }: SignInUpStandardContentProps) => {
+  const { t, i18n } = useLingui();
+  const { workspaceInviteHash } = useWorkspaceFromInviteHash();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
+  const isCredentialStep = CREDENTIAL_STEPS.includes(signInUpStep);
+  const isInvite = isDefined(workspaceInviteHash);
+  const heading =
+    isCredentialStep && !isInvite
+      ? isPortuguese
+        ? 'Acesse sua conta'
+        : t`Sign in to your account`
+      : title;
+  const subtitle =
+    isCredentialStep && !isInvite
+      ? isPortuguese
+        ? 'Use o e-mail corporativo da IOSEI'
+        : t`Use your IOSEI work email`
+      : undefined;
+
   return (
-    <StyledAuthContent>
-      <AnimatedEaseIn>
-        <Logo
-          secondaryLogo={workspacePublicData?.logo}
-          placeholder={workspacePublicData?.displayName}
-          onClick={onClickOnLogo}
-          to={AppPath.SignInUp}
-        />
-      </AnimatedEaseIn>
-      <StyledTitleContainer>
-        <Title animate>{title}</Title>
-      </StyledTitleContainer>
-      <StyledFormContainer>{signInUpForm}</StyledFormContainer>
+    <IoseiAuthShell
+      title={heading}
+      subtitle={subtitle}
+      onLogoClick={onClickOnLogo}
+    >
+      {signInUpForm}
       {signInUpStep === SignInUpStep.WorkspaceSelection && (
         <WorkspaceSelectionFooter />
       )}
@@ -66,6 +62,6 @@ export const SignInUpStandardContent = ({
         SignInUpStep.WorkspaceSelection,
         SignInUpStep.WorkspaceCreation,
       ].includes(signInUpStep) && <FooterNote />}
-    </StyledAuthContent>
+    </IoseiAuthShell>
   );
 };

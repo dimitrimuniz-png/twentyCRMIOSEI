@@ -1,13 +1,14 @@
 import { getSsoCallbackErrorMessage } from '@/auth/sign-in-up/utils/getSsoCallbackErrorMessage';
+import { authFormAlertState } from '@/auth/states/authFormAlertState';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components/feedback';
 
 export const SignInUpSsoErrorEffect = () => {
   const { i18n } = useLingui();
-  const { enqueueToast } = useToast();
+  const setAuthFormAlert = useSetAtomState(authFormAlertState);
   const [searchParams, setSearchParams] = useSearchParams();
   const ssoError = searchParams.get('ssoError');
 
@@ -16,21 +17,19 @@ export const SignInUpSsoErrorEffect = () => {
       return;
     }
 
-    enqueueToast({
-      status: 'error',
-      children: getSsoCallbackErrorMessage({
+    setAuthFormAlert(
+      getSsoCallbackErrorMessage({
         ssoError,
         locale: i18n.locale,
         i18n,
       }),
-      dedupeKey: `sso-error-${ssoError}`,
-    });
+    );
 
     const nextSearchParams = new URLSearchParams(searchParams);
 
     nextSearchParams.delete('ssoError');
     setSearchParams(nextSearchParams, { replace: true });
-  }, [enqueueToast, i18n, searchParams, setSearchParams, ssoError]);
+  }, [i18n, searchParams, setAuthFormAlert, setSearchParams, ssoError]);
 
   return <></>;
 };

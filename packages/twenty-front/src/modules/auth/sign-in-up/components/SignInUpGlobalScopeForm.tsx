@@ -6,8 +6,12 @@ import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { FormProvider } from 'react-hook-form';
-import { Button } from 'twenty-ui/primitives/input';
 
+import { IoseiAuthTextLink } from '@/auth/components/iosei-auth/IoseiAuthTextLink';
+import {
+  StyledIoseiAuthForgotPasswordRow,
+  StyledIoseiAuthMethods,
+} from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { StyledOnboardingContentContainer } from '@/auth/components/StyledOnboardingContentContainer';
 import { SignInUpWithCredentials } from '@/auth/sign-in-up/components/internal/SignInUpWithCredentials';
 import { SignInUpWithGoogle } from '@/auth/sign-in-up/components/internal/SignInUpWithGoogle';
@@ -29,7 +33,6 @@ import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvata
 import { isNonEmptyString } from '@sniptt/guards';
 import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
 import { Avatar } from 'twenty-ui/primitives/data-display';
-import { Separator } from 'twenty-ui/primitives/layout';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import {
   type AvailableWorkspace,
@@ -118,12 +121,6 @@ const StyledChevronIcon = styled.div`
   display: flex;
 `;
 
-const StyledForgotPasswordLinkContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  padding-top: ${themeCssVariables.spacing[4]};
-`;
-
 export const SignInUpGlobalScopeForm = () => {
   const theme = useTheme();
   const authProviders = useAtomStateValue(authProvidersState);
@@ -132,7 +129,8 @@ export const SignInUpGlobalScopeForm = () => {
   const setSignInUpStep = useSetAtomState(signInUpStepState);
   const { buildWorkspaceUrl } = useBuildWorkspaceUrl();
   const availableWorkspaces = useAtomStateValue(availableWorkspacesState);
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
 
   const { form } = useSignInUpForm();
   const { handleResetPassword } = useHandleResetPassword();
@@ -236,7 +234,28 @@ export const SignInUpGlobalScopeForm = () => {
         </StyledOnboardingContentContainer>
       )}
       {signInUpStep !== SignInUpStep.WorkspaceSelection && (
-        <StyledOnboardingContentContainer>
+        <StyledIoseiAuthMethods>
+          {/* oxlint-disable-next-line react/jsx-props-no-spreading */}
+          <FormProvider {...form}>
+            <SignInUpWithCredentials
+              isGlobalScope
+              beforeSubmit={
+                signInUpStep === SignInUpStep.Password ? (
+                  <StyledIoseiAuthForgotPasswordRow>
+                    <IoseiAuthTextLink
+                      onClick={handleResetPassword(form.getValues('email'))}
+                    >
+                      {isPortuguese ? (
+                        'Esqueceu a senha?'
+                      ) : (
+                        <Trans>Forgot your password?</Trans>
+                      )}
+                    </IoseiAuthTextLink>
+                  </StyledIoseiAuthForgotPasswordRow>
+                ) : null
+              }
+            />
+          </FormProvider>
           {authProviders.google && (
             <SignInUpWithGoogle
               action="list-available-workspaces"
@@ -249,24 +268,7 @@ export const SignInUpGlobalScopeForm = () => {
               isGlobalScope
             />
           )}
-          {(authProviders.google || authProviders.microsoft) && (
-            <Separator style={{ marginBlock: themeCssVariables.spacing[3] }} />
-          )}
-          {/* oxlint-disable-next-line react/jsx-props-no-spreading */}
-          <FormProvider {...form}>
-            <SignInUpWithCredentials isGlobalScope />
-          </FormProvider>
-          {signInUpStep === SignInUpStep.Password && (
-            <StyledForgotPasswordLinkContainer>
-              <Button
-                variant="link"
-                onClick={handleResetPassword(form.getValues('email'))}
-              >
-                <Trans>Forgot your password?</Trans>
-              </Button>
-            </StyledForgotPasswordLinkContainer>
-          )}
-        </StyledOnboardingContentContainer>
+        </StyledIoseiAuthMethods>
       )}
     </>
   );

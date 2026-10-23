@@ -1,11 +1,10 @@
-import { StyledAuthContent } from '@/auth/components/StyledAuthContent';
-import { SubTitle } from '@/auth/components/SubTitle';
+import { IoseiAuthShell } from '@/auth/components/iosei-auth/IoseiAuthShell';
 import { VerifyEmailEffect } from '@/auth/components/VerifyEmailEffect';
 import { EmailVerificationSent } from '@/auth/sign-in-up/components/EmailVerificationSent';
-import { OnboardingVerifyLayout } from '@/onboarding/components/OnboardingVerifyLayout';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Loader } from 'twenty-ui/primitives/feedback';
 
 export const VerifyEmail = () => {
   const { t } = useLingui();
@@ -16,18 +15,19 @@ export const VerifyEmail = () => {
 
   if (isError) {
     return (
-      <StyledAuthContent>
+      <IoseiAuthShell>
         <EmailVerificationSent email={email} isError={true} />
-      </StyledAuthContent>
+      </IoseiAuthShell>
     );
   }
 
   return (
-    <>
+    <IoseiAuthShell
+      title={t`Verifying your email`}
+      subtitle={email ?? undefined}
+    >
       <VerifyEmailEffect onError={() => setIsError(true)} />
-      <OnboardingVerifyLayout>
-        <SubTitle>{t`Verifying your email`}</SubTitle>
-      </OnboardingVerifyLayout>
-    </>
+      <Loader color="gray" />
+    </IoseiAuthShell>
   );
 };

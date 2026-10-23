@@ -1,3 +1,6 @@
+import { IoseiAuthFormAlert } from '@/auth/components/iosei-auth/IoseiAuthFormAlert';
+import { IoseiAuthPrimaryButton } from '@/auth/components/iosei-auth/IoseiAuthPrimaryButton';
+import { StyledIoseiAuthForm } from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { useHasMultipleAuthMethods } from '@/auth/sign-in-up/hooks/useHasMultipleAuthMethods';
 import { useSignInUp } from '@/auth/sign-in-up/hooks/useSignInUp';
 import { type Form } from '@/auth/sign-in-up/hooks/useSignInUpForm';
@@ -19,27 +22,20 @@ import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { InputHint } from '@/ui/input/components/internal/InputHint/InputHint';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { isDefined } from 'twenty-shared/utils';
-import { MainButton } from 'twenty-ui/components/input';
-
-const StyledForm = styled.form`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  width: 100%;
-`;
 
 export const SignInUpWithCredentials = ({
   isGlobalScope,
+  beforeSubmit,
 }: {
   isGlobalScope?: boolean;
+  beforeSubmit?: ReactNode;
 }) => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
   const form = useFormContext<Form>();
 
   const [signInUpStep, setSignInUpStep] = useAtomState(signInUpStepState);
@@ -95,25 +91,25 @@ export const SignInUpWithCredentials = ({
 
   const buttonTitle = useMemo(() => {
     if (signInUpStep === SignInUpStep.Init) {
-      return t`Continue with Email`;
+      return isPortuguese ? 'Continuar com e-mail' : t`Continue with Email`;
     }
 
     if (
       signInUpMode === SignInUpMode.SignIn &&
       signInUpStep === SignInUpStep.Password
     ) {
-      return t`Sign in`;
+      return isPortuguese ? 'Entrar' : t`Sign in`;
     }
 
     if (
       signInUpMode === SignInUpMode.SignUp &&
       signInUpStep === SignInUpStep.Password
     ) {
-      return t`Sign up`;
+      return isPortuguese ? 'Criar conta' : t`Sign up`;
     }
 
-    return t`Continue`;
-  }, [signInUpMode, signInUpStep, t]);
+    return isPortuguese ? 'Continuar' : t`Continue`;
+  }, [isPortuguese, signInUpMode, signInUpStep, t]);
 
   const shouldWaitForCaptchaToken =
     signInUpStep !== SignInUpStep.Init &&
@@ -147,11 +143,12 @@ export const SignInUpWithCredentials = ({
       {(signInUpStep === SignInUpStep.Password ||
         signInUpStep === SignInUpStep.Email ||
         signInUpStep === SignInUpStep.Init) && (
-        <StyledForm onSubmit={handleSubmit}>
+        <StyledIoseiAuthForm onSubmit={handleSubmit}>
           {signInUpStep !== SignInUpStep.Init && (
             <SignInUpEmailField
               showErrors={showErrors}
               onInputChange={onEmailChange}
+              autoFocus={signInUpStep !== SignInUpStep.Password}
             />
           )}
           {signInUpStep === SignInUpStep.Password && (
@@ -160,23 +157,22 @@ export const SignInUpWithCredentials = ({
               signInUpMode={signInUpMode}
             />
           )}
+          {beforeSubmit}
+          <IoseiAuthFormAlert />
           <StyledSsoButtonContainer>
-            <MainButton
+            <IoseiAuthPrimaryButton
               type="submit"
               loading={form.formState.isSubmitting}
-              loadingPosition="start"
               disabled={isSubmitButtonDisabled}
-              fullWidth
-              variant={signInUpStep === SignInUpStep.Init ? 'outline' : 'solid'}
             >
               {buttonTitle}
-            </MainButton>
+            </IoseiAuthPrimaryButton>
             {isLastUsed && <LastUsedPill />}
             {isSignUpBlockedByDDLLock && (
               <InputHint>{t`Sign-up is temporarily unavailable during maintenance.`}</InputHint>
             )}
           </StyledSsoButtonContainer>
-        </StyledForm>
+        </StyledIoseiAuthForm>
       )}
     </>
   );

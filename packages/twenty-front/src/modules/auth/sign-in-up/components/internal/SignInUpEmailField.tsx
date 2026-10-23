@@ -1,65 +1,47 @@
+import { IoseiAuthTextField } from '@/auth/components/iosei-auth/IoseiAuthTextField';
 import { type Form } from '@/auth/sign-in-up/hooks/useSignInUpForm';
-import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { motion } from 'framer-motion';
 import { Controller, useFormContext } from 'react-hook-form';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
-import { themeCssVariables } from 'twenty-ui/theme';
-
-const StyledFullWidthMotionDiv = styled(motion.div)`
-  width: 100%;
-`;
-
-const StyledInputContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[3]};
-`;
 
 export const SignInUpEmailField = ({
   showErrors,
   onInputChange,
+  autoFocus = true,
 }: {
   showErrors: boolean;
   onInputChange?: (value: string) => void;
+  autoFocus?: boolean;
 }) => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const form = useFormContext<Form>();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
 
   return (
-    <StyledFullWidthMotionDiv
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      transition={{
-        type: 'spring',
-        stiffness: 800,
-        damping: 35,
-      }}
-    >
-      <Controller
-        name="email"
-        control={form.control}
-        render={({
-          field: { onChange, onBlur, value },
-          fieldState: { error },
-        }) => (
-          <StyledInputContainer>
-            <SettingsTextInput
-              instanceId="sign-in-up-email"
-              autoComplete="email"
-              autoFocus
-              value={value}
-              placeholder={t`Email`}
-              onBlur={onBlur}
-              onChange={(email: string) => {
-                if (isDefined(onInputChange)) onInputChange(email);
-                onChange(email);
-              }}
-              error={showErrors ? error?.message : undefined}
-              fullWidth
-            />
-          </StyledInputContainer>
-        )}
-      />
-    </StyledFullWidthMotionDiv>
+    <Controller
+      name="email"
+      control={form.control}
+      render={({
+        field: { onChange, onBlur, value },
+        fieldState: { error },
+      }) => (
+        <IoseiAuthTextField
+          id="sign-in-up-email"
+          label={isPortuguese ? 'E-mail' : t`Email`}
+          autoComplete="email"
+          autoFocus={autoFocus}
+          type="email"
+          value={value}
+          placeholder={doNotTranslate('nome@iosei.co')}
+          onBlur={onBlur}
+          onChange={(email: string) => {
+            if (isDefined(onInputChange)) onInputChange(email);
+            onChange(email);
+          }}
+          error={showErrors ? error?.message : undefined}
+        />
+      )}
+    />
   );
 };

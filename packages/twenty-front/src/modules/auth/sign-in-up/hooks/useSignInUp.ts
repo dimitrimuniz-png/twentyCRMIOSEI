@@ -4,6 +4,7 @@ import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { type Form } from '@/auth/sign-in-up/hooks/useSignInUpForm';
+import { authFormAlertState } from '@/auth/states/authFormAlertState';
 import { lastAuthenticatedMethodState } from '@/auth/states/lastAuthenticatedMethodState';
 import { signInUpModeState } from '@/auth/states/signInUpModeState';
 import {
@@ -25,13 +26,23 @@ import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomStat
 import { useLingui } from '@lingui/react/macro';
 import { AppPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components/feedback';
 import { buildAppPathWithQueryParams } from '~/utils/buildAppPathWithQueryParams';
 import { isMatchingLocation } from '~/utils/isMatchingLocation';
 
+const readAuthFormAlertMessage = (error: unknown, fallback: string) => {
+  const toastOptions = getToastOptionsFromError({ error });
+  const children = toastOptions?.children;
+
+  if (!isDefined(toastOptions)) {
+    return null;
+  }
+
+  return typeof children === 'string' ? children : fallback;
+};
+
 export const useSignInUp = (form: UseFormReturn<Form>) => {
-  const { enqueueToast } = useToast();
   const { t } = useLingui();
+  const setAuthFormAlert = useSetAtomState(authFormAlertState);
 
   const [signInUpStep, setSignInUpStep] = useAtomState(signInUpStepState);
   const [signInUpMode, setSignInUpMode] = useAtomState(signInUpModeState);
@@ -70,18 +81,29 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
     setSignInUpStep(SignInUpStep.Email);
   }, [setSignInUpStep]);
 
+  const showAuthFormAlertFromError = useCallback(
+    (error: unknown) => {
+      const message = readAuthFormAlertMessage(error, t`An error occurred.`);
+
+      if (isDefined(message)) {
+        setAuthFormAlert(message);
+      }
+    },
+    [setAuthFormAlert, t],
+  );
+
   const errorMsgUserAlreadyExist = t`An error occurred while checking user existence`;
   const continueWithCredentials = useCallback(async () => {
     if (!form.getValues('email')) {
-      return enqueueToast({ status: 'error', children: t`Email is required` });
+      setAuthFormAlert(t`Email is required`);
+      return;
     }
     if (!isCaptchaReady) {
-      return enqueueToast({
-        status: 'error',
-        children: t`Captcha (anti-bot check) is still loading, try again`,
-      });
+      setAuthFormAlert(t`Captcha (anti-bot check) is still loading, try again`);
+      return;
     }
     try {
+      setAuthFormAlert(null);
       const token = readCaptchaToken();
 
       const { data, error } = await checkUserExistsQuery({
@@ -92,7 +114,8 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
       });
 
       if (isDefined(error)) {
-        return enqueueToast(getToastOptionsFromError({ error }));
+        showAuthFormAlertFromError(error);
+        return;
       }
 
       setSignInUpMode(
@@ -102,13 +125,14 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
       );
       setSignInUpStep(SignInUpStep.Password);
     } catch {
-      enqueueToast({ status: 'error', children: errorMsgUserAlreadyExist });
+      setAuthFormAlert(errorMsgUserAlreadyExist);
     }
   }, [
     readCaptchaToken,
     form,
     isCaptchaReady,
-    enqueueToast,
+    setAuthFormAlert,
+    showAuthFormAlertFromError,
     t,
     checkUserExistsQuery,
     setSignInUpMode,
@@ -123,14 +147,15 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
       }
 
       if (!isCaptchaReady) {
-        return enqueueToast({
-          status: 'error',
-          children: t`Captcha (anti-bot check) is still loading, try again`,
-        });
+        setAuthFormAlert(
+          t`Captcha (anti-bot check) is still loading, try again`,
+        );
+        return;
       }
 
       const token = readCaptchaToken();
       try {
+        setAuthFormAlert(null);
         setLastAuthenticatedMethod(AuthenticatedMethod.EMAIL);
 
         if (
@@ -184,7 +209,7 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
           verifyEmailRedirectPath,
         });
       } catch (error: unknown) {
-        enqueueToast(getToastOptionsFromError({ error }));
+        showAuthFormAlertFromError(error);
       }
     },
     [
@@ -198,7 +223,8 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
       signUpWithCredentialsInWorkspace,
       workspaceInviteHash,
       workspacePersonalInviteToken,
-      enqueueToast,
+      setAuthFormAlert,
+      showAuthFormAlertFromError,
       buildSearchParamsFromUrlSyncedStates,
       isOnAWorkspace,
       workspacePublicData,
