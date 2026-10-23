@@ -310,9 +310,11 @@ export class RowLevelPermissionPredicateService {
       ['id'],
     );
 
+    // getRoles reads predicate ids from the flat role, not the predicate maps.
     await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
       'flatRowLevelPermissionPredicateMaps',
       'flatRowLevelPermissionPredicateGroupMaps',
+      'flatRoleMaps',
       'rolesPermissions',
     ]);
 

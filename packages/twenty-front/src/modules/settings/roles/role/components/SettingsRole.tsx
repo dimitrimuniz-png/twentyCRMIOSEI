@@ -128,7 +128,12 @@ export const SettingsRole = ({ roleId, isCreateMode }: SettingsRoleProps) => {
       await saveDraftRoleToDB();
       await loadCurrentUser();
     } catch (error) {
-      enqueueToast(getToastOptionsFromError({ error }));
+      enqueueToast(
+        getToastOptionsFromError({ error }) ?? {
+          status: 'error',
+          children: t`An error occurred.`,
+        },
+      );
     } finally {
       setIsSaving(false);
     }

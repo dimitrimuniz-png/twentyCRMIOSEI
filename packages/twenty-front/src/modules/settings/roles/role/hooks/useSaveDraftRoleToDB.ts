@@ -10,6 +10,7 @@ import { settingsPersistedRoleFamilyState } from '@/settings/roles/states/settin
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { getOperationName } from '~/utils/getOperationName';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { t } from '@lingui/core/macro';
 import { useMutation } from '@apollo/client/react';
 import {
   type RowLevelPermissionPredicateGroupLogicalOperator,
@@ -22,6 +23,20 @@ import {
   UpsertPermissionFlagsDocument,
 } from '~/generated-metadata/graphql';
 import { getRoleDirtyFields } from '@/settings/roles/role/utils/getRoleDirtyFields';
+
+// Apollo Client 4 resolves GraphQL failures as { error } unless the link rejects.
+const assertMutationSucceeded = <TData>(result: {
+  data?: TData | null;
+  error?: unknown;
+}): TData => {
+  if (isDefined(result.error) || !isDefined(result.data)) {
+    throw isDefined(result.error)
+      ? result.error
+      : new Error(t`An error occurred.`);
+  }
+
+  return result.data;
+};
 
 const ROLE_BASIC_KEYS: Array<keyof Role> = [
   'label',
@@ -128,35 +143,37 @@ export const useSaveDraftRoleToDB = ({
   };
 
   const createNewRole = async () => {
-    const { data } = await createRole({
-      variables: {
-        createRoleInput: {
-          id: roleId,
-          label: settingsDraftRole.label,
-          description: settingsDraftRole.description,
-          icon: settingsDraftRole.icon,
-          canUpdateAllSettings: settingsDraftRole.canUpdateAllSettings,
-          canAccessAllTools: settingsDraftRole.canAccessAllTools,
-          canReadAllObjectRecords: settingsDraftRole.canReadAllObjectRecords,
-          canUpdateAllObjectRecords:
-            settingsDraftRole.canUpdateAllObjectRecords,
-          canSoftDeleteAllObjectRecords:
-            settingsDraftRole.canSoftDeleteAllObjectRecords,
-          canDestroyAllObjectRecords:
-            settingsDraftRole.canDestroyAllObjectRecords,
-          canBeAssignedToUsers: settingsDraftRole.canBeAssignedToUsers,
-          canBeAssignedToAgents: settingsDraftRole.canBeAssignedToAgents,
-          canBeAssignedToApiKeys: settingsDraftRole.canBeAssignedToApiKeys,
-        } satisfies Partial<Role>,
-      },
-      refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-    });
+    const data = assertMutationSucceeded(
+      await createRole({
+        variables: {
+          createRoleInput: {
+            id: roleId,
+            label: settingsDraftRole.label,
+            description: settingsDraftRole.description,
+            icon: settingsDraftRole.icon,
+            canUpdateAllSettings: settingsDraftRole.canUpdateAllSettings,
+            canAccessAllTools: settingsDraftRole.canAccessAllTools,
+            canReadAllObjectRecords: settingsDraftRole.canReadAllObjectRecords,
+            canUpdateAllObjectRecords:
+              settingsDraftRole.canUpdateAllObjectRecords,
+            canSoftDeleteAllObjectRecords:
+              settingsDraftRole.canSoftDeleteAllObjectRecords,
+            canDestroyAllObjectRecords:
+              settingsDraftRole.canDestroyAllObjectRecords,
+            canBeAssignedToUsers: settingsDraftRole.canBeAssignedToUsers,
+            canBeAssignedToAgents: settingsDraftRole.canBeAssignedToAgents,
+            canBeAssignedToApiKeys: settingsDraftRole.canBeAssignedToApiKeys,
+          } satisfies Partial<Role>,
+        },
+        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+      }),
+    );
 
-    if (!data) {
-      return;
+    const createdRoleId = data.createOneRole?.id;
+
+    if (!isDefined(createdRoleId)) {
+      throw new Error(t`An error occurred.`);
     }
-
-    const createdRoleId = data.createOneRole.id;
 
     await upsertRolePermissions(createdRoleId);
     await assignEntitiesToRole(createdRoleId);
@@ -166,86 +183,98 @@ export const useSaveDraftRoleToDB = ({
 
   const updateExistingRole = async () => {
     if (isDefined(dirtyFields.permissionFlags)) {
-      await upsertPermissionFlags({
-        variables: {
-          upsertPermissionFlagsInput: {
-            roleId: roleId,
-            permissionFlagKeys:
-              settingsDraftRole.permissionFlags?.map(
-                (permissionFlag) => permissionFlag.flag,
-              ) ?? [],
+      assertMutationSucceeded(
+        await upsertPermissionFlags({
+          variables: {
+            upsertPermissionFlagsInput: {
+              roleId: roleId,
+              permissionFlagKeys:
+                settingsDraftRole.permissionFlags?.map(
+                  (permissionFlag) => permissionFlag.flag,
+                ) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (ROLE_BASIC_KEYS.some((key) => key in dirtyFields)) {
-      await updateRole({
-        variables: {
-          updateRoleInput: {
-            id: roleId,
-            update: {
-              label: settingsDraftRole.label,
-              description: settingsDraftRole.description,
-              icon: settingsDraftRole.icon,
-              canUpdateAllSettings: settingsDraftRole.canUpdateAllSettings,
-              canAccessAllTools: settingsDraftRole.canAccessAllTools,
-              canReadAllObjectRecords:
-                settingsDraftRole.canReadAllObjectRecords,
-              canUpdateAllObjectRecords:
-                settingsDraftRole.canUpdateAllObjectRecords,
-              canSoftDeleteAllObjectRecords:
-                settingsDraftRole.canSoftDeleteAllObjectRecords,
-              canDestroyAllObjectRecords:
-                settingsDraftRole.canDestroyAllObjectRecords,
-              canBeAssignedToUsers: settingsDraftRole.canBeAssignedToUsers,
-              canBeAssignedToAgents: settingsDraftRole.canBeAssignedToAgents,
-              canBeAssignedToApiKeys: settingsDraftRole.canBeAssignedToApiKeys,
+      assertMutationSucceeded(
+        await updateRole({
+          variables: {
+            updateRoleInput: {
+              id: roleId,
+              update: {
+                label: settingsDraftRole.label,
+                description: settingsDraftRole.description,
+                icon: settingsDraftRole.icon,
+                canUpdateAllSettings: settingsDraftRole.canUpdateAllSettings,
+                canAccessAllTools: settingsDraftRole.canAccessAllTools,
+                canReadAllObjectRecords:
+                  settingsDraftRole.canReadAllObjectRecords,
+                canUpdateAllObjectRecords:
+                  settingsDraftRole.canUpdateAllObjectRecords,
+                canSoftDeleteAllObjectRecords:
+                  settingsDraftRole.canSoftDeleteAllObjectRecords,
+                canDestroyAllObjectRecords:
+                  settingsDraftRole.canDestroyAllObjectRecords,
+                canBeAssignedToUsers: settingsDraftRole.canBeAssignedToUsers,
+                canBeAssignedToAgents: settingsDraftRole.canBeAssignedToAgents,
+                canBeAssignedToApiKeys:
+                  settingsDraftRole.canBeAssignedToApiKeys,
+              },
             },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (isDefined(dirtyFields.objectPermissions)) {
-      await upsertObjectPermissions({
-        variables: {
-          upsertObjectPermissionsInput: {
-            roleId: roleId,
-            objectPermissions:
-              settingsDraftRole.objectPermissions?.map((objectPermission) => ({
-                objectMetadataId: objectPermission.objectMetadataId,
-                canReadObjectRecords: objectPermission.canReadObjectRecords,
-                canUpdateObjectRecords: objectPermission.canUpdateObjectRecords,
-                canSoftDeleteObjectRecords:
-                  objectPermission.canSoftDeleteObjectRecords,
-                canDestroyObjectRecords:
-                  objectPermission.canDestroyObjectRecords,
-              })) ?? [],
+      assertMutationSucceeded(
+        await upsertObjectPermissions({
+          variables: {
+            upsertObjectPermissionsInput: {
+              roleId: roleId,
+              objectPermissions:
+                settingsDraftRole.objectPermissions?.map(
+                  (objectPermission) => ({
+                    objectMetadataId: objectPermission.objectMetadataId,
+                    canReadObjectRecords: objectPermission.canReadObjectRecords,
+                    canUpdateObjectRecords:
+                      objectPermission.canUpdateObjectRecords,
+                    canSoftDeleteObjectRecords:
+                      objectPermission.canSoftDeleteObjectRecords,
+                    canDestroyObjectRecords:
+                      objectPermission.canDestroyObjectRecords,
+                  }),
+                ) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (isNonEmptyArray(fieldPermissionsToUpsert) === true) {
-      await upsertFieldPermissions({
-        variables: {
-          upsertFieldPermissionsInput: {
-            roleId: roleId,
-            fieldPermissions:
-              fieldPermissionsToUpsert.map((fieldPermission) => ({
-                objectMetadataId: fieldPermission.objectMetadataId,
-                fieldMetadataId: fieldPermission.fieldMetadataId,
-                canReadFieldValue: fieldPermission.canReadFieldValue,
-                canUpdateFieldValue: fieldPermission.canUpdateFieldValue,
-              })) ?? [],
+      assertMutationSucceeded(
+        await upsertFieldPermissions({
+          variables: {
+            upsertFieldPermissionsInput: {
+              roleId: roleId,
+              fieldPermissions:
+                fieldPermissionsToUpsert.map((fieldPermission) => ({
+                  objectMetadataId: fieldPermission.objectMetadataId,
+                  fieldMetadataId: fieldPermission.fieldMetadataId,
+                  canReadFieldValue: fieldPermission.canReadFieldValue,
+                  canUpdateFieldValue: fieldPermission.canUpdateFieldValue,
+                })) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (
@@ -325,97 +354,109 @@ export const useSaveDraftRoleToDB = ({
         objectUsedGroupIds.has(group.id),
       );
 
-      await upsertRowLevelPermissionPredicates({
-        variables: {
-          input: {
-            roleId: targetRoleId,
-            objectMetadataId,
-            predicates: objectPredicates.map((predicate) => ({
-              id: predicate.id,
-              fieldMetadataId: predicate.fieldMetadataId,
-              operand: predicate.operand as RowLevelPermissionPredicateOperand,
-              value: predicate.value,
-              subFieldName: predicate.subFieldName,
-              workspaceMemberFieldMetadataId:
-                predicate.workspaceMemberFieldMetadataId,
-              workspaceMemberSubFieldName:
-                predicate.workspaceMemberSubFieldName,
-              rowLevelPermissionPredicateGroupId:
-                predicate.rowLevelPermissionPredicateGroupId,
-              positionInRowLevelPermissionPredicateGroup:
-                predicate.positionInRowLevelPermissionPredicateGroup,
-            })),
-            predicateGroups: objectPredicateGroups.map((group) => ({
-              id: group.id,
+      assertMutationSucceeded(
+        await upsertRowLevelPermissionPredicates({
+          variables: {
+            input: {
+              roleId: targetRoleId,
               objectMetadataId,
-              parentRowLevelPermissionPredicateGroupId:
-                group.parentRowLevelPermissionPredicateGroupId,
-              logicalOperator:
-                group.logicalOperator as RowLevelPermissionPredicateGroupLogicalOperator,
-              positionInRowLevelPermissionPredicateGroup:
-                group.positionInRowLevelPermissionPredicateGroup,
-            })),
+              predicates: objectPredicates.map((predicate) => ({
+                id: predicate.id,
+                fieldMetadataId: predicate.fieldMetadataId,
+                operand:
+                  predicate.operand as RowLevelPermissionPredicateOperand,
+                value: predicate.value,
+                subFieldName: predicate.subFieldName,
+                workspaceMemberFieldMetadataId:
+                  predicate.workspaceMemberFieldMetadataId,
+                workspaceMemberSubFieldName:
+                  predicate.workspaceMemberSubFieldName,
+                rowLevelPermissionPredicateGroupId:
+                  predicate.rowLevelPermissionPredicateGroupId,
+                positionInRowLevelPermissionPredicateGroup:
+                  predicate.positionInRowLevelPermissionPredicateGroup,
+              })),
+              predicateGroups: objectPredicateGroups.map((group) => ({
+                id: group.id,
+                objectMetadataId,
+                parentRowLevelPermissionPredicateGroupId:
+                  group.parentRowLevelPermissionPredicateGroupId,
+                logicalOperator:
+                  group.logicalOperator as RowLevelPermissionPredicateGroupLogicalOperator,
+                positionInRowLevelPermissionPredicateGroup:
+                  group.positionInRowLevelPermissionPredicateGroup,
+              })),
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-        awaitRefetchQueries: true,
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+          awaitRefetchQueries: true,
+        }),
+      );
     }
   };
 
   const upsertRolePermissions = async (targetRoleId: string) => {
     if (isDefined(dirtyFields.permissionFlags)) {
-      await upsertPermissionFlags({
-        variables: {
-          upsertPermissionFlagsInput: {
-            roleId: targetRoleId,
-            permissionFlagKeys:
-              settingsDraftRole.permissionFlags?.map(
-                (permissionFlag) => permissionFlag.flag,
-              ) ?? [],
+      assertMutationSucceeded(
+        await upsertPermissionFlags({
+          variables: {
+            upsertPermissionFlagsInput: {
+              roleId: targetRoleId,
+              permissionFlagKeys:
+                settingsDraftRole.permissionFlags?.map(
+                  (permissionFlag) => permissionFlag.flag,
+                ) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (isDefined(dirtyFields.objectPermissions)) {
-      await upsertObjectPermissions({
-        variables: {
-          upsertObjectPermissionsInput: {
-            roleId: targetRoleId,
-            objectPermissions:
-              settingsDraftRole.objectPermissions?.map((objectPermission) => ({
-                objectMetadataId: objectPermission.objectMetadataId,
-                canReadObjectRecords: objectPermission.canReadObjectRecords,
-                canUpdateObjectRecords: objectPermission.canUpdateObjectRecords,
-                canSoftDeleteObjectRecords:
-                  objectPermission.canSoftDeleteObjectRecords,
-                canDestroyObjectRecords:
-                  objectPermission.canDestroyObjectRecords,
-              })) ?? [],
+      assertMutationSucceeded(
+        await upsertObjectPermissions({
+          variables: {
+            upsertObjectPermissionsInput: {
+              roleId: targetRoleId,
+              objectPermissions:
+                settingsDraftRole.objectPermissions?.map(
+                  (objectPermission) => ({
+                    objectMetadataId: objectPermission.objectMetadataId,
+                    canReadObjectRecords: objectPermission.canReadObjectRecords,
+                    canUpdateObjectRecords:
+                      objectPermission.canUpdateObjectRecords,
+                    canSoftDeleteObjectRecords:
+                      objectPermission.canSoftDeleteObjectRecords,
+                    canDestroyObjectRecords:
+                      objectPermission.canDestroyObjectRecords,
+                  }),
+                ) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (isNonEmptyArray(fieldPermissionsToUpsert) === true) {
-      await upsertFieldPermissions({
-        variables: {
-          upsertFieldPermissionsInput: {
-            roleId: targetRoleId,
-            fieldPermissions:
-              fieldPermissionsToUpsert.map((fieldPermission) => ({
-                objectMetadataId: fieldPermission.objectMetadataId,
-                fieldMetadataId: fieldPermission.fieldMetadataId,
-                canReadFieldValue: fieldPermission.canReadFieldValue,
-                canUpdateFieldValue: fieldPermission.canUpdateFieldValue,
-              })) ?? [],
+      assertMutationSucceeded(
+        await upsertFieldPermissions({
+          variables: {
+            upsertFieldPermissionsInput: {
+              roleId: targetRoleId,
+              fieldPermissions:
+                fieldPermissionsToUpsert.map((fieldPermission) => ({
+                  objectMetadataId: fieldPermission.objectMetadataId,
+                  fieldMetadataId: fieldPermission.fieldMetadataId,
+                  canReadFieldValue: fieldPermission.canReadFieldValue,
+                  canUpdateFieldValue: fieldPermission.canUpdateFieldValue,
+                })) ?? [],
+            },
           },
-        },
-        refetchQueries: [getOperationName(GET_ROLES) ?? ''],
-      });
+          refetchQueries: [getOperationName(GET_ROLES) ?? ''],
+        }),
+      );
     }
 
     if (

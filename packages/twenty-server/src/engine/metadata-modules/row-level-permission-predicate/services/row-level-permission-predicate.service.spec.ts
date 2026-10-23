@@ -99,6 +99,7 @@ describe('RowLevelPermissionPredicateService', () => {
       [
         'flatRowLevelPermissionPredicateMaps',
         'flatRowLevelPermissionPredicateGroupMaps',
+        'flatRoleMaps',
         'rolesPermissions',
       ],
     );
