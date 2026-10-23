@@ -55,6 +55,16 @@ export interface StorageDriver {
     responseCacheControl?: string;
   }): Promise<string | null>;
 
+  // Signs a browser GET even when the global presign flag is off.
+  // That flag also switches CRM uploads to presigned PUT.
+  getPresignedDownloadUrl(params: {
+    filePath: string;
+    expiresInSeconds?: number;
+    responseContentType?: string;
+    responseContentDisposition?: string;
+    responseCacheControl?: string;
+  }): Promise<string | null>;
+
   getPresignedUploadUrl(params: {
     filePath: string;
     contentType: string;

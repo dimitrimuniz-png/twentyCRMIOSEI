@@ -1,3 +1,5 @@
+import { i18n } from '@lingui/core';
+import { I18nProvider } from '@lingui/react';
 import { render, screen } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -9,9 +11,11 @@ const BaseWrapper = getJestMetadataAndApolloMocksWrapper({ apolloMocks: [] });
 
 const Wrapper = ({ children }: { children: ReactNode }) => (
   <BaseWrapper>
-    <MemoryRouter initialEntries={['/objects/companies']}>
-      {children}
-    </MemoryRouter>
+    <I18nProvider i18n={i18n}>
+      <MemoryRouter initialEntries={['/objects/companies']}>
+        {children}
+      </MemoryRouter>
+    </I18nProvider>
   </BaseWrapper>
 );
 
@@ -27,6 +31,10 @@ describe('WorkspaceSectionContainer', () => {
     );
 
     expect(screen.getByText('Workspace')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Treinamento' })).toHaveAttribute(
+      'href',
+      '/training',
+    );
     expect(
       screen.getByRole('button', { name: 'Customize' }),
     ).toBeInTheDocument();

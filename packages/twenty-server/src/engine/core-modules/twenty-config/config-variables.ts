@@ -721,6 +721,16 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
     description:
+      'Prefix inside the private storage bucket (or local storage directory) for the sales-training videos, PDF manual, and optional manifest.json. Served only to signed-in workspace members. Default: training',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  @IsString()
+  TRAINING_STORAGE_PREFIX = 'training';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.STORAGE_CONFIG,
+    description:
       'Maximum tarball upload size in bytes for application registration',
     type: ConfigVariableType.NUMBER,
   })

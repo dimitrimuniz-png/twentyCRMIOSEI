@@ -429,6 +429,10 @@ export class LocalDriver implements StorageDriver {
     return null;
   }
 
+  async getPresignedDownloadUrl(): Promise<string | null> {
+    return null;
+  }
+
   async getPresignedUploadUrl(): Promise<string | null> {
     return null;
   }

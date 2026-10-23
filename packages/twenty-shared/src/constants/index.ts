@@ -25,6 +25,12 @@ export { DATE_TYPE_FORMAT } from './DateTypeFormat';
 export { DEFAULT_NUMBER_OF_GROUPS_LIMIT } from './DefaultNumberOfGroupsLimit';
 export { DEFAULT_RELATIVE_DATE_FILTER_VALUE } from './DefaultRelativeDateFilterValue';
 export { DEFAULT_SELECT_OPTION_COLOR } from './DefaultSelectOptionColor';
+export type {
+  TrainingCatalogModule,
+  TrainingCatalogManual,
+  TrainingCatalogDefinition,
+} from './DefaultTrainingCatalog';
+export { DEFAULT_TRAINING_CATALOG } from './DefaultTrainingCatalog';
 export { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from './DefaultViewGroupLoadLimit';
 export { DEFAULT_VISIBLE_ADDRESS_SUBFIELDS } from './DefaultVisibleAddressSubfields';
 export { DEFAULT_WIDGET_SIZE } from './DefaultWidgetSize';
@@ -83,6 +89,7 @@ export { SUBDOMAIN_PATTERN } from './SubdomainPattern';
 export { SystemPermissionFlag } from './SystemPermissionFlag';
 export { TAG_COLORS } from './TagColors';
 export { TOOL_PERMISSION_FLAGS } from './ToolPermissionFlags';
+export { TRAINING_MANIFEST_FILE_NAME } from './TrainingManifestFileName';
 export { TWENTY_COMPANIES_BASE_URL } from './TwentyCompaniesBaseUrl';
 export { TWENTY_ICONS_BASE_URL } from './TwentyIconsBaseUrl';
 export { UI_SCALE_VALUES } from './UiScaleValues';

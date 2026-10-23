@@ -80,6 +80,7 @@ import { WorkspaceEventEmitterModule } from 'src/engine/workspace-event-emitter/
 import { AiToolCallAnswerModule } from 'src/engine/metadata-modules/ai/ai-tool-call-answer/ai-tool-call-answer.module';
 import { ClientConfigModule } from './client-config/client-config.module';
 import { EventLogsViewerModule } from './event-logs/event-logs-viewer.module';
+import { TrainingModule } from 'src/engine/core-modules/training/training.module';
 import { FileApiModule } from './file/file-api.module';
 
 @Module({
@@ -133,6 +134,7 @@ import { FileApiModule } from './file/file-api.module';
     SubscriptionsModule,
     ImapSmtpCaldavModule,
     FileStorageModule.forRoot(),
+    TrainingModule,
     LoggerModule.forRootAsync({
       useFactory: loggerModuleFactory,
       inject: [TwentyConfigService],

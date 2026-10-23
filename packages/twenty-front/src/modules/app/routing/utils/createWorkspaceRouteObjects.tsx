@@ -63,6 +63,12 @@ const MobileHomePage = lazy(() =>
   })),
 );
 
+const TrainingPage = lazy(() =>
+  import('~/pages/training/TrainingPage').then((module) => ({
+    default: module.TrainingPage,
+  })),
+);
+
 const NotFound = lazy(() =>
   import('~/pages/not-found/NotFound').then((module) => ({
     default: module.NotFound,
@@ -166,6 +172,14 @@ export const createWorkspaceRouteObjects = ({
       element: (
         <LazyRoute>
           <MobileHomePage />
+        </LazyRoute>
+      ),
+    },
+    {
+      path: AppPath.TrainingPage,
+      element: (
+        <LazyRoute>
+          <TrainingPage />
         </LazyRoute>
       ),
     },

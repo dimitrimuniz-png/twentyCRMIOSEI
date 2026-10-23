@@ -21,6 +21,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 
 import {
@@ -55,6 +56,8 @@ export class S3Driver implements StorageDriver {
   private s3Client: S3;
   private metadataClient: S3;
   private presignClient: S3 | undefined;
+  // Reachable by the browser. Unset when the only endpoint is internal and no public base is configured.
+  private browserPresignClient: S3 | undefined;
   private bucketName: string;
   private readonly logger = new Logger(S3Driver.name);
   private supportsConditionalCopy = true;
@@ -104,6 +107,19 @@ export class S3Driver implements StorageDriver {
             requestHandler,
           })
         : this.s3Client;
+    }
+
+    if (isNonEmptyString(presignEndpoint)) {
+      this.browserPresignClient = new S3({
+        ...s3Options,
+        region,
+        endpoint: presignEndpoint,
+        requestHandler,
+      });
+    } else if (!isNonEmptyString(endpoint)) {
+      this.browserPresignClient = this.s3Client;
+    } else if (presignEnabled) {
+      this.browserPresignClient = this.s3Client;
     }
   }
 
@@ -566,6 +582,30 @@ export class S3Driver implements StorageDriver {
     });
 
     return getSignedUrl(this.presignClient, command, {
+      expiresIn: params.expiresInSeconds ?? 900,
+    });
+  }
+
+  async getPresignedDownloadUrl(params: {
+    filePath: string;
+    expiresInSeconds?: number;
+    responseContentType?: string;
+    responseContentDisposition?: string;
+    responseCacheControl?: string;
+  }): Promise<string | null> {
+    if (!this.browserPresignClient) {
+      return null;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: params.filePath,
+      ResponseContentType: params.responseContentType,
+      ResponseContentDisposition: params.responseContentDisposition,
+      ResponseCacheControl: params.responseCacheControl,
+    });
+
+    return getSignedUrl(this.browserPresignClient, command, {
       expiresIn: params.expiresInSeconds ?? 900,
     });
   }
