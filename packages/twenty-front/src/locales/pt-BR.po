@@ -13274,6 +13274,11 @@ msgstr "Como os créditos funcionam"
 msgid "How much can be spent, and how often it resets."
 msgstr "Quanto pode ser gasto e com que frequência é redefinido."
 
+#. js-lingui-id: 6C+77a
+#: src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/components/SettingsRolePermissionsObjectLevelRecordLevelSection.tsx
+msgid "How rules combine"
+msgstr "Como as regras se combinam"
+
 #. js-lingui-id: tdbxbk
 #: src/modules/validation-rules/components/SettingsValidationRuleForm.tsx
 msgid "How this rule appears in settings."
@@ -15153,6 +15158,12 @@ msgstr "Limite salvo para este espaço de trabalho."
 msgid "Limit updated."
 msgstr "Limite atualizado."
 
+#. js-lingui-id: mvsLqR
+#. placeholder {0}: objectMetadataItem.labelPlural
+#: src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/components/SettingsRolePermissionsObjectLevelRecordLevelSection.tsx
+msgid "Limit which {0} this role can see. Rules combine with the operator below."
+msgstr "Limite quais {0} esta função pode ver. As regras se combinam com o operador abaixo."
+
 #. js-lingui-id: 6BDqha
 #: src/modules/settings/admin-panel/components/SettingsAdminWorkspaceUsageLimitsSection.tsx
 #: src/modules/settings/billing/components/SettingsBillingLimitEditForm.tsx
@@ -15912,6 +15923,16 @@ msgstr "Corresponder a {entry}"
 #: src/modules/spreadsheet-import/steps/components/SpreadsheetImportStepperContainer.tsx
 msgid "Match Columns"
 msgstr "Correspondência de Colunas"
+
+#. js-lingui-id: sEn3hA
+#: src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/components/SettingsRolePermissionsObjectLevelRecordLevelSection.tsx
+msgid "Match all rules"
+msgstr "Corresponder a todas as regras"
+
+#. js-lingui-id: 3zbsF5
+#: src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/components/SettingsRolePermissionsObjectLevelRecordLevelSection.tsx
+msgid "Match any rule"
+msgstr "Corresponder a qualquer regra"
 
 #. js-lingui-id: CK1KXz
 #: src/modules/ai/utils/getAiModelEffortLabel.ts
@@ -20671,6 +20692,11 @@ msgstr "Rótulo do registro"
 #: src/modules/settings/data-model/object-details/components/tabs/ObjectLayout.tsx
 msgid "Record page"
 msgstr "Página de registro"
+
+#. js-lingui-id: fJ56RB
+#: src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/components/SettingsRolePermissionsObjectLevelRecordLevelSection.tsx
+msgid "Record rules"
+msgstr "Regras de registro"
 
 #. js-lingui-id: pVTJSR
 #: src/modules/command-menu-item/edit/components/CommandMenuItemEditRecordSelectionDropdown.tsx
