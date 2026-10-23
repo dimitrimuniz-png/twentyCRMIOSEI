@@ -1,21 +1,33 @@
-import { StyledIoseiAuthWordmark } from '@/auth/components/iosei-auth/iosei-auth-styles';
+import ioseiLogoUrl from '@/auth/components/assets/iosei-logo.png';
+import {
+  StyledIoseiAuthLogoButton,
+  StyledIoseiAuthLogoFrame,
+} from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { doNotTranslate } from 'twenty-shared/i18n';
+import { isDefined } from 'twenty-shared/utils';
 
 type IoseiLogoProps = {
   onClick?: () => void;
 };
 
-// Text stand-in until the logo PNG is dropped in at
-// packages/twenty-front/src/modules/auth/components/assets/iosei-logo.png
-// (navy mark, 240px wide, on the white card).
+const IOSEI_LOGO_ALT = doNotTranslate('IOSEI Global Operations');
+
 export const IoseiLogo = ({ onClick }: IoseiLogoProps) => {
+  if (!isDefined(onClick)) {
+    return (
+      <StyledIoseiAuthLogoFrame>
+        <img src={ioseiLogoUrl} alt={IOSEI_LOGO_ALT} width={240} />
+      </StyledIoseiAuthLogoFrame>
+    );
+  }
+
   return (
-    <StyledIoseiAuthWordmark
+    <StyledIoseiAuthLogoButton
       type="button"
       onClick={onClick}
-      aria-label={doNotTranslate('IOSEI Global Operations')}
+      aria-label={IOSEI_LOGO_ALT}
     >
-      {doNotTranslate('IOSEI Global Operations')}
-    </StyledIoseiAuthWordmark>
+      <img src={ioseiLogoUrl} alt="" width={240} />
+    </StyledIoseiAuthLogoButton>
   );
 };

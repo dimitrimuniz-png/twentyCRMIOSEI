@@ -7,9 +7,11 @@ import { Controller, useFormContext } from 'react-hook-form';
 export const SignInUpPasswordField = ({
   showErrors,
   signInUpMode,
+  autoFocus = true,
 }: {
   showErrors: boolean;
   signInUpMode: SignInUpMode;
+  autoFocus?: boolean;
 }) => {
   const { t, i18n } = useLingui();
   const form = useFormContext<Form>();
@@ -26,7 +28,7 @@ export const SignInUpPasswordField = ({
         <IoseiAuthPasswordField
           id="sign-in-up-password"
           label={isPortuguese ? 'Senha' : t`Password`}
-          autoFocus
+          autoFocus={autoFocus}
           autoComplete={
             signInUpMode === SignInUpMode.SignUp
               ? 'new-password'
@@ -36,11 +38,6 @@ export const SignInUpPasswordField = ({
           onBlur={onBlur}
           onChange={onChange}
           error={showErrors ? error?.message : undefined}
-          hint={
-            signInUpMode === SignInUpMode.SignUp
-              ? t`At least 8 characters long.`
-              : undefined
-          }
         />
       )}
     />

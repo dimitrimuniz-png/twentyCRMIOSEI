@@ -7,11 +7,9 @@ import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { FormProvider } from 'react-hook-form';
 
+import { IoseiAuthOrDivider } from '@/auth/components/iosei-auth/IoseiAuthOrDivider';
 import { IoseiAuthTextLink } from '@/auth/components/iosei-auth/IoseiAuthTextLink';
-import {
-  StyledIoseiAuthForgotPasswordRow,
-  StyledIoseiAuthMethods,
-} from '@/auth/components/iosei-auth/iosei-auth-styles';
+import { StyledIoseiAuthMethods } from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { StyledOnboardingContentContainer } from '@/auth/components/StyledOnboardingContentContainer';
 import { SignInUpWithCredentials } from '@/auth/sign-in-up/components/internal/SignInUpWithCredentials';
 import { SignInUpWithGoogle } from '@/auth/sign-in-up/components/internal/SignInUpWithGoogle';
@@ -235,33 +233,30 @@ export const SignInUpGlobalScopeForm = () => {
       )}
       {signInUpStep !== SignInUpStep.WorkspaceSelection && (
         <StyledIoseiAuthMethods>
-          {/* oxlint-disable-next-line react/jsx-props-no-spreading */}
-          <FormProvider {...form}>
-            <SignInUpWithCredentials
-              isGlobalScope
-              beforeSubmit={
-                signInUpStep === SignInUpStep.Password ? (
-                  <StyledIoseiAuthForgotPasswordRow>
-                    <IoseiAuthTextLink
-                      onClick={handleResetPassword(form.getValues('email'))}
-                    >
-                      {isPortuguese ? (
-                        'Esqueceu a senha?'
-                      ) : (
-                        <Trans>Forgot your password?</Trans>
-                      )}
-                    </IoseiAuthTextLink>
-                  </StyledIoseiAuthForgotPasswordRow>
-                ) : null
-              }
-            />
-          </FormProvider>
           {authProviders.google && (
             <SignInUpWithGoogle
               action="list-available-workspaces"
               isGlobalScope
             />
           )}
+          {authProviders.google && <IoseiAuthOrDivider />}
+          {/* oxlint-disable-next-line react/jsx-props-no-spreading */}
+          <FormProvider {...form}>
+            <SignInUpWithCredentials
+              isGlobalScope
+              beforeSubmit={
+                <IoseiAuthTextLink
+                  onClick={handleResetPassword(form.getValues('email'))}
+                >
+                  {isPortuguese ? (
+                    'Esqueceu a senha?'
+                  ) : (
+                    <Trans>Forgot your password?</Trans>
+                  )}
+                </IoseiAuthTextLink>
+              }
+            />
+          </FormProvider>
           {authProviders.microsoft && (
             <SignInUpWithMicrosoft
               action="list-available-workspaces"

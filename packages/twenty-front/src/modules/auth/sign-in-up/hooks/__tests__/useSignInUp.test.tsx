@@ -71,11 +71,12 @@ const credentials: Form = {
 const renderUseSignInUp = (
   workspacePublicData: PublicWorkspaceData | null,
   signInUpMode: SignInUpMode = SignInUpMode.SignUp,
+  form: UseFormReturn<Form> = {} as UseFormReturn<Form>,
 ) => {
   jotaiStore.set(workspacePublicDataState.atom, workspacePublicData);
   jotaiStore.set(signInUpModeState.atom, signInUpMode);
 
-  return renderHook(() => useSignInUp({} as UseFormReturn<Form>), {
+  return renderHook(() => useSignInUp(form), {
     wrapper: ({ children }) => (
       <JotaiProvider store={jotaiStore}>
         <I18nProvider i18n={i18n}>
@@ -160,5 +161,80 @@ describe('useSignInUp > submitCredentials > sign-in routing', () => {
     );
     expect(signInWithCredentialsInWorkspaceMock).toHaveBeenCalledTimes(1);
     expect(signInWithCredentialsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('useSignInUp > submitEmailAndPassword', () => {
+  const checkUserExistsQuery = jest.fn();
+  const emailAndPasswordForm = {
+    getValues: (field?: string) => {
+      if (field === 'email') {
+        return 'someone@example.com';
+      }
+
+      if (field === 'password') {
+        return 'Passw0rd!';
+      }
+
+      return credentials;
+    },
+  } as UseFormReturn<Form>;
+
+  beforeEach(() => {
+    resetJotaiStore();
+    jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({
+      signUpWithCredentialsInWorkspace: signUpWithCredentialsInWorkspaceMock,
+      signUpWithCredentials: signUpWithCredentialsMock,
+      signInWithCredentials: signInWithCredentialsMock,
+      signInWithCredentialsInWorkspace: signInWithCredentialsInWorkspaceMock,
+      checkUserExists: { checkUserExistsQuery },
+    });
+  });
+
+  it('signs in from the current mode when the account already exists', async () => {
+    checkUserExistsQuery.mockResolvedValue({
+      data: { checkUserExists: { exists: true } },
+    });
+
+    const { result } = renderUseSignInUp(
+      { id: 'workspace-id' } as PublicWorkspaceData,
+      SignInUpMode.SignUp,
+      emailAndPasswordForm,
+    );
+
+    await act(() => result.current.submitEmailAndPassword());
+
+    expect(signInWithCredentialsInWorkspaceMock).toHaveBeenCalledWith(
+      'someone@example.com',
+      'Passw0rd!',
+      'captcha-token',
+    );
+    expect(signUpWithCredentialsInWorkspaceMock).not.toHaveBeenCalled();
+    expect(jotaiStore.get(signInUpModeState.atom)).toBe(SignInUpMode.SignIn);
+  });
+
+  it('signs up from the current mode when the account does not exist', async () => {
+    checkUserExistsQuery.mockResolvedValue({
+      data: { checkUserExists: { exists: false } },
+    });
+
+    const { result } = renderUseSignInUp(
+      { id: 'workspace-id' } as PublicWorkspaceData,
+      SignInUpMode.SignIn,
+      emailAndPasswordForm,
+    );
+
+    await act(() => result.current.submitEmailAndPassword());
+
+    expect(signUpWithCredentialsInWorkspaceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'someone@example.com',
+        password: 'Passw0rd!',
+        captchaToken: 'captcha-token',
+      }),
+    );
+    expect(signInWithCredentialsInWorkspaceMock).not.toHaveBeenCalled();
+    expect(jotaiStore.get(signInUpModeState.atom)).toBe(SignInUpMode.SignUp);
   });
 });

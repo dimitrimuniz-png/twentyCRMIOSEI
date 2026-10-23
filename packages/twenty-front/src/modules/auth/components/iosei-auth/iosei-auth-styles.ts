@@ -9,9 +9,9 @@ const ioseiTransition =
 
 export const StyledIoseiAuthPage = styled.div`
   align-items: center;
-  background-color: #0b1050;
+  background-color: #f3f4f9;
   background-image: radial-gradient(
-    rgba(255, 255, 255, 0.1) 2px,
+    rgba(11, 16, 80, 0.07) 2px,
     transparent 2px
   );
   background-size: 32px 32px;
@@ -30,7 +30,8 @@ export const StyledIoseiAuthCard = styled.div`
   align-items: center;
   background: #ffffff;
   border-radius: 24px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  border-top: 6px solid #0b1050;
+  box-shadow: 0 20px 60px rgba(11, 16, 80, 0.12);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -44,20 +45,28 @@ export const StyledIoseiAuthCard = styled.div`
   }
 `;
 
-export const StyledIoseiAuthWordmark = styled.button`
+const ioseiLogoFrame = css`
   background: transparent;
   border: 0;
-  color: #0b1050;
-  cursor: pointer;
-  font-family: 'Outfit', system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  display: block;
   margin: 0 0 8px;
   padding: 0;
-  text-align: center;
   width: 240px;
+
+  img {
+    display: block;
+    height: auto;
+    width: 100%;
+  }
+`;
+
+export const StyledIoseiAuthLogoFrame = styled.div`
+  ${ioseiLogoFrame}
+`;
+
+export const StyledIoseiAuthLogoButton = styled.button`
+  ${ioseiLogoFrame}
+  cursor: pointer;
 
   &:focus-visible {
     border-radius: 8px;
@@ -114,7 +123,7 @@ export const StyledIoseiAuthBody = styled.div`
 `;
 
 export const StyledIoseiAuthFooter = styled.p`
-  color: #b9bde6;
+  color: #5a6078;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
   font-weight: 400;
@@ -389,6 +398,72 @@ export const StyledIoseiAuthForgotPasswordRow = styled.div`
   width: 100%;
 `;
 
+export const StyledIoseiAuthOrDivider = styled.div`
+  align-items: center;
+  color: #7a8094;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  gap: 12px;
+  width: 100%;
+
+  &::before,
+  &::after {
+    background: #e1e4ec;
+    content: '';
+    flex: 1;
+    height: 1px;
+  }
+`;
+
+export const StyledIoseiAuthRememberRow = styled.div`
+  align-items: center;
+  color: #4a5068;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  gap: 12px;
+  justify-content: space-between;
+  width: 100%;
+`;
+
+export const StyledIoseiAuthRememberLabel = styled.label`
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+`;
+
+export const StyledIoseiAuthCheckbox = styled.input`
+  appearance: none;
+  background-color: #ffffff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 18px 18px;
+  border: 1.5px solid #9aa0b4;
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: none;
+  height: 18px;
+  margin: 0;
+  width: 18px;
+
+  &:checked {
+    background-color: #0b1050;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4 9.2 7.2 12.4 14 5.6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    border-color: #0b1050;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(11, 16, 80, 0.15);
+    outline: none;
+  }
+`;
+
 export const StyledIoseiAuthCenteredLinkRow = styled.div`
   align-items: center;
   display: flex;
@@ -408,4 +483,27 @@ export const StyledIoseiAuthIconCircle = styled.div`
   justify-content: center;
   margin: 0 auto;
   width: 64px;
+`;
+
+export const StyledIoseiAuthWaitBadge = styled.div`
+  align-items: center;
+  background: #eef0fa;
+  border-radius: 999px;
+  color: #0b1050;
+  display: flex;
+  height: 56px;
+  justify-content: center;
+  margin: 0 auto;
+  width: 56px;
+`;
+
+export const StyledIoseiAuthWaitCopy = styled.p`
+  color: #4a5068;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: break-word;
+  text-align: center;
 `;

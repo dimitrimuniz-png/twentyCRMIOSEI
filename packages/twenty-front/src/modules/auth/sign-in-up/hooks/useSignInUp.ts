@@ -16,6 +16,7 @@ import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { SignInUpMode } from '@/auth/types/SignInUpMode';
 import { useReadCaptchaToken } from '@/captcha/hooks/useReadCaptchaToken';
 import { useCaptcha } from '@/client-config/hooks/useCaptcha';
+import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { useBuildSearchParamsFromUrlSyncedStates } from '@/domain-manager/hooks/useBuildSearchParamsFromUrlSyncedStates';
 import { useIsCurrentLocationOnAWorkspace } from '@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
@@ -49,6 +50,7 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
   const { isOnAWorkspace } = useIsCurrentLocationOnAWorkspace();
   const workspacePublicData = useAtomStateValue(workspacePublicDataState);
   const { isCaptchaReady } = useCaptcha();
+  const isDDLLocked = useAtomStateValue(isDDLLockedState);
   const setLastAuthenticatedMethod = useSetAtomState(
     lastAuthenticatedMethodState,
   );
@@ -140,12 +142,8 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
     errorMsgUserAlreadyExist,
   ]);
 
-  const submitCredentials: SubmitHandler<Form> = useCallback(
-    async (data) => {
-      if (!data.email || !data.password) {
-        throw new Error(t`Email and password are required`);
-      }
-
+  const submitWithMode = useCallback(
+    async (data: { email: string; password: string }, mode: SignInUpMode) => {
       if (!isCaptchaReady) {
         setAuthFormAlert(
           t`Captcha (anti-bot check) is still loading, try again`,
@@ -160,7 +158,7 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
 
         if (
           !isInviteMode &&
-          signInUpMode === SignInUpMode.SignIn &&
+          mode === SignInUpMode.SignIn &&
           isOnAWorkspace &&
           isDefined(workspacePublicData)
         ) {
@@ -173,7 +171,7 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
 
         if (
           !isInviteMode &&
-          signInUpMode === SignInUpMode.SignIn &&
+          mode === SignInUpMode.SignIn &&
           (!isOnAWorkspace || !isDefined(workspacePublicData))
         ) {
           return await signInWithCredentials(
@@ -185,7 +183,7 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
 
         if (
           !isInviteMode &&
-          signInUpMode === SignInUpMode.SignUp &&
+          mode === SignInUpMode.SignUp &&
           (!isOnAWorkspace || !isDefined(workspacePublicData))
         ) {
           return await signUpWithCredentials(
@@ -215,7 +213,6 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
     [
       isCaptchaReady,
       readCaptchaToken,
-      signInUpMode,
       isInviteMode,
       signInWithCredentialsInWorkspace,
       signInWithCredentials,
@@ -233,6 +230,78 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
     ],
   );
 
+  const submitCredentials: SubmitHandler<Form> = useCallback(
+    async (data) => {
+      if (!data.email || !data.password) {
+        throw new Error(t`Email and password are required`);
+      }
+
+      await submitWithMode(
+        { email: data.email, password: data.password },
+        signInUpMode,
+      );
+    },
+    [signInUpMode, submitWithMode, t],
+  );
+
+  const submitEmailAndPassword = useCallback(async () => {
+    const email = form.getValues('email');
+    const password = form.getValues('password') ?? '';
+
+    if (!email || !password) {
+      return;
+    }
+
+    if (!isCaptchaReady) {
+      setAuthFormAlert(t`Captcha (anti-bot check) is still loading, try again`);
+      return;
+    }
+
+    try {
+      setAuthFormAlert(null);
+      const token = readCaptchaToken();
+      const { data, error } = await checkUserExistsQuery({
+        variables: {
+          email: email.toLowerCase().trim(),
+          captchaToken: token,
+        },
+      });
+
+      if (isDefined(error)) {
+        showAuthFormAlertFromError(error);
+        return;
+      }
+
+      const mode = data?.checkUserExists.exists
+        ? SignInUpMode.SignIn
+        : SignInUpMode.SignUp;
+
+      setSignInUpMode(mode);
+      setSignInUpStep(SignInUpStep.Password);
+
+      if (mode === SignInUpMode.SignUp && isDDLLocked) {
+        return;
+      }
+
+      await submitWithMode({ email, password }, mode);
+    } catch {
+      setAuthFormAlert(errorMsgUserAlreadyExist);
+    }
+  }, [
+    form,
+    isCaptchaReady,
+    readCaptchaToken,
+    checkUserExistsQuery,
+    setAuthFormAlert,
+    showAuthFormAlertFromError,
+    setSignInUpMode,
+    setSignInUpStep,
+    isDDLLocked,
+    submitWithMode,
+    t,
+    errorMsgUserAlreadyExist,
+  ]);
+
   return {
     isInviteMode,
     signInUpStep,
@@ -240,5 +309,6 @@ export const useSignInUp = (form: UseFormReturn<Form>) => {
     continueWithCredentials,
     continueWithEmail,
     submitCredentials,
+    submitEmailAndPassword,
   };
 };

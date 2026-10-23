@@ -55,6 +55,8 @@ export const SignInUpStandardContent = ({
         <WorkspaceSelectionFooter />
       )}
       {![
+        SignInUpStep.Init,
+        SignInUpStep.Email,
         SignInUpStep.Password,
         SignInUpStep.TwoFactorAuthenticationProvision,
         SignInUpStep.TwoFactorAuthenticationVerification,
