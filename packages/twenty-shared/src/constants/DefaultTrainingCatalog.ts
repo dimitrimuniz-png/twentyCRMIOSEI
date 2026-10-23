@@ -15,8 +15,6 @@ export type TrainingCatalogDefinition = {
   modules: TrainingCatalogModule[];
 };
 
-export const TRAINING_MANIFEST_FILE_NAME = 'manifest.json';
-
 export const DEFAULT_TRAINING_CATALOG: TrainingCatalogDefinition = {
   manual: {
     fileName: 'manual-crm-iosei.pdf',

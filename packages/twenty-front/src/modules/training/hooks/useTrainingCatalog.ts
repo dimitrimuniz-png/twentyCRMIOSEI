@@ -1,6 +1,7 @@
 import { isObject, isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import { type TrainingCatalogDefinition } from 'twenty-shared/constants';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 const isTrainingCatalog = (
   value: unknown,
@@ -42,13 +43,15 @@ export const useTrainingCatalog = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Training catalog request failed');
+          throw new Error(doNotTranslate('Training catalog request failed'));
         }
 
         const body: unknown = await response.json();
 
         if (!isTrainingCatalog(body)) {
-          throw new Error('Training catalog response is invalid');
+          throw new Error(
+            doNotTranslate('Training catalog response is invalid'),
+          );
         }
 
         if (!cancelled) {

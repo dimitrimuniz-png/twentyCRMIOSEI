@@ -30,10 +30,7 @@ export type {
   TrainingCatalogManual,
   TrainingCatalogDefinition,
 } from './DefaultTrainingCatalog';
-export {
-  TRAINING_MANIFEST_FILE_NAME,
-  DEFAULT_TRAINING_CATALOG,
-} from './DefaultTrainingCatalog';
+export { DEFAULT_TRAINING_CATALOG } from './DefaultTrainingCatalog';
 export { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from './DefaultViewGroupLoadLimit';
 export { DEFAULT_VISIBLE_ADDRESS_SUBFIELDS } from './DefaultVisibleAddressSubfields';
 export { DEFAULT_WIDGET_SIZE } from './DefaultWidgetSize';
@@ -92,6 +89,7 @@ export { SUBDOMAIN_PATTERN } from './SubdomainPattern';
 export { SystemPermissionFlag } from './SystemPermissionFlag';
 export { TAG_COLORS } from './TagColors';
 export { TOOL_PERMISSION_FLAGS } from './ToolPermissionFlags';
+export { TRAINING_MANIFEST_FILE_NAME } from './TrainingManifestFileName';
 export { TWENTY_COMPANIES_BASE_URL } from './TwentyCompaniesBaseUrl';
 export { TWENTY_ICONS_BASE_URL } from './TwentyIconsBaseUrl';
 export { UI_SCALE_VALUES } from './UiScaleValues';

@@ -1,4 +1,5 @@
 import { isNonEmptyString, isObject } from '@sniptt/guards';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const fetchTrainingMediaUrl = async (
   fileName: string,
@@ -9,19 +10,19 @@ export const fetchTrainingMediaUrl = async (
   );
 
   if (!response.ok) {
-    throw new Error('Training media URL request failed');
+    throw new Error(doNotTranslate('Training media URL request failed'));
   }
 
   const body: unknown = await response.json();
 
   if (!isObject(body)) {
-    throw new Error('Training media URL response is invalid');
+    throw new Error(doNotTranslate('Training media URL response is invalid'));
   }
 
   const url = (body as Record<string, unknown>).url;
 
   if (!isNonEmptyString(url)) {
-    throw new Error('Training media URL is missing');
+    throw new Error(doNotTranslate('Training media URL is missing'));
   }
 
   return url;
