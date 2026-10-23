@@ -163,6 +163,46 @@ describe('S3Driver.getFileMetadata', () => {
   });
 });
 
+describe('S3Driver.getPresignedDownloadUrl', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('signs a browser download when the global presign flag is off and the endpoint is AWS', async () => {
+    (getSignedUrl as jest.Mock).mockResolvedValue(
+      'https://s3.us-east-1.amazonaws.com/test-bucket/training/01.mp4?signed=1',
+    );
+
+    const driver = new S3Driver({
+      bucketName: 'test-bucket',
+      region: 'us-east-1',
+    });
+
+    const result = await driver.getPresignedDownloadUrl({
+      filePath: 'training/01.mp4',
+      responseContentType: 'video/mp4',
+    });
+
+    expect(result).toBe(
+      'https://s3.us-east-1.amazonaws.com/test-bucket/training/01.mp4?signed=1',
+    );
+    expect(getSignedUrl).toHaveBeenCalled();
+  });
+
+  it('does not sign a browser download against an internal endpoint without a public base', async () => {
+    const driver = new S3Driver({
+      bucketName: 'test-bucket',
+      region: 'us-east-1',
+      endpoint: 'http://minio:9000',
+    });
+
+    await expect(
+      driver.getPresignedDownloadUrl({ filePath: 'training/01.mp4' }),
+    ).resolves.toBeNull();
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+});
+
 describe('S3Driver.getPresignedUrl', () => {
   afterEach(() => {
     jest.clearAllMocks();

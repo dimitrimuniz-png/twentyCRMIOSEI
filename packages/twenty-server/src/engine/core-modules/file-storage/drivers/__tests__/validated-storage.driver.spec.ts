@@ -19,6 +19,7 @@ const createMockDriver = (): jest.Mocked<StorageDriver> => ({
   checkFileExists: jest.fn().mockResolvedValue(true),
   checkFolderExists: jest.fn().mockResolvedValue(true),
   getPresignedUrl: jest.fn().mockResolvedValue(null),
+  getPresignedDownloadUrl: jest.fn().mockResolvedValue(null),
 });
 
 describe('ValidatedStorageDriver', () => {

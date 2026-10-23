@@ -11,6 +11,7 @@ import { useReadableNavigationMenuItems } from '@/navigation-menu-item/display/h
 import { getObjectMetadataForNavigationMenuItem } from '@/navigation-menu-item/display/object/utils/getObjectMetadataForNavigationMenuItem';
 import { NavigationMenuItemSection } from '@/navigation-menu-item/display/sections/components/NavigationMenuItemSection';
 import { WorkspaceSectionListReadOnly } from '@/navigation-menu-item/display/sections/workspace/components/WorkspaceSectionListReadOnly';
+import { TrainingNavigationDrawerItem } from '@/training/components/TrainingNavigationDrawerItem';
 import type { EditModeProps } from '@/object-metadata/components/EditModeProps';
 import { WorkspaceSectionListEditModeFallback } from '@/object-metadata/components/WorkspaceSectionListEditModeFallback';
 import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMetadataItemsSelector';
@@ -27,6 +28,10 @@ const LazyWorkspaceSectionListDndKit = lazy(() =>
 
 const StyledWorkspaceSectionContentGapOffset = styled.div`
   margin-top: calc(-1 * ${themeCssVariables.betweenSiblingsGap});
+`;
+
+const StyledTrainingItem = styled.div`
+  margin-top: ${themeCssVariables.betweenSiblingsGap};
 `;
 
 type WorkspaceSectionContainerProps = {
@@ -148,6 +153,9 @@ export const WorkspaceSectionContainer = ({
           onActiveObjectMetadataItemClick={onActiveObjectMetadataItemClick}
         />
       )}
+      <StyledTrainingItem>
+        <TrainingNavigationDrawerItem />
+      </StyledTrainingItem>
     </NavigationMenuItemSection>
   );
 };
