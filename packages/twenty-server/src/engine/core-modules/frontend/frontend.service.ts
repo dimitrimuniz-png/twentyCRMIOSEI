@@ -114,8 +114,9 @@ export class FrontendService {
     );
 
     try {
+      const baseUrl = getRequestBaseUrl(request);
       const { workspace, isPublicDomain } = await this.workspaceDomainsService
-        .resolveWorkspaceAndPublicDomain(getRequestBaseUrl(request))
+        .resolveWorkspaceAndPublicDomain(baseUrl)
         .catch((error: unknown) => {
           if (error === WorkspaceNotFoundDefaultError) {
             return { workspace: undefined, isPublicDomain: false };
@@ -147,7 +148,9 @@ export class FrontendService {
         response.removeHeader('X-Frame-Options');
       }
 
-      response.type('html').end(renderFrontendHtml(template, clientConfig));
+      response
+        .type('html')
+        .end(renderFrontendHtml(template, clientConfig, baseUrl));
     } catch (error) {
       this.logger.error('Unable to serve frontend document', error);
       response
