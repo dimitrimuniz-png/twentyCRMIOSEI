@@ -16,15 +16,14 @@ import { t } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { InlineBanner, useToast } from 'twenty-ui/components/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import { Section } from 'twenty-ui/components/layout';
 import { IconPlus } from 'twenty-ui/icon';
 import { Checkbox, Switch } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
-import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 
 const StyledComboInputContainer = styled.div`
   display: flex;
@@ -96,11 +95,7 @@ export const SettingsAdminNewAiModel = () => {
   const { enqueueToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCustomModelId, setIsCustomModelId] = useState(false);
-  const {
-    hasAccess: hasCustomAiProviderAccess,
-    gateDescription: customAiProviderGateDescription,
-    tooltipContent: customAiProviderTooltipContent,
-  } = useCustomAiProviderAccess();
+  const { hasAccess: hasCustomAiProviderAccess } = useCustomAiProviderAccess();
 
   const { data: providersData } = useQuery<GetAiProvidersResult>(
     GET_AI_PROVIDERS,
@@ -342,27 +337,6 @@ export const SettingsAdminNewAiModel = () => {
         }
       >
         <SettingsPageContainer>
-          {!hasCustomAiProviderAccess && (
-            <InlineBanner
-              layout="compact"
-              status="error"
-              action={
-                <InlineBanner.Action
-                  href={getSettingsPath(SettingsPath.AdminPanelOrganization)}
-                  nativeButton={false}
-                  role="link"
-                  render={
-                    <Link
-                      to={getSettingsPath(SettingsPath.AdminPanelOrganization)}
-                    />
-                  }
-                >{t`Activate`}</InlineBanner.Action>
-              }
-            >
-              {customAiProviderGateDescription}
-            </InlineBanner>
-          )}
-
           <Section.Root>
             <Section.Header
               title={t`Model ID`}
@@ -370,11 +344,6 @@ export const SettingsAdminNewAiModel = () => {
                 showModelSelect
                   ? t`Select a known model or add a custom one`
                   : t`The model identifier used by the provider API`
-              }
-              actions={
-                <OrganizationAdornment
-                  tooltipContent={customAiProviderTooltipContent}
-                />
               }
             />
             {showModelSelect ? (

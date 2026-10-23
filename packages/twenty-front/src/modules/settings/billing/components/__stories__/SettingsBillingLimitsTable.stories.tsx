@@ -85,17 +85,7 @@ export const Default: Story = {
 
     await expect(logicFunctionRunsRing).toHaveAttribute('aria-valuenow', '98');
 
-    await userEvent.hover(await canvas.findByText('Deactivated'));
-
-    const tooltip = await within(canvasElement.ownerDocument.body).findByRole(
-      'tooltip',
-      {},
-      { timeout: 2000 },
-    );
-
-    await waitFor(() =>
-      expect(tooltip).toHaveTextContent('require the Organization plan'),
-    );
+    expect(await canvas.findByText('Deactivated')).toBeVisible();
   },
 };
 

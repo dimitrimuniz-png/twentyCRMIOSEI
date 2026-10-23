@@ -97,16 +97,9 @@ const NameCell = ({ item }: { item: UsageLimitRow }) => {
       <StyledNameContainer>
         <StyledName>{item.name}</StyledName>
         {!item.isEnforced && (
-          <Tooltip
-            content={t`Limits on members, API keys and apps require the Organization plan.`}
-            side="top"
-            delay={TooltipDelay.shortDelay}
-            positionMethod="fixed"
-          >
-            <SettingsNameCellSecondaryLabel id={deactivatedAnchorId}>
-              {t`Deactivated`}
-            </SettingsNameCellSecondaryLabel>
-          </Tooltip>
+          <SettingsNameCellSecondaryLabel id={deactivatedAnchorId}>
+            {t`Deactivated`}
+          </SettingsNameCellSecondaryLabel>
         )}
       </StyledNameContainer>
     </StyledCell>

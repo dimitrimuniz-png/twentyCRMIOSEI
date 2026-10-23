@@ -29,7 +29,6 @@ import { capitalize, getSettingsPath, isDefined } from 'twenty-shared/utils';
 import { InlineBanner, useToast } from 'twenty-ui/components/feedback';
 import { Section } from 'twenty-ui/components/layout';
 import { IconPlus } from 'twenty-ui/icon';
-import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 import { getErrorMessageFromApolloError } from '~/utils/get-error-message-from-apollo-error.util';
 import { isGraphqlErrorOfType } from '~/utils/is-graphql-error-of-type.util';
 
@@ -56,11 +55,7 @@ export const SettingsAdminNewAiProvider = () => {
     null,
   );
   const [isCustomMode, setIsCustomMode] = useState(false);
-  const {
-    hasAccess: hasCustomAiProviderAccess,
-    gateDescription: customAiProviderGateDescription,
-    tooltipContent: customAiProviderTooltipContent,
-  } = useCustomAiProviderAccess();
+  const { hasAccess: hasCustomAiProviderAccess } = useCustomAiProviderAccess();
 
   const [addAiProvider] = useMutation(ADD_AI_PROVIDER, {
     client: apolloAdminClient,
@@ -307,36 +302,10 @@ export const SettingsAdminNewAiProvider = () => {
         }
       >
         <SettingsPageContainer>
-          {!hasCustomAiProviderAccess && (
-            <InlineBanner
-              layout="compact"
-              status="error"
-              action={
-                <InlineBanner.Action
-                  href={getSettingsPath(SettingsPath.AdminPanelOrganization)}
-                  nativeButton={false}
-                  role="link"
-                  render={
-                    <Link
-                      to={getSettingsPath(SettingsPath.AdminPanelOrganization)}
-                    />
-                  }
-                >{t`Activate`}</InlineBanner.Action>
-              }
-            >
-              {customAiProviderGateDescription}
-            </InlineBanner>
-          )}
-
           <Section.Root>
             <Section.Header
               title={t`Provider`}
               description={t`Select a known provider or create a custom one`}
-              actions={
-                <OrganizationAdornment
-                  tooltipContent={customAiProviderTooltipContent}
-                />
-              }
             />
             <Select
               dropdownId="ai-provider-models-dev-select"

@@ -42,15 +42,12 @@ export const WorkspaceOnlyPlan: Story = {
     await userEvent.click(within(canvasElement).getByRole('button'));
     const popup = await body.findByRole('dialog', { name: 'Spender' });
 
-    expect(within(popup).getAllByLabelText('Organization')).toHaveLength(3);
     await userEvent.click(within(popup).getByText('User'));
     expect(
       within(popup).queryByRole('button', { name: 'All users' }),
     ).not.toBeInTheDocument();
     expect(args.onChange).not.toHaveBeenCalled();
-    expect(
-      within(popup).getByRole('link', { name: 'Upgrade to Organization' }),
-    ).toHaveAttribute('href', '/settings/billing/plans');
+    expect(within(popup).queryByRole('link')).not.toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
   },
 };
