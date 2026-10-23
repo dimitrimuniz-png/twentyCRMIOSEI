@@ -253,6 +253,7 @@ import { DropBillingMeterTableFastInstanceCommand } from 'src/database/commands/
 import { AddContentSha256ToFileFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581115000-add-content-sha256-to-file';
 import { AddSsoIdentityProviderTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581116000-add-sso-identity-provider-table';
 import { AddWorkspaceAuditLogTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581117000-add-workspace-audit-log-table';
+import { AddWorkspaceMemberApprovalFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-51/2-51-instance-command-fast-1792581118000-add-workspace-member-approval';
 
 export const INSTANCE_COMMANDS = [
   AddViewFieldGroupIdIndexOnViewFieldFastInstanceCommand,
@@ -508,4 +509,5 @@ export const INSTANCE_COMMANDS = [
   AddContentSha256ToFileFastInstanceCommand,
   AddSsoIdentityProviderTableFastInstanceCommand,
   AddWorkspaceAuditLogTableFastInstanceCommand,
+  AddWorkspaceMemberApprovalFastInstanceCommand,
 ];

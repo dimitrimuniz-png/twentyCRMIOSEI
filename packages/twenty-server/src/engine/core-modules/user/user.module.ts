@@ -14,6 +14,8 @@ import { WorkspaceFlatWorkspaceMemberMapCacheService } from 'src/engine/core-mod
 import { WorkspaceMemberTranspiler } from 'src/engine/core-modules/user/services/workspace-member-transpiler.service';
 import { UserVarsModule } from 'src/engine/core-modules/user/user-vars/user-vars.module';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
+import { WorkspaceMemberApprovalResolver } from 'src/engine/core-modules/user/resolvers/workspace-member-approval.resolver';
+import { WorkspaceMemberApprovalService } from 'src/engine/core-modules/user/services/workspace-member-approval.service';
 import { UserResolver } from 'src/engine/core-modules/user/user.resolver';
 import { WorkspaceModule } from 'src/engine/core-modules/workspace/workspace.module';
 import { AgentHistoryModule } from 'src/engine/metadata-modules/ai/ai-history/ai-history.module';
@@ -48,6 +50,8 @@ import { UserService } from './services/user.service';
   providers: [
     UserService,
     UserResolver,
+    WorkspaceMemberApprovalService,
+    WorkspaceMemberApprovalResolver,
     UserEntityCacheProviderService,
     WorkspaceMemberTranspiler,
     WorkspaceFlatWorkspaceMemberMapCacheService,

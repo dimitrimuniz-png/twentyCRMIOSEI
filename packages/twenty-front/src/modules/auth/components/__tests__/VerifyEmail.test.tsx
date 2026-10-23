@@ -1,13 +1,15 @@
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { MemoryRouter } from 'react-router-dom';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
 import { AppPath } from 'twenty-shared/types';
 import { ThemeProvider } from 'twenty-ui/theme';
+import { type PublicWorkspaceData } from '~/generated-metadata/graphql';
 
 import { VerifyEmail } from '@/auth/components/VerifyEmail';
+import { workspacePublicDataState } from '@/auth/states/workspacePublicDataState';
 import { clientConfigApiStatusState } from '@/client-config/states/clientConfigApiStatusState';
 import {
   jotaiStore,
@@ -22,6 +24,11 @@ const verifyLoginTokenMock = jest.fn();
 const redirectToWorkspaceDomainMock = jest.fn();
 
 let isOnAWorkspaceValue = false;
+let isPublicWorkspaceDataSettledValue = true;
+
+const publicWorkspaceData = {
+  id: 'workspace-id',
+} as PublicWorkspaceData;
 
 jest.mock('@/auth/hooks/useAuth', () => ({
   useAuth: () => ({
@@ -38,6 +45,12 @@ jest.mock('@/auth/hooks/useVerifyLogin', () => ({
 jest.mock('@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace', () => ({
   useIsCurrentLocationOnAWorkspace: () => ({
     isOnAWorkspace: isOnAWorkspaceValue,
+  }),
+}));
+
+jest.mock('@/domain-manager/hooks/useGetPublicWorkspaceDataByDomain', () => ({
+  useGetPublicWorkspaceDataByDomain: () => ({
+    isPublicWorkspaceDataSettled: isPublicWorkspaceDataSettledValue,
   }),
 }));
 
@@ -92,6 +105,7 @@ describe('VerifyEmail', () => {
     localStorage.clear();
     resetJotaiStore();
     isOnAWorkspaceValue = false;
+    isPublicWorkspaceDataSettledValue = true;
     // The verification effect is gated on the client config having loaded.
     jotaiStore.set(clientConfigApiStatusState.atom, {
       isLoadedOnce: true,
@@ -138,6 +152,7 @@ describe('VerifyEmail', () => {
 
   it('keeps the workspace-scoped verification path untouched when already on a workspace', async () => {
     isOnAWorkspaceValue = true;
+    jotaiStore.set(workspacePublicDataState.atom, publicWorkspaceData);
     verifyEmailAndGetLoginTokenMock.mockResolvedValue({
       loginToken: { token: 'login-token' },
       workspaceUrls: { subdomainUrl: 'https://foo.twenty.com/' },
@@ -156,8 +171,39 @@ describe('VerifyEmail', () => {
     expect(navigateMock).not.toHaveBeenCalledWith(AppPath.SignInUp);
   });
 
+  it('uses the workspace-agnostic path when single-workspace mode has no workspace yet', async () => {
+    isOnAWorkspaceValue = true;
+    verifyEmailAndGetWorkspaceAgnosticTokenMock.mockResolvedValue(undefined);
+
+    renderVerifyEmail(VERIFY_EMAIL_URL);
+
+    await waitFor(() => {
+      expect(verifyEmailAndGetWorkspaceAgnosticTokenMock).toHaveBeenCalledWith(
+        'valid-token',
+        'user@example.com',
+      );
+    });
+    expect(verifyEmailAndGetLoginTokenMock).not.toHaveBeenCalled();
+  });
+
+  it('waits until public workspace data has settled before verifying', async () => {
+    isPublicWorkspaceDataSettledValue = false;
+
+    renderVerifyEmail(VERIFY_EMAIL_URL);
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+    });
+
+    expect(verifyEmailAndGetWorkspaceAgnosticTokenMock).not.toHaveBeenCalled();
+    expect(verifyEmailAndGetLoginTokenMock).not.toHaveBeenCalled();
+  });
+
   it('exchanges the login token without redirecting when already on the workspace origin', async () => {
     isOnAWorkspaceValue = true;
+    jotaiStore.set(workspacePublicDataState.atom, publicWorkspaceData);
     verifyEmailAndGetLoginTokenMock.mockResolvedValue({
       loginToken: { token: 'login-token' },
       workspaceUrls: { subdomainUrl: `${window.location.origin}/` },

@@ -4,7 +4,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { ApiKeyService } from 'src/engine/core-modules/api-key/services/api-key.service';
 import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
-import { AuthExceptionCode } from 'src/engine/core-modules/auth/auth.exception';
+import {
+  AuthException,
+  AuthExceptionCode,
+} from 'src/engine/core-modules/auth/auth.exception';
 import { EventLogEmitterService } from 'src/engine/core-modules/event-logs/emit/event-log-emitter.service';
 import { ImpersonationAuthorizationService } from 'src/engine/core-modules/impersonation/services/impersonation-authorization.service';
 import { SignInUpService } from 'src/engine/core-modules/auth/services/sign-in-up.service';
@@ -74,6 +77,9 @@ describe('AuthResolver', () => {
     buildWorkspaceURL: jest.Mock;
     getWorkspaceByOriginOrDefaultWorkspace: jest.Mock;
     getWorkspaceUrls: jest.Mock;
+  };
+  let userWorkspaceService: {
+    findFirstWorkspaceByUserId: jest.Mock;
   };
   const mock_CaptchaGuard: CanActivate = { canActivate: jest.fn(() => true) };
 
@@ -274,6 +280,7 @@ describe('AuthResolver', () => {
     signInUpService = module.get(SignInUpService);
     throttlerService = module.get<ThrottlerService>(ThrottlerService);
     userService = module.get(UserService);
+    userWorkspaceService = module.get(UserWorkspaceService);
     workspaceDomainsService = module.get(WorkspaceDomainsService);
   });
 
@@ -318,6 +325,40 @@ describe('AuthResolver', () => {
         AuthProviderEnum.Password,
       );
       expect(appTokenRepository.remove).toHaveBeenCalledWith(appToken);
+    });
+
+    it('does not consume the verification token when no workspace exists yet', async () => {
+      const appToken = { user, context: {} };
+
+      emailVerificationTokenService.validateEmailVerificationTokenOrThrow.mockResolvedValue(
+        appToken,
+      );
+      workspaceDomainsService.getWorkspaceByOriginOrDefaultWorkspace.mockResolvedValue(
+        undefined,
+      );
+      userWorkspaceService.findFirstWorkspaceByUserId.mockRejectedValue(
+        new AuthException(
+          'Workspace not found',
+          AuthExceptionCode.WORKSPACE_NOT_FOUND,
+        ),
+      );
+      userService.markEmailAsVerified.mockClear();
+      appTokenRepository.remove.mockClear();
+
+      await expect(
+        resolver.verifyEmailAndGetLoginToken(
+          {
+            email: user.email,
+            emailVerificationToken: 'email-verification-token',
+          },
+          'https://crm.example.com',
+        ),
+      ).rejects.toMatchObject({
+        code: AuthExceptionCode.WORKSPACE_NOT_FOUND,
+      });
+
+      expect(userService.markEmailAsVerified).not.toHaveBeenCalled();
+      expect(appTokenRepository.remove).not.toHaveBeenCalled();
     });
 
     it('uses the password provider when signing up in a workspace', async () => {

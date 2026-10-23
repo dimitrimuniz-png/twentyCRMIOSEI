@@ -39,6 +39,7 @@ import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { KeyValuePairEntity } from 'src/engine/core-modules/key-value-pair/key-value-pair.entity';
 import { PublicDomainEntity } from 'src/engine/core-modules/public-domain/public-domain.entity';
 import { WorkspaceSsoIdentityProviderEntity } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
+import { ADD_WORKSPACE_MEMBER_APPROVAL_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-51/add-workspace-member-approval-upgrade-command-name.constant';
 import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { WorkspaceDiscoverability } from 'src/engine/core-modules/workspace/types/workspace-discoverability.type';
@@ -124,6 +125,13 @@ export class WorkspaceEntity {
   @Field()
   @Column({ default: true })
   isPublicInviteLinkEnabled: boolean;
+
+  @Field()
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_WORKSPACE_MEMBER_APPROVAL_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ default: true })
+  isMemberApprovalRequired: boolean;
 
   @Field()
   @WasIntroducedInUpgrade({

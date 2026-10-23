@@ -10,10 +10,15 @@ import {
 } from '@nestjs/common';
 
 import { type Response } from 'express';
-import { ApiPath } from 'twenty-shared/types';
+import { ApiPath, AppPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
+import {
+  AuthException,
+  AuthExceptionCode,
+} from 'src/engine/core-modules/auth/auth.exception';
 import { AuthRestApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-rest-api-exception.filter';
+import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
 import { OidcAuthGuard } from 'src/engine/core-modules/auth/guards/oidc-auth.guard';
 import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.guard';
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
@@ -34,6 +39,7 @@ export class SsoAuthController {
     private readonly userService: UserService,
     private readonly loginTokenService: LoginTokenService,
     private readonly twentyConfigService: TwentyConfigService,
+    private readonly domainServerConfigService: DomainServerConfigService,
   ) {}
 
   @Get('saml/login/:identityProviderId')
@@ -96,6 +102,26 @@ export class SsoAuthController {
     request: SamlRequest,
     response: Response,
   ): Promise<void> {
+    try {
+      await this.completeSsoSignIn(request, response);
+    } catch (error) {
+      if (response.headersSent) {
+        throw error;
+      }
+
+      const redirectUrl = this.domainServerConfigService.buildBaseUrl({
+        pathname: AppPath.SignInUp,
+        searchParams: { ssoError: getSsoCallbackErrorCode(error) },
+      });
+
+      response.redirect(redirectUrl.toString());
+    }
+  }
+
+  private async completeSsoSignIn(
+    request: SamlRequest,
+    response: Response,
+  ): Promise<void> {
     const email = request.user.email.toLowerCase();
 
     assertEmailDomainIsAllowed({
@@ -147,6 +173,18 @@ export class SsoAuthController {
     );
   }
 }
+
+const getSsoCallbackErrorCode = (error: unknown): string => {
+  if (error instanceof AuthException) {
+    if (error.message === 'Email domain is not allowed') {
+      return 'EMAIL_DOMAIN_NOT_ALLOWED';
+    }
+
+    return error.code;
+  }
+
+  return AuthExceptionCode.SSO_AUTH_FAILED;
+};
 
 const escapeXml = (value: string): string =>
   value.replace(/[&<>"']/g, (character) => {

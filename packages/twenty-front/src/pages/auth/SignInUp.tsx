@@ -28,6 +28,7 @@ import { useIsCurrentLocationOnDefaultDomain } from '@/domain-manager/hooks/useI
 import { useMemo } from 'react';
 
 import { SignInUpGlobalScopeFormEffect } from '@/auth/sign-in-up/components/internal/SignInUpGlobalScopeFormEffect';
+import { SignInUpSsoErrorEffect } from '@/auth/sign-in-up/components/internal/SignInUpSsoErrorEffect';
 import { SignInUpSsoExchangeTokenEffect } from '@/auth/sign-in-up/components/internal/SignInUpSsoExchangeTokenEffect';
 import { SignInUpTwoFactorAuthenticationProvision } from '@/auth/sign-in-up/components/internal/SignInUpTwoFactorAuthenticationProvision';
 import { SignInUpTwoFactorAuthenticationRecovery } from '@/auth/sign-in-up/components/internal/SignInUpTwoFactorAuthenticationRecovery';
@@ -210,27 +211,34 @@ export const SignInUp = () => {
     workspacePublicData,
   ]);
 
-  return signInUpStep === SignInUpStep.WorkspaceCreation ? (
-    <OnboardingLayout
-      onBack={!isCreatingWorkspace ? onBackFromWorkspaceCreation : undefined}
-    >
-      <StyledOnboardingStepPage>{signInUpForm}</StyledOnboardingStepPage>
-    </OnboardingLayout>
-  ) : (
-    <StyledBackground>
-      {signInUpStep === SignInUpStep.EmailVerification ? (
-        <StyledAuthContent>
-          <EmailVerificationSent email={searchParams.get('email')} />
-        </StyledAuthContent>
+  return (
+    <>
+      <SignInUpSsoErrorEffect />
+      {signInUpStep === SignInUpStep.WorkspaceCreation ? (
+        <OnboardingLayout
+          onBack={
+            !isCreatingWorkspace ? onBackFromWorkspaceCreation : undefined
+          }
+        >
+          <StyledOnboardingStepPage>{signInUpForm}</StyledOnboardingStepPage>
+        </OnboardingLayout>
       ) : (
-        <SignInUpStandardContent
-          workspacePublicData={workspacePublicData}
-          signInUpForm={signInUpForm}
-          signInUpStep={signInUpStep}
-          title={title}
-          onClickOnLogo={onClickOnLogo}
-        />
+        <StyledBackground>
+          {signInUpStep === SignInUpStep.EmailVerification ? (
+            <StyledAuthContent>
+              <EmailVerificationSent email={searchParams.get('email')} />
+            </StyledAuthContent>
+          ) : (
+            <SignInUpStandardContent
+              workspacePublicData={workspacePublicData}
+              signInUpForm={signInUpForm}
+              signInUpStep={signInUpStep}
+              title={title}
+              onClickOnLogo={onClickOnLogo}
+            />
+          )}
+        </StyledBackground>
       )}
-    </StyledBackground>
+    </>
   );
 };

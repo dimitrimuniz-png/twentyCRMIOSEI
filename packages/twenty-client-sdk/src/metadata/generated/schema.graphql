@@ -2793,6 +2793,11 @@ type MarketplaceAppRoleObjectPermission {
   universalIdentifier: String!
 }
 
+type MemberApprovalAssignableRole {
+  id: UUID!
+  label: String!
+}
+
 type MessageCampaignBodyConfiguration {
   configurationType: WidgetConfigurationType!
 }
@@ -3035,6 +3040,7 @@ type Mutation {
   activateWorkspace(data: ActivateWorkspaceInput!): Workspace!
   addAgentChatMessageReaction(emoji: String!, messageId: UUID!): [AgentMessageReactionSummary!]!
   addQueryToEventStream(input: AddQuerySubscriptionInput!): Boolean!
+  approvePendingWorkspaceMember(roleId: UUID!, userWorkspaceId: UUID!): Boolean!
   assignAgentChatThread(assigneeWorkspaceMemberId: UUID, threadId: UUID!): Boolean!
   assignRoleToAgent(agentId: UUID!, roleId: UUID!): Boolean!
   assignRoleToApiKey(apiKeyId: UUID!, roleId: UUID!): Boolean!
@@ -3180,6 +3186,7 @@ type Mutation {
   installApplication(universalIdentifier: String!, version: String): Application!
   installMarketplaceApp(universalIdentifier: String!, version: String): Boolean! @deprecated(reason: "Use installApplication instead")
   refreshEnterpriseValidityToken: Boolean!
+  rejectPendingWorkspaceMember(userWorkspaceId: UUID!): Boolean!
   releaseEnterpriseServerBinding: EnterpriseLicenseInfoDTO!
   removeAgentChatMessageReaction(emoji: String!, messageId: UUID!): [AgentMessageReactionSummary!]!
   removeQueryFromEventStream(input: RemoveQueryFromEventStreamInput!): Boolean!
@@ -3657,6 +3664,14 @@ type PathCommandMenuItemPayload {
   path: String!
 }
 
+type PendingWorkspaceMember {
+  createdAt: DateTime!
+  email: String!
+  firstName: String
+  lastName: String
+  userWorkspaceId: UUID!
+}
+
 type PermissionFlag {
   applicationId: UUID!
   createdAt: DateTime!
@@ -3850,6 +3865,7 @@ type Query {
   currentUserApplicationAuthorizations: [ApplicationAuthorization!]!
   currentUserSessions: [UserSession!]!
   currentWorkspace: Workspace!
+  currentWorkspaceMemberApproval: WorkspaceMemberApproval!
   enterpriseCheckoutSession(billingInterval: String): String
   enterprisePortalSession(returnUrlPath: String): String
   enterpriseSubscriptionStatus: EnterpriseSubscriptionStatusDTO
@@ -3936,6 +3952,7 @@ type Query {
   isApplicationStopped(applicationUniversalIdentifier: String!): Boolean!
   lineChartData(input: LineChartDataInput!): LineChartData!
   listPlans: [BillingPlan!]!
+  memberApprovalAssignableRoles: [MemberApprovalAssignableRole!]!
   messageSuppressions(input: FindMessageSuppressionsInput!): MessageSuppressionList!
   metadataTranslations(input: MetadataTranslationsInput!): [MetadataTranslation!]!
   minimalMetadata: MinimalMetadata!
@@ -3960,6 +3977,7 @@ type Query {
     """Limit or page results."""
     paging: CursorPaging! = {first: 10}
   ): ObjectConnection!
+  pendingWorkspaceMembers: [PendingWorkspaceMember!]!
   pieChartData(input: PieChartDataInput!): PieChartData!
   previewMessageCampaignAudience(input: PreviewMessageCampaignAudienceInput!): CampaignAudiencePreviewDTO!
   previewMessageCampaignSend(input: PreviewMessageCampaignSendInput!): PreviewMessageCampaignSendOutputDTO!
@@ -5170,6 +5188,7 @@ input UpdateWorkspaceInput {
   isGoogleAuthBypassEnabled: Boolean
   isGoogleAuthEnabled: Boolean
   isInternalMessagesImportEnabled: Boolean
+  isMemberApprovalRequired: Boolean
   isMicrosoftAuthBypassEnabled: Boolean
   isMicrosoftAuthEnabled: Boolean
   isPasswordAuthBypassEnabled: Boolean
@@ -5551,6 +5570,7 @@ type UserSession {
 }
 
 type UserWorkspace {
+  approvalStatus: WorkspaceMemberApprovalStatus!
   createdAt: DateTime!
   deletedAt: DateTime
   id: UUID!
@@ -5923,6 +5943,7 @@ type Workspace {
   isGoogleAuthBypassEnabled: Boolean!
   isGoogleAuthEnabled: Boolean!
   isInternalMessagesImportEnabled: Boolean!
+  isMemberApprovalRequired: Boolean!
   isMicrosoftAuthBypassEnabled: Boolean!
   isMicrosoftAuthEnabled: Boolean!
   isPasswordAuthBypassEnabled: Boolean!
@@ -6022,6 +6043,17 @@ type WorkspaceMemberApplicationVariables {
   userWorkspaceId: UUID!
   variables: [UserApplicationVariableValue!]!
   workspaceMemberId: UUID!
+}
+
+type WorkspaceMemberApproval {
+  approvalStatus: WorkspaceMemberApprovalStatus!
+  isMemberApprovalRequired: Boolean!
+}
+
+enum WorkspaceMemberApprovalStatus {
+  APPROVED
+  PENDING
+  REJECTED
 }
 
 """Date format as Month first, Day first, Year first or system as default"""

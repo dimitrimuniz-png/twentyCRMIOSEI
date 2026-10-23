@@ -9,6 +9,7 @@ export const fromUserWorkspaceEntityToFlat = (
   userId: entity.userId,
   defaultAvatarUrl: entity.defaultAvatarUrl,
   locale: entity.locale,
+  approvalStatus: entity.approvalStatus,
   createdAt: entity.createdAt.toISOString(),
   updatedAt: entity.updatedAt.toISOString(),
   deletedAt: entity.deletedAt?.toISOString() ?? null,

@@ -1,0 +1,2 @@
+export const ADD_WORKSPACE_MEMBER_APPROVAL_UPGRADE_COMMAND_NAME =
+  '2.51.0_AddWorkspaceMemberApprovalFastInstanceCommand_1792581118000';

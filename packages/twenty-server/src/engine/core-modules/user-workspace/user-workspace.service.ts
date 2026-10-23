@@ -24,7 +24,10 @@ import { FileCorePictureService } from 'src/engine/core-modules/file/file-core-p
 import { FileUrlService } from 'src/engine/core-modules/file/file-url/file-url.service';
 import { extractFileIdFromUrl } from 'src/engine/core-modules/file/files-field/utils/extract-file-id-from-url.util';
 import { OnboardingService } from 'src/engine/core-modules/onboarding/onboarding.service';
+import { WorkspaceMemberApprovalStatus } from 'src/engine/core-modules/user-workspace/enums/workspace-member-approval-status.enum';
+import { WorkspaceMemberApprovalNotifierService } from 'src/engine/core-modules/user-workspace/services/workspace-member-approval-notifier.service';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
+import { resolveInitialWorkspaceMemberApprovalStatus } from 'src/engine/core-modules/user-workspace/utils/resolve-initial-workspace-member-approval-status.util';
 import { WorkflowRunRecordShareService } from 'src/engine/core-modules/workflow/services/workflow-run-record-share.service';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { WorkspaceInvitationService } from 'src/engine/core-modules/workspace-invitation/services/workspace-invitation.service';
@@ -73,6 +76,7 @@ export class UserWorkspaceService {
     private readonly twentyConfigService: TwentyConfigService,
     private readonly workflowRunRecordShareService: WorkflowRunRecordShareService,
     private readonly workspaceCacheService: WorkspaceCacheService,
+    private readonly workspaceMemberApprovalNotifierService: WorkspaceMemberApprovalNotifierService,
   ) {}
 
   async findById(id: string): Promise<UserWorkspaceEntity | null> {
@@ -129,6 +133,7 @@ export class UserWorkspaceService {
       pictureUrl,
       applicationUniversalIdentifier,
       locale,
+      approvalStatus = WorkspaceMemberApprovalStatus.APPROVED,
     }: {
       userId: string;
       workspaceId: string;
@@ -136,6 +141,7 @@ export class UserWorkspaceService {
       pictureUrl?: string;
       applicationUniversalIdentifier?: string;
       locale?: UserWorkspaceEntity['locale'];
+      approvalStatus?: WorkspaceMemberApprovalStatus;
     },
     queryRunner?: QueryRunner,
   ): Promise<UserWorkspaceEntity> {
@@ -153,6 +159,7 @@ export class UserWorkspaceService {
       workspaceId,
       defaultAvatarUrl,
       locale: locale ?? SOURCE_LOCALE,
+      approvalStatus,
     });
 
     return queryRunner
@@ -222,6 +229,7 @@ export class UserWorkspaceService {
     user: UserEntity,
     workspace: WorkspaceEntity,
     roleId?: string | null,
+    options?: { isExplicitlyInvited?: boolean },
   ) {
     const existingUserWorkspace = await this.checkUserWorkspaceExists(
       user.id,
@@ -237,11 +245,18 @@ export class UserWorkspaceService {
       workspace,
     );
 
+    const approvalStatus = resolveInitialWorkspaceMemberApprovalStatus({
+      isMemberApprovalRequired: workspace.isMemberApprovalRequired === true,
+      isWorkspaceCreator: false,
+      isExplicitlyInvited: options?.isExplicitlyInvited === true,
+    });
+
     const userWorkspace = await this.create({
       userId: user.id,
       workspaceId: workspace.id,
       isExistingUser: true,
       locale: user.locale,
+      approvalStatus,
     });
 
     await this.createWorkspaceMember(workspace.id, user);
@@ -266,6 +281,15 @@ export class UserWorkspaceService {
       workspaceId: workspace.id,
       value: true,
     });
+
+    if (approvalStatus === WorkspaceMemberApprovalStatus.PENDING) {
+      await this.workspaceMemberApprovalNotifierService.notifyAdminsOfPendingMember(
+        {
+          workspace,
+          pendingUser: user,
+        },
+      );
+    }
   }
 
   private async resolveRoleIdForNewMember(

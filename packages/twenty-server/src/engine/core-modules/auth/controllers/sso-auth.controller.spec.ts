@@ -21,6 +21,7 @@ import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.gua
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
 import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
+import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
 import { GuardRedirectService } from 'src/engine/core-modules/guard-redirect/services/guard-redirect.service';
@@ -109,6 +110,30 @@ describe('SsoAuthController', () => {
 
               return 'http://localhost:3000';
             }),
+          },
+        },
+        {
+          provide: DomainServerConfigService,
+          useValue: {
+            buildBaseUrl: jest.fn(
+              ({
+                pathname,
+                searchParams,
+              }: {
+                pathname?: string;
+                searchParams?: Record<string, string>;
+              }) => {
+                const url = new URL('http://localhost:3000');
+
+                url.pathname = pathname ?? '/';
+
+                for (const [key, value] of Object.entries(searchParams ?? {})) {
+                  url.searchParams.set(key, value);
+                }
+
+                return url;
+              },
+            ),
           },
         },
         { provide: GuardRedirectService, useValue: {} },
@@ -239,23 +264,33 @@ describe('SsoAuthController', () => {
 
     const response = buildResponse();
 
-    await expect(
-      controller.oidcAuthCallback(
-        {
-          user: {
-            identityProviderId: IDENTITY_PROVIDER_ID,
-            email: 'Person@gmail.com',
-          },
-        } as SamlRequest,
-        response,
-      ),
-    ).rejects.toMatchObject({
-      message: 'Email domain is not allowed',
-      code: AuthExceptionCode.FORBIDDEN_EXCEPTION,
-    });
+    await controller.oidcAuthCallback(
+      {
+        user: {
+          identityProviderId: IDENTITY_PROVIDER_ID,
+          email: 'Person@gmail.com',
+        },
+      } as SamlRequest,
+      response,
+    );
 
     expect(authService.signInUp).not.toHaveBeenCalled();
-    expect(response.redirect).not.toHaveBeenCalled();
+    expect(response.redirect).toHaveBeenCalledWith(
+      'http://localhost:3000/welcome?ssoError=EMAIL_DOMAIN_NOT_ALLOWED',
+    );
+  });
+
+  it('redirects other SSO callback failures back to the login page', async () => {
+    userService.findUserByEmail.mockResolvedValue(null);
+    authService.signInUp.mockRejectedValue(new Error('identity provider down'));
+
+    const response = buildResponse();
+
+    await controller.oidcAuthCallback(buildSamlRequest(), response);
+
+    expect(response.redirect).toHaveBeenCalledWith(
+      `http://localhost:3000/welcome?ssoError=${AuthExceptionCode.SSO_AUTH_FAILED}`,
+    );
   });
 
   it('accepts an SSO callback for an allowed domain', async () => {

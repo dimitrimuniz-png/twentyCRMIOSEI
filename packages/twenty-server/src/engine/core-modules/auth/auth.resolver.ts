@@ -100,6 +100,7 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
 import { AuthProvider } from 'src/engine/decorators/auth/auth-provider.decorator';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
+import { AllowPendingWorkspaceMember } from 'src/engine/decorators/auth/allow-pending-workspace-member.decorator';
 import { AllowSuspendedWorkspace } from 'src/engine/decorators/auth/allow-suspended-workspace.decorator';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
@@ -317,6 +318,19 @@ export class AuthResolver {
         getAuthTokenFromEmailVerificationTokenInput,
       );
 
+    const workspaceFromOrigin =
+      await this.workspaceDomainsService.getWorkspaceByOriginOrDefaultWorkspace(
+        origin,
+      );
+
+    // Resolve a workspace before the token is consumed. A fresh single-workspace
+    // install has none yet, and deleting the token here left the user unable to sign in.
+    const workspace = isDefined(workspaceFromOrigin)
+      ? workspaceFromOrigin
+      : await this.userWorkspaceService.findFirstWorkspaceByUserId(
+          appToken.user.id,
+        );
+
     if (
       appToken.context?.email &&
       appToken.context.email !== appToken.user.email
@@ -330,12 +344,6 @@ export class AuthResolver {
     const user = await this.userService.markEmailAsVerified(appToken.user.id);
 
     await this.appTokenRepository.remove(appToken);
-
-    const workspace =
-      (await this.workspaceDomainsService.getWorkspaceByOriginOrDefaultWorkspace(
-        origin,
-      )) ??
-      (await this.userWorkspaceService.findFirstWorkspaceByUserId(user.id));
 
     await this.authService.joinWorkspaceIfInvited({ user, workspace });
 
@@ -1163,6 +1171,7 @@ export class AuthResolver {
   @Mutation(() => AuthTokens)
   @UseGuards(PublicEndpointGuard, NoPermissionGuard)
   @AllowSuspendedWorkspace()
+  @AllowPendingWorkspaceMember()
   async renewToken(
     @Args() args: AppTokenInput,
     @Context() context: { req: Request },
@@ -1183,6 +1192,7 @@ export class AuthResolver {
   @Mutation(() => Boolean)
   @UseGuards(PublicEndpointGuard, NoPermissionGuard)
   @AllowSuspendedWorkspace()
+  @AllowPendingWorkspaceMember()
   async signOut(
     @Context() context: { req: Request },
     @Args('refreshToken', { nullable: true }) refreshToken?: string,

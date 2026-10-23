@@ -1912,6 +1912,12 @@ export interface MarketplaceAppRoleObjectPermission {
     __typename: 'MarketplaceAppRoleObjectPermission'
 }
 
+export interface MemberApprovalAssignableRole {
+    id: Scalars['UUID']
+    label: Scalars['String']
+    __typename: 'MemberApprovalAssignableRole'
+}
+
 export interface MessageCampaignBodyConfiguration {
     configurationType: WidgetConfigurationType
     __typename: 'MessageCampaignBodyConfiguration'
@@ -2077,6 +2083,7 @@ export interface Mutation {
     activateWorkspace: Workspace
     addAgentChatMessageReaction: AgentMessageReactionSummary[]
     addQueryToEventStream: Scalars['Boolean']
+    approvePendingWorkspaceMember: Scalars['Boolean']
     assignAgentChatThread: Scalars['Boolean']
     assignRoleToAgent: Scalars['Boolean']
     assignRoleToApiKey: Scalars['Boolean']
@@ -2224,6 +2231,7 @@ export interface Mutation {
     /** @deprecated Use installApplication instead */
     installMarketplaceApp: Scalars['Boolean']
     refreshEnterpriseValidityToken: Scalars['Boolean']
+    rejectPendingWorkspaceMember: Scalars['Boolean']
     releaseEnterpriseServerBinding: EnterpriseLicenseInfoDTO
     removeAgentChatMessageReaction: AgentMessageReactionSummary[]
     removeQueryFromEventStream: Scalars['Boolean']
@@ -2649,6 +2657,15 @@ export interface PathCommandMenuItemPayload {
     __typename: 'PathCommandMenuItemPayload'
 }
 
+export interface PendingWorkspaceMember {
+    createdAt: Scalars['DateTime']
+    email: Scalars['String']
+    firstName?: Scalars['String']
+    lastName?: Scalars['String']
+    userWorkspaceId: Scalars['UUID']
+    __typename: 'PendingWorkspaceMember'
+}
+
 export interface PermissionFlag {
     applicationId: Scalars['UUID']
     createdAt: Scalars['DateTime']
@@ -2814,6 +2831,7 @@ export interface Query {
     currentUserApplicationAuthorizations: ApplicationAuthorization[]
     currentUserSessions: UserSession[]
     currentWorkspace: Workspace
+    currentWorkspaceMemberApproval: WorkspaceMemberApproval
     enterpriseCheckoutSession?: Scalars['String']
     enterprisePortalSession?: Scalars['String']
     enterpriseSubscriptionStatus?: EnterpriseSubscriptionStatusDTO
@@ -2891,6 +2909,7 @@ export interface Query {
     isApplicationStopped: Scalars['Boolean']
     lineChartData: LineChartData
     listPlans: BillingPlan[]
+    memberApprovalAssignableRoles: MemberApprovalAssignableRole[]
     messageSuppressions: MessageSuppressionList
     metadataTranslations: MetadataTranslation[]
     minimalMetadata: MinimalMetadata
@@ -2906,6 +2925,7 @@ export interface Query {
     object: Object
     objectRecordCounts: ObjectRecordCount[]
     objects: ObjectConnection
+    pendingWorkspaceMembers: PendingWorkspaceMember[]
     pieChartData: PieChartData
     previewMessageCampaignAudience: CampaignAudiencePreviewDTO
     previewMessageCampaignSend: PreviewMessageCampaignSendOutputDTO
@@ -3594,6 +3614,7 @@ export interface UserSession {
 }
 
 export interface UserWorkspace {
+    approvalStatus: WorkspaceMemberApprovalStatus
     createdAt: Scalars['DateTime']
     deletedAt?: Scalars['DateTime']
     id: Scalars['UUID']
@@ -3880,6 +3901,7 @@ export interface Workspace {
     isGoogleAuthBypassEnabled: Scalars['Boolean']
     isGoogleAuthEnabled: Scalars['Boolean']
     isInternalMessagesImportEnabled: Scalars['Boolean']
+    isMemberApprovalRequired: Scalars['Boolean']
     isMicrosoftAuthBypassEnabled: Scalars['Boolean']
     isMicrosoftAuthEnabled: Scalars['Boolean']
     isPasswordAuthBypassEnabled: Scalars['Boolean']
@@ -3974,6 +3996,14 @@ export interface WorkspaceMemberApplicationVariables {
     workspaceMemberId: Scalars['UUID']
     __typename: 'WorkspaceMemberApplicationVariables'
 }
+
+export interface WorkspaceMemberApproval {
+    approvalStatus: WorkspaceMemberApprovalStatus
+    isMemberApprovalRequired: Scalars['Boolean']
+    __typename: 'WorkspaceMemberApproval'
+}
+
+export type WorkspaceMemberApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED'
 
 
 /** Date format as Month first, Day first, Year first or system as default */
@@ -6215,6 +6245,13 @@ export interface MarketplaceAppRoleObjectPermissionGenqlSelection{
     __scalar?: boolean | number
 }
 
+export interface MemberApprovalAssignableRoleGenqlSelection{
+    id?: boolean | number
+    label?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
 export interface MessageCampaignBodyConfigurationGenqlSelection{
     configurationType?: boolean | number
     __typename?: boolean | number
@@ -6360,6 +6397,7 @@ export interface MutationGenqlSelection{
     activateWorkspace?: (WorkspaceGenqlSelection & { __args: {data: ActivateWorkspaceInput} })
     addAgentChatMessageReaction?: (AgentMessageReactionSummaryGenqlSelection & { __args: {emoji: Scalars['String'], messageId: Scalars['UUID']} })
     addQueryToEventStream?: { __args: {input: AddQuerySubscriptionInput} }
+    approvePendingWorkspaceMember?: { __args: {roleId: Scalars['UUID'], userWorkspaceId: Scalars['UUID']} }
     assignAgentChatThread?: { __args: {assigneeWorkspaceMemberId?: (Scalars['UUID'] | null), threadId: Scalars['UUID']} }
     assignRoleToAgent?: { __args: {agentId: Scalars['UUID'], roleId: Scalars['UUID']} }
     assignRoleToApiKey?: { __args: {apiKeyId: Scalars['UUID'], roleId: Scalars['UUID']} }
@@ -6507,6 +6545,7 @@ export interface MutationGenqlSelection{
     /** @deprecated Use installApplication instead */
     installMarketplaceApp?: { __args: {universalIdentifier: Scalars['String'], version?: (Scalars['String'] | null)} }
     refreshEnterpriseValidityToken?: boolean | number
+    rejectPendingWorkspaceMember?: { __args: {userWorkspaceId: Scalars['UUID']} }
     releaseEnterpriseServerBinding?: EnterpriseLicenseInfoDTOGenqlSelection
     removeAgentChatMessageReaction?: (AgentMessageReactionSummaryGenqlSelection & { __args: {emoji: Scalars['String'], messageId: Scalars['UUID']} })
     removeQueryFromEventStream?: { __args: {input: RemoveQueryFromEventStreamInput} }
@@ -6952,6 +6991,16 @@ export interface PathCommandMenuItemPayloadGenqlSelection{
     __scalar?: boolean | number
 }
 
+export interface PendingWorkspaceMemberGenqlSelection{
+    createdAt?: boolean | number
+    email?: boolean | number
+    firstName?: boolean | number
+    lastName?: boolean | number
+    userWorkspaceId?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
 export interface PermissionFlagGenqlSelection{
     applicationId?: boolean | number
     createdAt?: boolean | number
@@ -7135,6 +7184,7 @@ export interface QueryGenqlSelection{
     currentUserApplicationAuthorizations?: ApplicationAuthorizationGenqlSelection
     currentUserSessions?: UserSessionGenqlSelection
     currentWorkspace?: WorkspaceGenqlSelection
+    currentWorkspaceMemberApproval?: WorkspaceMemberApprovalGenqlSelection
     enterpriseCheckoutSession?: { __args: {billingInterval?: (Scalars['String'] | null)} } | boolean | number
     enterprisePortalSession?: { __args: {returnUrlPath?: (Scalars['String'] | null)} } | boolean | number
     enterpriseSubscriptionStatus?: EnterpriseSubscriptionStatusDTOGenqlSelection
@@ -7218,6 +7268,7 @@ export interface QueryGenqlSelection{
     isApplicationStopped?: { __args: {applicationUniversalIdentifier: Scalars['String']} }
     lineChartData?: (LineChartDataGenqlSelection & { __args: {input: LineChartDataInput} })
     listPlans?: BillingPlanGenqlSelection
+    memberApprovalAssignableRoles?: MemberApprovalAssignableRoleGenqlSelection
     messageSuppressions?: (MessageSuppressionListGenqlSelection & { __args: {input: FindMessageSuppressionsInput} })
     metadataTranslations?: (MetadataTranslationGenqlSelection & { __args: {input: MetadataTranslationsInput} })
     minimalMetadata?: MinimalMetadataGenqlSelection
@@ -7239,6 +7290,7 @@ export interface QueryGenqlSelection{
     filter: ObjectFilter, 
     /** Limit or page results. */
     paging: CursorPaging} })
+    pendingWorkspaceMembers?: PendingWorkspaceMemberGenqlSelection
     pieChartData?: (PieChartDataGenqlSelection & { __args: {input: PieChartDataInput} })
     previewMessageCampaignAudience?: (CampaignAudiencePreviewDTOGenqlSelection & { __args: {input: PreviewMessageCampaignAudienceInput} })
     previewMessageCampaignSend?: (PreviewMessageCampaignSendOutputDTOGenqlSelection & { __args: {input: PreviewMessageCampaignSendInput} })
@@ -7988,7 +8040,7 @@ export interface UpdateWebhookInputUpdates {description?: (Scalars['String'] | n
 
 export interface UpdateWorkspaceAllowedIframeOriginsInput {operation: Scalars['String'],origin: Scalars['String']}
 
-export interface UpdateWorkspaceInput {aiAdditionalInstructions?: (Scalars['String'] | null),aiAgentModelTier?: (AiModelTier | null),aiChatModelTier?: (AiModelTier | null),aiEvaluationModelId?: (Scalars['String'] | null),aiModelIdByTier?: (Scalars['JSON'] | null),allowImpersonation?: (Scalars['Boolean'] | null),customDomain?: (Scalars['String'] | null),defaultRoleId?: (Scalars['UUID'] | null),displayName?: (Scalars['String'] | null),editableProfileFields?: (Scalars['String'][] | null),eventLogRetentionDays?: (Scalars['Float'] | null),inviteHash?: (Scalars['String'] | null),isAutoModelSelectionEnabled?: (Scalars['Boolean'] | null),isCampaignClickTrackingEnabled?: (Scalars['Boolean'] | null),isCampaignOpenTrackingEnabled?: (Scalars['Boolean'] | null),isGoogleAuthBypassEnabled?: (Scalars['Boolean'] | null),isGoogleAuthEnabled?: (Scalars['Boolean'] | null),isInternalMessagesImportEnabled?: (Scalars['Boolean'] | null),isMicrosoftAuthBypassEnabled?: (Scalars['Boolean'] | null),isMicrosoftAuthEnabled?: (Scalars['Boolean'] | null),isPasswordAuthBypassEnabled?: (Scalars['Boolean'] | null),isPasswordAuthEnabled?: (Scalars['Boolean'] | null),isPublicInviteLinkEnabled?: (Scalars['Boolean'] | null),isTwoFactorAuthenticationEnforced?: (Scalars['Boolean'] | null),logo?: (Scalars['String'] | null),subdomain?: (Scalars['String'] | null),trashRetentionDays?: (Scalars['Float'] | null),workspaceDiscoverability?: (WorkspaceDiscoverability | null)}
+export interface UpdateWorkspaceInput {aiAdditionalInstructions?: (Scalars['String'] | null),aiAgentModelTier?: (AiModelTier | null),aiChatModelTier?: (AiModelTier | null),aiEvaluationModelId?: (Scalars['String'] | null),aiModelIdByTier?: (Scalars['JSON'] | null),allowImpersonation?: (Scalars['Boolean'] | null),customDomain?: (Scalars['String'] | null),defaultRoleId?: (Scalars['UUID'] | null),displayName?: (Scalars['String'] | null),editableProfileFields?: (Scalars['String'][] | null),eventLogRetentionDays?: (Scalars['Float'] | null),inviteHash?: (Scalars['String'] | null),isAutoModelSelectionEnabled?: (Scalars['Boolean'] | null),isCampaignClickTrackingEnabled?: (Scalars['Boolean'] | null),isCampaignOpenTrackingEnabled?: (Scalars['Boolean'] | null),isGoogleAuthBypassEnabled?: (Scalars['Boolean'] | null),isGoogleAuthEnabled?: (Scalars['Boolean'] | null),isInternalMessagesImportEnabled?: (Scalars['Boolean'] | null),isMemberApprovalRequired?: (Scalars['Boolean'] | null),isMicrosoftAuthBypassEnabled?: (Scalars['Boolean'] | null),isMicrosoftAuthEnabled?: (Scalars['Boolean'] | null),isPasswordAuthBypassEnabled?: (Scalars['Boolean'] | null),isPasswordAuthEnabled?: (Scalars['Boolean'] | null),isPublicInviteLinkEnabled?: (Scalars['Boolean'] | null),isTwoFactorAuthenticationEnforced?: (Scalars['Boolean'] | null),logo?: (Scalars['String'] | null),subdomain?: (Scalars['String'] | null),trashRetentionDays?: (Scalars['Float'] | null),workspaceDiscoverability?: (WorkspaceDiscoverability | null)}
 
 export interface UpdateWorkspaceMemberSettingsInput {update: Scalars['JSON'],workspaceMemberId: Scalars['UUID']}
 
@@ -8237,6 +8289,7 @@ export interface UserSessionGenqlSelection{
 }
 
 export interface UserWorkspaceGenqlSelection{
+    approvalStatus?: boolean | number
     createdAt?: boolean | number
     deletedAt?: boolean | number
     id?: boolean | number
@@ -8555,6 +8608,7 @@ export interface WorkspaceGenqlSelection{
     isGoogleAuthBypassEnabled?: boolean | number
     isGoogleAuthEnabled?: boolean | number
     isInternalMessagesImportEnabled?: boolean | number
+    isMemberApprovalRequired?: boolean | number
     isMicrosoftAuthBypassEnabled?: boolean | number
     isMicrosoftAuthEnabled?: boolean | number
     isPasswordAuthBypassEnabled?: boolean | number
@@ -8648,6 +8702,13 @@ export interface WorkspaceMemberApplicationVariablesGenqlSelection{
     userWorkspaceId?: boolean | number
     variables?: UserApplicationVariableValueGenqlSelection
     workspaceMemberId?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface WorkspaceMemberApprovalGenqlSelection{
+    approvalStatus?: boolean | number
+    isMemberApprovalRequired?: boolean | number
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -10113,6 +10174,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     
 
 
+    const MemberApprovalAssignableRole_possibleTypes: string[] = ['MemberApprovalAssignableRole']
+    export const isMemberApprovalAssignableRole = (obj?: { __typename?: any } | null): obj is MemberApprovalAssignableRole => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isMemberApprovalAssignableRole"')
+      return MemberApprovalAssignableRole_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
     const MessageCampaignBodyConfiguration_possibleTypes: string[] = ['MessageCampaignBodyConfiguration']
     export const isMessageCampaignBodyConfiguration = (obj?: { __typename?: any } | null): obj is MessageCampaignBodyConfiguration => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isMessageCampaignBodyConfiguration"')
@@ -10413,6 +10482,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     export const isPathCommandMenuItemPayload = (obj?: { __typename?: any } | null): obj is PathCommandMenuItemPayload => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isPathCommandMenuItemPayload"')
       return PathCommandMenuItemPayload_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const PendingWorkspaceMember_possibleTypes: string[] = ['PendingWorkspaceMember']
+    export const isPendingWorkspaceMember = (obj?: { __typename?: any } | null): obj is PendingWorkspaceMember => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isPendingWorkspaceMember"')
+      return PendingWorkspaceMember_possibleTypes.includes(obj.__typename)
     }
     
 
@@ -11325,6 +11402,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     export const isWorkspaceMemberApplicationVariables = (obj?: { __typename?: any } | null): obj is WorkspaceMemberApplicationVariables => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isWorkspaceMemberApplicationVariables"')
       return WorkspaceMemberApplicationVariables_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const WorkspaceMemberApproval_possibleTypes: string[] = ['WorkspaceMemberApproval']
+    export const isWorkspaceMemberApproval = (obj?: { __typename?: any } | null): obj is WorkspaceMemberApproval => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isWorkspaceMemberApproval"')
+      return WorkspaceMemberApproval_possibleTypes.includes(obj.__typename)
     }
     
 
@@ -12329,6 +12414,12 @@ export const enumWorkspaceDiscoverability = {
    HIDDEN: 'HIDDEN' as const,
    MEMBERS_AND_INVITEES: 'MEMBERS_AND_INVITEES' as const,
    PUBLIC: 'PUBLIC' as const
+}
+
+export const enumWorkspaceMemberApprovalStatus = {
+   APPROVED: 'APPROVED' as const,
+   PENDING: 'PENDING' as const,
+   REJECTED: 'REJECTED' as const
 }
 
 export const enumWorkspaceMemberDateFormatEnum = {

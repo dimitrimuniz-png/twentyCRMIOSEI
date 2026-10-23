@@ -136,6 +136,7 @@ export class WorkspaceService {
     eventLogRetentionDays: PermissionFlagType.SECURITY,
     inviteHash: PermissionFlagType.WORKSPACE_MEMBERS,
     isPublicInviteLinkEnabled: PermissionFlagType.SECURITY,
+    isMemberApprovalRequired: PermissionFlagType.WORKSPACE_MEMBERS,
     workspaceDiscoverability: PermissionFlagType.SECURITY,
     allowImpersonation: PermissionFlagType.SECURITY,
     isGoogleAuthEnabled: PermissionFlagType.SECURITY,

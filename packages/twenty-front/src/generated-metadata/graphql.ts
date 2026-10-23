@@ -2952,6 +2952,12 @@ export type MarketplaceAppRoleObjectPermission = {
   universalIdentifier: Scalars['String']['output'];
 };
 
+export type MemberApprovalAssignableRole = {
+  __typename?: 'MemberApprovalAssignableRole';
+  id: Scalars['UUID']['output'];
+  label: Scalars['String']['output'];
+};
+
 export type MessageCampaignBodyConfiguration = {
   __typename?: 'MessageCampaignBodyConfiguration';
   configurationType: WidgetConfigurationType;
@@ -3205,6 +3211,7 @@ export type Mutation = {
   activateWorkspace: Workspace;
   addAgentChatMessageReaction: Array<AgentMessageReactionSummary>;
   addQueryToEventStream: Scalars['Boolean']['output'];
+  approvePendingWorkspaceMember: Scalars['Boolean']['output'];
   assignAgentChatThread: Scalars['Boolean']['output'];
   assignRoleToAgent: Scalars['Boolean']['output'];
   assignRoleToApiKey: Scalars['Boolean']['output'];
@@ -3352,6 +3359,7 @@ export type Mutation = {
   /** @deprecated Use installApplication instead */
   installMarketplaceApp: Scalars['Boolean']['output'];
   refreshEnterpriseValidityToken: Scalars['Boolean']['output'];
+  rejectPendingWorkspaceMember: Scalars['Boolean']['output'];
   releaseEnterpriseServerBinding: EnterpriseLicenseInfoDto;
   removeAgentChatMessageReaction: Array<AgentMessageReactionSummary>;
   removeQueryFromEventStream: Scalars['Boolean']['output'];
@@ -3507,6 +3515,12 @@ export type MutationAddAgentChatMessageReactionArgs = {
 
 export type MutationAddQueryToEventStreamArgs = {
   input: AddQuerySubscriptionInput;
+};
+
+
+export type MutationApprovePendingWorkspaceMemberArgs = {
+  roleId: Scalars['UUID']['input'];
+  userWorkspaceId: Scalars['UUID']['input'];
 };
 
 
@@ -4206,6 +4220,11 @@ export type MutationInstallApplicationArgs = {
 export type MutationInstallMarketplaceAppArgs = {
   universalIdentifier: Scalars['String']['input'];
   version?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type MutationRejectPendingWorkspaceMemberArgs = {
+  userWorkspaceId: Scalars['UUID']['input'];
 };
 
 
@@ -5248,6 +5267,15 @@ export type PathCommandMenuItemPayload = {
   path: Scalars['String']['output'];
 };
 
+export type PendingWorkspaceMember = {
+  __typename?: 'PendingWorkspaceMember';
+  createdAt: Scalars['DateTime']['output'];
+  email: Scalars['String']['output'];
+  firstName?: Maybe<Scalars['String']['output']>;
+  lastName?: Maybe<Scalars['String']['output']>;
+  userWorkspaceId: Scalars['UUID']['output'];
+};
+
 export type PermissionFlag = {
   __typename?: 'PermissionFlag';
   applicationId: Scalars['UUID']['output'];
@@ -5456,6 +5484,7 @@ export type Query = {
   currentUserApplicationAuthorizations: Array<ApplicationAuthorization>;
   currentUserSessions: Array<UserSession>;
   currentWorkspace: Workspace;
+  currentWorkspaceMemberApproval: WorkspaceMemberApproval;
   enterpriseCheckoutSession?: Maybe<Scalars['String']['output']>;
   enterprisePortalSession?: Maybe<Scalars['String']['output']>;
   enterpriseSubscriptionStatus?: Maybe<EnterpriseSubscriptionStatusDto>;
@@ -5533,6 +5562,7 @@ export type Query = {
   isApplicationStopped: Scalars['Boolean']['output'];
   lineChartData: LineChartData;
   listPlans: Array<BillingPlan>;
+  memberApprovalAssignableRoles: Array<MemberApprovalAssignableRole>;
   messageSuppressions: MessageSuppressionList;
   metadataTranslations: Array<MetadataTranslation>;
   minimalMetadata: MinimalMetadata;
@@ -5548,6 +5578,7 @@ export type Query = {
   object: Object;
   objectRecordCounts: Array<ObjectRecordCount>;
   objects: ObjectConnection;
+  pendingWorkspaceMembers: Array<PendingWorkspaceMember>;
   pieChartData: PieChartData;
   previewMessageCampaignAudience: CampaignAudiencePreviewDto;
   previewMessageCampaignSend: PreviewMessageCampaignSendOutputDto;
@@ -7336,6 +7367,7 @@ export type UpdateWorkspaceInput = {
   isGoogleAuthBypassEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   isGoogleAuthEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   isInternalMessagesImportEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMemberApprovalRequired?: InputMaybe<Scalars['Boolean']['input']>;
   isMicrosoftAuthBypassEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   isMicrosoftAuthEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   isPasswordAuthBypassEnabled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -7704,6 +7736,7 @@ export type UserSession = {
 
 export type UserWorkspace = {
   __typename?: 'UserWorkspace';
+  approvalStatus: WorkspaceMemberApprovalStatus;
   createdAt: Scalars['DateTime']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['UUID']['output'];
@@ -8098,6 +8131,7 @@ export type Workspace = {
   isGoogleAuthBypassEnabled: Scalars['Boolean']['output'];
   isGoogleAuthEnabled: Scalars['Boolean']['output'];
   isInternalMessagesImportEnabled: Scalars['Boolean']['output'];
+  isMemberApprovalRequired: Scalars['Boolean']['output'];
   isMicrosoftAuthBypassEnabled: Scalars['Boolean']['output'];
   isMicrosoftAuthEnabled: Scalars['Boolean']['output'];
   isPasswordAuthBypassEnabled: Scalars['Boolean']['output'];
@@ -8206,6 +8240,18 @@ export type WorkspaceMemberApplicationVariables = {
   variables: Array<UserApplicationVariableValue>;
   workspaceMemberId: Scalars['UUID']['output'];
 };
+
+export type WorkspaceMemberApproval = {
+  __typename?: 'WorkspaceMemberApproval';
+  approvalStatus: WorkspaceMemberApprovalStatus;
+  isMemberApprovalRequired: Scalars['Boolean']['output'];
+};
+
+export enum WorkspaceMemberApprovalStatus {
+  APPROVED = 'APPROVED',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED'
+}
 
 /** Date format as Month first, Day first, Year first or system as default */
 export enum WorkspaceMemberDateFormatEnum {

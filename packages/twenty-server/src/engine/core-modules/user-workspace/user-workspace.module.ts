@@ -11,6 +11,7 @@ import { WorkspaceDomainsModule } from 'src/engine/core-modules/domain/workspace
 import { FileModule } from 'src/engine/core-modules/file/file.module';
 import { OnboardingModule } from 'src/engine/core-modules/onboarding/onboarding.module';
 import { UserWorkspaceEntityCacheProviderService } from 'src/engine/core-modules/user-workspace/services/user-workspace-entity-cache-provider.service';
+import { WorkspaceMemberApprovalNotifierService } from 'src/engine/core-modules/user-workspace/services/workspace-member-approval-notifier.service';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
@@ -43,6 +44,7 @@ import { UserRoleModule } from 'src/engine/metadata-modules/user-role/user-role.
   providers: [
     UserWorkspaceAuthContextService,
     UserWorkspaceService,
+    WorkspaceMemberApprovalNotifierService,
     UserWorkspaceEntityCacheProviderService,
     provideWorkspaceScopedRepository(RoleTargetEntity),
   ],
