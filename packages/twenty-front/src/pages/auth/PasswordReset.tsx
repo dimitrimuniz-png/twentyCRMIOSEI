@@ -1,38 +1,30 @@
-import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
-import { Logo } from '@/auth/components/Logo';
-import { StyledAuthContent } from '@/auth/components/StyledAuthContent';
-import { StyledOnboardingContentContainer } from '@/auth/components/StyledOnboardingContentContainer';
-import { Title } from '@/auth/components/Title';
-import { AnimatedEaseIn } from '@/auth/components/internal/AnimatedEaseIn/AnimatedEaseIn';
+import { IoseiAuthPasswordField } from '@/auth/components/iosei-auth/IoseiAuthPasswordField';
+import { IoseiAuthPrimaryButton } from '@/auth/components/iosei-auth/IoseiAuthPrimaryButton';
+import { IoseiAuthShell } from '@/auth/components/iosei-auth/IoseiAuthShell';
+import { IoseiAuthTextField } from '@/auth/components/iosei-auth/IoseiAuthTextField';
+import { StyledIoseiAuthForm } from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useIsLogged } from '@/auth/hooks/useIsLogged';
 import { currentUserState } from '@/auth/states/currentUserState';
-import { workspacePublicDataState } from '@/auth/states/workspacePublicDataState';
 import { PASSWORD_REGEX } from '@/auth/utils/passwordRegex';
 import { useReadCaptchaToken } from '@/captcha/hooks/useReadCaptchaToken';
 import { useCaptcha } from '@/client-config/hooks/useCaptcha';
 import { useIsCurrentLocationOnAWorkspace } from '@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { TextInput } from '@/ui/input/components/TextInput';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { styled } from '@linaria/react';
 import { i18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { SKELETON_HEIGHT_SIZES } from 'twenty-ui/primitives/feedback';
 import { useParams } from 'react-router-dom';
 import { AppPath } from 'twenty-shared/types';
 import { useToast } from 'twenty-ui/components/feedback';
-import { MainButton } from 'twenty-ui/components/input';
-import { themeCssVariables } from 'twenty-ui/theme';
+import { Loader } from 'twenty-ui/primitives/feedback';
 import { z } from 'zod';
 import {
   UpdatePasswordViaResetTokenDocument,
@@ -54,38 +46,11 @@ const validationSchema = z
 
 type Form = z.infer<typeof validationSchema>;
 
-const StyledMainContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  width: 100%;
-`;
-
-const StyledForm = styled.form`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-`;
-
-const StyledFullWidthContainer = styled.div`
-  width: 100%;
-`;
-
-const StyledInputContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[3]};
-`;
-
-const StyledMainButtonContainer = styled.div`
-  margin-top: ${themeCssVariables.spacing[2]};
-`;
-
 export const PasswordReset = () => {
-  const { t } = useLingui();
+  const { t, i18n: linguiI18n } = useLingui();
   const { enqueueToast } = useToast();
+  const isPortuguese = linguiI18n.locale.toLowerCase().startsWith('pt');
 
-  const workspacePublicData = useAtomStateValue(workspacePublicDataState);
   const setCurrentUser = useSetAtomState(currentUserState);
 
   const navigate = useNavigateApp();
@@ -208,98 +173,55 @@ export const PasswordReset = () => {
   const passwordActionLabel =
     isTargetUserPasswordSet === true ? t`Change Password` : t`Set Password`;
 
-  return (
-    isTokenValid && (
-      <StyledAuthContent>
-        <StyledMainContainer>
-          <AnimatedEaseIn>
-            <Logo
-              secondaryLogo={workspacePublicData?.logo}
-              placeholder={workspacePublicData?.displayName}
-            />
-          </AnimatedEaseIn>
-          <Title animate>{passwordActionLabel}</Title>
-          <StyledOnboardingContentContainer>
-            {!email ? (
-              <SkeletonLine
-                height={SKELETON_HEIGHT_SIZES.m}
-                count={2}
-                gap={themeCssVariables.spacing[2]}
-                baseColor={themeCssVariables.background.quaternary}
-                highlightColor={themeCssVariables.background.secondary}
-              />
-            ) : (
-              <StyledForm onSubmit={handleSubmit(onSubmit)}>
-                <StyledFullWidthContainer>
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 800,
-                      damping: 35,
-                    }}
-                  >
-                    <StyledInputContainer>
-                      <TextInput
-                        autoFocus
-                        value={email}
-                        placeholder={t`Email`}
-                        fullWidth
-                        disabled
-                      />
-                    </StyledInputContainer>
-                  </motion.div>
-                </StyledFullWidthContainer>
-                <StyledFullWidthContainer>
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 800,
-                      damping: 35,
-                    }}
-                  >
-                    <Controller
-                      name="newPassword"
-                      control={control}
-                      render={({
-                        field: { onChange, onBlur, value },
-                        fieldState: { error },
-                      }) => (
-                        <StyledInputContainer>
-                          <TextInput
-                            autoFocus
-                            value={value}
-                            type="password"
-                            placeholder={t`New Password`}
-                            onBlur={onBlur}
-                            onChange={onChange}
-                            error={error?.message}
-                            fullWidth
-                          />
-                        </StyledInputContainer>
-                      )}
-                    />
-                  </motion.div>
-                </StyledFullWidthContainer>
+  if (!isTokenValid) {
+    return (
+      <IoseiAuthShell>
+        <Loader color="gray" />
+      </IoseiAuthShell>
+    );
+  }
 
-                <StyledMainButtonContainer>
-                  <MainButton
-                    type="submit"
-                    fullWidth
-                    disabled={isUpdatingPassword}
-                    variant="outline"
-                  >
-                    {passwordActionLabel}
-                  </MainButton>
-                </StyledMainButtonContainer>
-              </StyledForm>
+  return (
+    <IoseiAuthShell title={passwordActionLabel}>
+      {!email ? (
+        <Loader color="gray" />
+      ) : (
+        <StyledIoseiAuthForm onSubmit={handleSubmit(onSubmit)}>
+          <IoseiAuthTextField
+            id="password-reset-email"
+            label={isPortuguese ? 'E-mail' : t`Email`}
+            value={email}
+            onChange={() => undefined}
+            disabled
+          />
+          <Controller
+            name="newPassword"
+            control={control}
+            render={({
+              field: { onChange, onBlur, value },
+              fieldState: { error },
+            }) => (
+              <IoseiAuthPasswordField
+                id="password-reset-new-password"
+                label={isPortuguese ? 'Nova senha' : t`New Password`}
+                autoFocus
+                autoComplete="new-password"
+                value={value}
+                onBlur={onBlur}
+                onChange={onChange}
+                error={error?.message}
+              />
             )}
-          </StyledOnboardingContentContainer>
-        </StyledMainContainer>
-      </StyledAuthContent>
-    )
+          />
+          <IoseiAuthPrimaryButton
+            type="submit"
+            disabled={isUpdatingPassword}
+            loading={isUpdatingPassword}
+          >
+            {passwordActionLabel}
+          </IoseiAuthPrimaryButton>
+        </StyledIoseiAuthForm>
+      )}
+    </IoseiAuthShell>
   );
 };

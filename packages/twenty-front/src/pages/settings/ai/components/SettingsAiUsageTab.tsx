@@ -3,7 +3,6 @@ import { billingState } from '@/client-config/states/billingState';
 import { isClickHouseConfiguredState } from '@/client-config/states/isClickHouseConfiguredState';
 import { SettingsBillingLabelValueItem } from '@/settings/billing/components/internal/SettingsBillingLabelValueItem';
 import { SubscriptionInfoContainer } from '@/settings/billing/components/SubscriptionInfoContainer';
-import { SettingsEnterpriseFeatureGateCard } from '@/settings/components/SettingsEnterpriseFeatureGateCard';
 import { UsageBreakdownPieSection } from '@/settings/usage/components/UsageBreakdownPieSection';
 import { UsageByUserTableSection } from '@/settings/usage/components/UsageByUserTableSection';
 import { UsageDailyChartSection } from '@/settings/usage/components/UsageDailyChartSection';
@@ -14,7 +13,6 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 import { Section } from 'twenty-ui/components/layout';
 
 export const SettingsAiUsageTab = () => {
@@ -34,21 +32,9 @@ export const SettingsAiUsageTab = () => {
     skip: shouldSkipQuery,
   });
 
+  // The locked state was only the Organization upsell. Analytics stay closed.
   if (!hasEnterpriseAccess) {
-    return (
-      <Section.Root>
-        <Section.Header
-          title={t`AI Usage`}
-          description={t`Track AI consumption across your workspace.`}
-          actions={<OrganizationAdornment />}
-        />
-        <SettingsEnterpriseFeatureGateCard
-          title={t`Organization feature`}
-          description={t`AI usage analytics is available with an Organization key.`}
-          buttonTitle={t`Activate`}
-        />
-      </Section.Root>
-    );
+    return null;
   }
 
   if (!isClickHouseConfigured) {

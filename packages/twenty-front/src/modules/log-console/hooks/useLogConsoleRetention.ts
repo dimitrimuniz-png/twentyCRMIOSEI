@@ -5,23 +5,18 @@ import { getEventLogRetentionInHours } from 'twenty-shared/utils';
 
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { checkIfBillingEntitlementIsEnabledOnWorkspace } from '@/workspace/utils/checkIfBillingEntitlementIsEnabledOnWorkspace';
-import { BillingEntitlementKey } from '~/generated-metadata/graphql';
 
 export const useLogConsoleRetention = () => {
   const { t } = useLingui();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
 
-  const hasAuditLogsEntitlement = checkIfBillingEntitlementIsEnabledOnWorkspace(
-    BillingEntitlementKey.AUDIT_LOGS,
-    currentWorkspace,
-  );
-
+  // The shared helper still clamps retention without an audit-log entitlement.
+  // This fork does not sell that entitlement, so the console does not clamp.
   const retentionInHours = getEventLogRetentionInHours({
     workspaceRetentionInDays:
       currentWorkspace?.eventLogRetentionDays ??
       EVENT_LOG_RETENTION.defaultInDays,
-    hasAuditLogsEntitlement,
+    hasAuditLogsEntitlement: true,
   });
 
   const retentionInDays = retentionInHours / 24;
@@ -34,7 +29,7 @@ export const useLogConsoleRetention = () => {
   return {
     retentionInHours,
     retentionLabel,
-    isRetentionConfigurable: hasAuditLogsEntitlement,
+    isRetentionConfigurable: true,
     retentionDescription: t`Logs are kept ${retentionLabel}.`,
   };
 };

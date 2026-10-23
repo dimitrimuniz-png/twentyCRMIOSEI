@@ -34,6 +34,7 @@ import { Button } from 'twenty-ui/primitives/input';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useDebounce } from 'use-debounce';
+import { SettingsPendingWorkspaceMembers } from '@/settings/members/components/SettingsPendingWorkspaceMembers';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
@@ -78,6 +79,12 @@ const StyledChevronWrapper = styled.div`
   display: flex;
   justify-content: flex-end;
   width: 100%;
+`;
+
+const StyledMembersTab = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[10]};
 `;
 
 export const SettingsWorkspaceMembersTeamTab = () => {
@@ -161,141 +168,147 @@ export const SettingsWorkspaceMembersTeamTab = () => {
   }, [workspaceMembers, searchFilter]);
 
   return (
-    <Section.Root>
-      <Section.Header
-        title={t`Manage Members`}
-        description={t`Manage the members of your workspace here`}
-      />
-      <StyledSearchContainer>
-        <SearchInput
-          value={searchFilter}
-          onValueChange={handleSearchChange}
-          placeholder={t`Search a team member...`}
+    <StyledMembersTab>
+      <SettingsPendingWorkspaceMembers />
+      <Section.Root>
+        <Section.Header
+          title={t`Manage Members`}
+          description={t`Manage the members of your workspace here`}
         />
-        <DropdownRoot type="menu" dropdownId="workspace-members-open-dropdown">
-          <Dropdown.Trigger
-            render={
-              <Button
-                startIcon={<IconArrowUpRight />}
-                size="md"
-                variant="outline"
-              >{t`Open`}</Button>
-            }
+        <StyledSearchContainer>
+          <SearchInput
+            value={searchFilter}
+            onValueChange={handleSearchChange}
+            placeholder={t`Search a team member...`}
           />
-          <DropdownContent align="end" sideOffset={DROPDOWN_OFFSET_Y}>
-            <Dropdown.Section>
-              <Dropdown.ActionItem
-                startIcon={<IconListDetails />}
-                onClick={() => {
-                  navigateApp(AppPath.RecordIndexPage, {
-                    objectNamePlural: 'workspaceMembers',
-                  });
-                }}
-              >{t`See records`}</Dropdown.ActionItem>
-              <Dropdown.ActionItem
-                startIcon={<IconHierarchy />}
-                onClick={() => {
-                  navigateSettings(SettingsPath.ObjectDetail, {
-                    objectNamePlural: 'workspaceMembers',
-                  });
-                }}
-              >{t`See data model settings`}</Dropdown.ActionItem>
-            </Dropdown.Section>
-          </DropdownContent>
-        </DropdownRoot>
-      </StyledSearchContainer>
-      <StyledTableContainer hasMoreRows={hasNextPage}>
-        <Table>
-          <TableRow
-            gridAutoColumns="150px 1fr 40px"
-            mobileGridAutoColumns="100px 1fr 32px"
+          <DropdownRoot
+            type="menu"
+            dropdownId="workspace-members-open-dropdown"
           >
-            <TableHeader>
-              <Trans>Name</Trans>
-            </TableHeader>
-            <TableHeader>
-              <Trans>Email</Trans>
-            </TableHeader>
-            <TableHeader align="right"></TableHeader>
-          </TableRow>
-          <StyledTableRows>
-            {optimizedWorkspaceMembers.length > 0 ? (
-              optimizedWorkspaceMembers.map((workspaceMember) => (
-                <TableRow
-                  gridAutoColumns="150px 1fr 40px"
-                  mobileGridAutoColumns="100px 1fr 32px"
-                  key={workspaceMember.id}
-                  cursor="pointer"
+            <Dropdown.Trigger
+              render={
+                <Button
+                  startIcon={<IconArrowUpRight />}
+                  size="md"
+                  variant="outline"
+                >{t`Open`}</Button>
+              }
+            />
+            <DropdownContent align="end" sideOffset={DROPDOWN_OFFSET_Y}>
+              <Dropdown.Section>
+                <Dropdown.ActionItem
+                  startIcon={<IconListDetails />}
                   onClick={() => {
-                    if (currentWorkspaceMember?.id === workspaceMember.id) {
-                      return;
-                    }
-                    navigateSettings(SettingsPath.WorkspaceMemberPage, {
-                      workspaceMemberId: workspaceMember.id,
+                    navigateApp(AppPath.RecordIndexPage, {
+                      objectNamePlural: 'workspaceMembers',
                     });
                   }}
-                >
-                  <TableCell color={themeCssVariables.font.color.primary}>
-                    <StyledIconWrapper>
-                      <Avatar
-                        src={getAbsoluteImageUrl(workspaceMember.avatarUrl)}
-                        colorSeed={workspaceMember.id}
-                        name={workspaceMember.name.firstName ?? ''}
-                        shape="circle"
-                        size="sm"
-                      />
-                    </StyledIconWrapper>
-                    <Tooltip
-                      content={`${workspaceMember.name.firstName} ${workspaceMember.name.lastName}`}
-                      side="top"
-                      positionMethod="fixed"
-                      delay={TooltipDelay.shortDelay}
-                    >
-                      <StyledTextContainerWithEllipsis
-                        id={`hover-text-${workspaceMember.id}`}
-                      >
-                        {workspaceMember.name.firstName +
-                          ' ' +
-                          workspaceMember.name.lastName}
-                      </StyledTextContainerWithEllipsis>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <StyledTextContainerWithEllipsis>
-                      {workspaceMember.userEmail}
-                    </StyledTextContainerWithEllipsis>
-                  </TableCell>
-                  <TableCell align="right">
-                    <StyledChevronWrapper>
-                      {currentWorkspaceMember?.id !== workspaceMember.id && (
-                        <IconChevronRight size={theme.icon.size.sm} />
-                      )}
-                    </StyledChevronWrapper>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableCell color={themeCssVariables.font.color.tertiary}>
-                {!searchFilter
-                  ? t`No members`
-                  : t`No members match your search`}
-              </TableCell>
-            )}
-          </StyledTableRows>
-          {hasNextPage && (
+                >{t`See records`}</Dropdown.ActionItem>
+                <Dropdown.ActionItem
+                  startIcon={<IconHierarchy />}
+                  onClick={() => {
+                    navigateSettings(SettingsPath.ObjectDetail, {
+                      objectNamePlural: 'workspaceMembers',
+                    });
+                  }}
+                >{t`See data model settings`}</Dropdown.ActionItem>
+              </Dropdown.Section>
+            </DropdownContent>
+          </DropdownRoot>
+        </StyledSearchContainer>
+        <StyledTableContainer hasMoreRows={hasNextPage}>
+          <Table>
             <TableRow
-              gridAutoColumns="250px 1fr 1fr"
-              mobileGridAutoColumns="100px 1fr 1fr"
+              gridAutoColumns="150px 1fr 40px"
+              mobileGridAutoColumns="100px 1fr 32px"
             >
-              <TableCell>
-                <div ref={fetchMoreRef} style={{ height: '1px' }} />
-              </TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
+              <TableHeader>
+                <Trans>Name</Trans>
+              </TableHeader>
+              <TableHeader>
+                <Trans>Email</Trans>
+              </TableHeader>
+              <TableHeader align="right"></TableHeader>
             </TableRow>
-          )}
-        </Table>
-      </StyledTableContainer>
-    </Section.Root>
+            <StyledTableRows>
+              {optimizedWorkspaceMembers.length > 0 ? (
+                optimizedWorkspaceMembers.map((workspaceMember) => (
+                  <TableRow
+                    gridAutoColumns="150px 1fr 40px"
+                    mobileGridAutoColumns="100px 1fr 32px"
+                    key={workspaceMember.id}
+                    cursor="pointer"
+                    onClick={() => {
+                      if (currentWorkspaceMember?.id === workspaceMember.id) {
+                        return;
+                      }
+                      navigateSettings(SettingsPath.WorkspaceMemberPage, {
+                        workspaceMemberId: workspaceMember.id,
+                      });
+                    }}
+                  >
+                    <TableCell color={themeCssVariables.font.color.primary}>
+                      <StyledIconWrapper>
+                        <Avatar
+                          src={getAbsoluteImageUrl(workspaceMember.avatarUrl)}
+                          colorSeed={workspaceMember.id}
+                          name={workspaceMember.name.firstName ?? ''}
+                          shape="circle"
+                          size="sm"
+                        />
+                      </StyledIconWrapper>
+                      <Tooltip
+                        content={`${workspaceMember.name.firstName} ${workspaceMember.name.lastName}`}
+                        side="top"
+                        positionMethod="fixed"
+                        delay={TooltipDelay.shortDelay}
+                      >
+                        <StyledTextContainerWithEllipsis
+                          id={`hover-text-${workspaceMember.id}`}
+                        >
+                          {workspaceMember.name.firstName +
+                            ' ' +
+                            workspaceMember.name.lastName}
+                        </StyledTextContainerWithEllipsis>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      <StyledTextContainerWithEllipsis>
+                        {workspaceMember.userEmail}
+                      </StyledTextContainerWithEllipsis>
+                    </TableCell>
+                    <TableCell align="right">
+                      <StyledChevronWrapper>
+                        {currentWorkspaceMember?.id !== workspaceMember.id && (
+                          <IconChevronRight size={theme.icon.size.sm} />
+                        )}
+                      </StyledChevronWrapper>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableCell color={themeCssVariables.font.color.tertiary}>
+                  {!searchFilter
+                    ? t`No members`
+                    : t`No members match your search`}
+                </TableCell>
+              )}
+            </StyledTableRows>
+            {hasNextPage && (
+              <TableRow
+                gridAutoColumns="250px 1fr 1fr"
+                mobileGridAutoColumns="100px 1fr 1fr"
+              >
+                <TableCell>
+                  <div ref={fetchMoreRef} style={{ height: '1px' }} />
+                </TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            )}
+          </Table>
+        </StyledTableContainer>
+      </Section.Root>
+    </StyledMembersTab>
   );
 };

@@ -1,28 +1,14 @@
-import { isDefined } from 'twenty-shared/utils';
+import { IoseiAuthSecondaryButton } from '@/auth/components/iosei-auth/IoseiAuthSecondaryButton';
 import { useHasMultipleAuthMethods } from '@/auth/sign-in-up/hooks/useHasMultipleAuthMethods';
 import { useSignInWithGoogle } from '@/auth/sign-in-up/hooks/useSignInWithGoogle';
 import { lastAuthenticatedMethodState } from '@/auth/states/lastAuthenticatedMethodState';
-import {
-  SignInUpStep,
-  signInUpStepState,
-} from '@/auth/states/signInUpStepState';
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { type SocialSsoSignInUpActionType } from '@/auth/types/SocialSsoSignInUpActionType';
-import { useLingui } from '@lingui/react/macro';
-import { memo } from 'react';
-import { MainButton } from 'twenty-ui/components/input';
-import { IconGoogle } from 'twenty-ui/icon';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useLingui } from '@lingui/react/macro';
+import { IconGoogle } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
-import { useTheme } from 'twenty-ui/theme';
-import { SignInUpSeparator } from './SignInUpSeparator';
-
-const GoogleIcon = memo(() => {
-  const theme = useTheme();
-  return <IconGoogle size={theme.icon.size.md} />;
-});
 
 export const SignInUpWithGoogle = ({
   action,
@@ -31,13 +17,13 @@ export const SignInUpWithGoogle = ({
   action: SocialSsoSignInUpActionType;
   isGlobalScope?: boolean;
 }) => {
-  const { t } = useLingui();
-  const signInUpStep = useAtomStateValue(signInUpStepState);
+  const { t, i18n } = useLingui();
   const [lastAuthenticatedMethod, setLastAuthenticatedMethod] = useAtomState(
     lastAuthenticatedMethodState,
   );
   const { signInWithGoogle } = useSignInWithGoogle();
   const hasMultipleAuthMethods = useHasMultipleAuthMethods();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
 
   const handleClick = () => {
     setLastAuthenticatedMethod(AuthenticatedMethod.GOOGLE);
@@ -47,19 +33,14 @@ export const SignInUpWithGoogle = ({
   const isLastUsed = lastAuthenticatedMethod === AuthenticatedMethod.GOOGLE;
 
   return (
-    <>
-      <StyledSsoButtonContainer>
-        <MainButton
-          startIcon={isDefined(GoogleIcon) ? <GoogleIcon /> : undefined}
-          onClick={handleClick}
-          fullWidth
-          variant={signInUpStep === SignInUpStep.Init ? 'solid' : 'outline'}
-        >{t`Continue with Google`}</MainButton>
-        {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
-          <LastUsedPill />
-        )}
-      </StyledSsoButtonContainer>
-      <SignInUpSeparator />
-    </>
+    <StyledSsoButtonContainer>
+      <IoseiAuthSecondaryButton onClick={handleClick}>
+        <IconGoogle size={18} />
+        {isPortuguese ? 'Entrar com Google' : t`Continue with Google`}
+      </IoseiAuthSecondaryButton>
+      {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
+        <LastUsedPill />
+      )}
+    </StyledSsoButtonContainer>
   );
 };

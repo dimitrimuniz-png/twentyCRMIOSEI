@@ -1,4 +1,5 @@
 import { SettingsAdminTabContent } from '@/settings/admin-panel/components/SettingsAdminTabContent';
+import { SETTINGS_ADMIN_TABS } from '@/settings/admin-panel/constants/SettingsAdminTabs';
 import { SETTINGS_ADMIN_TABS_ID } from '@/settings/admin-panel/constants/SettingsAdminTabsId';
 import { useSettingsAdminTabs } from '@/settings/admin-panel/hooks/useSettingsAdminTabs';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
@@ -19,8 +20,17 @@ export const SettingsAdmin = () => {
     tabs.map((tab) => tab.id),
   );
 
-  if (location.hash === '#enterprise') {
-    return <Navigate to={{ ...location, hash: '#organization' }} replace />;
+  // Bookmarks for the hidden Organization key screen stay on General.
+  if (
+    location.hash === '#enterprise' ||
+    location.hash === `#${SETTINGS_ADMIN_TABS.ORGANIZATION}`
+  ) {
+    return (
+      <Navigate
+        to={{ ...location, hash: `#${SETTINGS_ADMIN_TABS.GENERAL}` }}
+        replace
+      />
+    );
   }
 
   return (

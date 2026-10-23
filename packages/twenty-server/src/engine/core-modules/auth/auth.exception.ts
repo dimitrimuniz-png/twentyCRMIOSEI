@@ -37,6 +37,7 @@ export const AuthExceptionCode = appendCommonExceptionCode({
   TWO_FACTOR_AUTHENTICATION_VERIFICATION_REQUIRED:
     'TWO_FACTOR_AUTHENTICATION_VERIFICATION_REQUIRED',
   USER_ALREADY_EXISTS: 'USER_ALREADY_EXISTS',
+  MEMBER_APPROVAL_REQUIRED: 'MEMBER_APPROVAL_REQUIRED',
 } as const);
 
 const getAuthExceptionUserFriendlyMessage = (
@@ -84,6 +85,8 @@ const getAuthExceptionUserFriendlyMessage = (
       return msg`Two-factor authentication verification is required.`;
     case AuthExceptionCode.USER_ALREADY_EXISTS:
       return msg`A user with this email already exists.`;
+    case AuthExceptionCode.MEMBER_APPROVAL_REQUIRED:
+      return msg`An administrator still needs to approve your account.`;
     case AuthExceptionCode.ENTERPRISE_VALIDITY_TOKEN_NOT_VALID:
       return msg`Enterprise validity token is not valid.`;
     case AuthExceptionCode.INTERNAL_SERVER_ERROR:
@@ -118,6 +121,7 @@ const getAuthExceptionStatusCode = (
     case AuthExceptionCode.INVALID_JWT_TOKEN_TYPE:
     case AuthExceptionCode.USER_ALREADY_EXISTS:
     case AuthExceptionCode.ENTERPRISE_VALIDITY_TOKEN_NOT_VALID:
+    case AuthExceptionCode.MEMBER_APPROVAL_REQUIRED:
       return 403;
     case AuthExceptionCode.TWO_FACTOR_AUTHENTICATION_PROVISION_REQUIRED:
     case AuthExceptionCode.TWO_FACTOR_AUTHENTICATION_VERIFICATION_REQUIRED:

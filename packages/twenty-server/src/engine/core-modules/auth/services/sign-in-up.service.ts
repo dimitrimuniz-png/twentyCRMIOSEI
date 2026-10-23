@@ -223,6 +223,7 @@ export class SignInUpService {
       workspace: invitationValidation.workspace,
       userData: params.userData,
       roleId: params.invitation.context?.roleId,
+      isExplicitlyInvited: true,
     });
 
     if (
@@ -287,6 +288,7 @@ export class SignInUpService {
     params: {
       workspace: WorkspaceEntity;
       roleId?: string | null;
+      isExplicitlyInvited?: boolean;
     } & ExistingUserOrPartialUserWithPicture,
   ) {
     await this.throwIfWorkspaceIsNotReadyForSignInUp(params.workspace, params);
@@ -314,6 +316,7 @@ export class SignInUpService {
         user,
         params.workspace,
         params.roleId,
+        { isExplicitlyInvited: params.isExplicitlyInvited },
       );
 
       return user;
@@ -330,6 +333,7 @@ export class SignInUpService {
       user,
       params.workspace,
       params.roleId,
+      { isExplicitlyInvited: params.isExplicitlyInvited },
     );
 
     return user;
@@ -719,6 +723,7 @@ export class SignInUpService {
             displayName,
             inviteHash: v4(),
             activationStatus: WorkspaceActivationStatus.PENDING_CREATION,
+            isMemberApprovalRequired: true,
           });
 
           const workspace = await queryRunner.manager.save(

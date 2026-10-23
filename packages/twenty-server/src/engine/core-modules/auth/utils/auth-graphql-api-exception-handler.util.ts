@@ -29,6 +29,7 @@ export const authGraphqlApiExceptionHandler = (exception: AuthException) => {
     case AuthExceptionCode.INVALID_JWT_TOKEN_TYPE:
     case AuthExceptionCode.USER_ALREADY_EXISTS:
     case AuthExceptionCode.ENTERPRISE_VALIDITY_TOKEN_NOT_VALID:
+    case AuthExceptionCode.MEMBER_APPROVAL_REQUIRED:
       throw new ForbiddenError(exception);
     case AuthExceptionCode.GOOGLE_API_AUTH_DISABLED:
     case AuthExceptionCode.MICROSOFT_API_AUTH_DISABLED:

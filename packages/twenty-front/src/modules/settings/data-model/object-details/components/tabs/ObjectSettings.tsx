@@ -7,12 +7,10 @@ import { getObjectColorWithFallback } from '@/object-metadata/utils/getObjectCol
 import { isShareableObjectMetadataItem } from '@/object-record/record-sharing/utils/isShareableObjectMetadataItem';
 import { isObjectMetadataReadOnly } from '@/object-record/read-only/utils/isObjectMetadataReadOnly';
 import { SettingsCard } from '@/settings/components/SettingsCard';
-import { SettingsEnterpriseFeatureGateCard } from '@/settings/components/SettingsEnterpriseFeatureGateCard';
 import { SettingsUpdateDataModelObjectAboutForm } from '@/settings/data-model/object-details/components/SettingsUpdateDataModelObjectAboutForm';
 import { ObjectSharingReachPicker } from '@/settings/data-model/object-details/components/tabs/ObjectSharingReachPicker';
 import { SettingsObjectValidationRulesSection } from '@/settings/data-model/object-details/components/tabs/SettingsObjectValidationRulesSection';
 import { SettingsDataModelObjectSettingsFormCard } from '@/settings/data-model/objects/forms/components/SettingsDataModelObjectSettingsFormCard';
-import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 import {
   type SettingsDataModelObjectAboutFormValues,
   settingsDataModelObjectAboutFormSchema,
@@ -164,25 +162,17 @@ export const ObjectSettings = ({
       </Section.Root>
       {isRecordCreationFormEnabled &&
         !objectMetadataItem.isRemote &&
-        !objectMetadataItem.isSystem && (
+        !objectMetadataItem.isSystem &&
+        hasValidationRulesEntitlement && (
           <Section.Root>
             <Section.Header
               title={t`Validation rules`}
               description={t`Block records that break your rules, like an opportunity marked Won with no amount. Checked on every save.`}
-              actions={<OrganizationAdornment />}
             />
-            {hasValidationRulesEntitlement ? (
-              <SettingsObjectValidationRulesSection
-                objectMetadataItem={objectMetadataItem}
-                isReadOnly={isReadOnly}
-              />
-            ) : (
-              <SettingsEnterpriseFeatureGateCard
-                title={t`Organization feature`}
-                description={t`Upgrade to Organization to set validation rules.`}
-                buttonTitle={t`Activate`}
-              />
-            )}
+            <SettingsObjectValidationRulesSection
+              objectMetadataItem={objectMetadataItem}
+              isReadOnly={isReadOnly}
+            />
           </Section.Root>
         )}
       {isRecordLevelSharingEnabled &&

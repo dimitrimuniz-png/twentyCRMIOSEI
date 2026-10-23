@@ -1,65 +1,22 @@
-import { Button } from 'twenty-ui/primitives/input';
-import { styled } from '@linaria/react';
-
-import { SubTitle } from '@/auth/components/SubTitle';
-import { Title } from '@/auth/components/Title';
-import { AnimatedEaseIn } from '@/auth/components/internal/AnimatedEaseIn/AnimatedEaseIn';
+import { IoseiAuthPrimaryButton } from '@/auth/components/iosei-auth/IoseiAuthPrimaryButton';
+import { IoseiAuthSecondaryButton } from '@/auth/components/iosei-auth/IoseiAuthSecondaryButton';
+import { IoseiAuthTextLink } from '@/auth/components/iosei-auth/IoseiAuthTextLink';
+import {
+  StyledIoseiAuthCenteredLinkRow,
+  StyledIoseiAuthCopy,
+  StyledIoseiAuthIconCircle,
+  StyledIoseiAuthSubtitle,
+  StyledIoseiAuthTitle,
+} from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { useHandleResendEmailVerificationToken } from '@/auth/sign-in-up/hooks/useHandleResendEmailVerificationToken';
 import {
   SignInUpStep,
   signInUpStepState,
 } from '@/auth/states/signInUpStepState';
-import { OnboardingModalCircularIcon } from '@/onboarding/components/OnboardingModalCircularIcon';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { t } from '@lingui/core/macro';
-import { MainButton } from 'twenty-ui/components/input';
 import { IconGmail, IconMail, IconMailX, IconMicrosoft } from 'twenty-ui/icon';
-import { themeCssVariables } from 'twenty-ui/theme';
 import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
-
-const StyledContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[8]};
-  width: 100%;
-`;
-
-const StyledTextContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  text-align: center;
-`;
-
-const StyledEmail = styled.span`
-  font-weight: ${themeCssVariables.font.weight.medium};
-`;
-
-const StyledButtonsContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[3]};
-  max-width: 240px;
-  width: 100%;
-`;
-
-const StyledBottomLinks = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  gap: ${themeCssVariables.spacing[2]};
-  justify-content: center;
-`;
-
-const StyledDot = styled.div`
-  background: ${themeCssVariables.font.color.light};
-  border-radius: 50%;
-  corner-shape: round;
-  height: 2px;
-  width: 2px;
-`;
 
 export const EmailVerificationSent = ({
   email,
@@ -98,71 +55,53 @@ export const EmailVerificationSent = ({
 
   const Icon = isError ? IconMailX : IconMail;
 
-  const mainButtons = isError ? (
-    <>
-      <MainButton
-        onClick={handleChangeEmail}
-        fullWidth
-        variant="outline"
-      >{t`Try with another email`}</MainButton>
-      <MainButton
-        onClick={handleResendEmailVerificationToken(email)}
-        disabled={isLoading}
-        fullWidth
-      >
-        {isLoading ? t`Sending...` : t`Resend email`}
-      </MainButton>
-    </>
-  ) : (
-    <>
-      <MainButton
-        onClick={handleOpenGmail}
-        startIcon={<IconGmail />}
-        fullWidth
-        variant="outline"
-      >{t`Open Gmail`}</MainButton>
-      <MainButton
-        onClick={handleOpenOutlook}
-        startIcon={<IconMicrosoft />}
-        fullWidth
-        variant="outline"
-      >{t`Open Outlook`}</MainButton>
-    </>
-  );
-
   return (
-    <StyledContainer>
-      <AnimatedEaseIn>
-        <OnboardingModalCircularIcon Icon={Icon} />
-      </AnimatedEaseIn>
-
-      <StyledTextContainer>
-        <Title animate noMarginTop>
-          {title}
-        </Title>
-        <SubTitle>
-          {subtitle} <StyledEmail>{email}</StyledEmail>
-        </SubTitle>
-      </StyledTextContainer>
-
-      <StyledButtonsContainer>{mainButtons}</StyledButtonsContainer>
-
-      {!isError && (
-        <StyledBottomLinks>
-          <Button
-            variant="link"
-            size="sm"
+    <>
+      <StyledIoseiAuthIconCircle>
+        <Icon size={28} stroke={1.8} />
+      </StyledIoseiAuthIconCircle>
+      <StyledIoseiAuthCopy>
+        <StyledIoseiAuthTitle>{title}</StyledIoseiAuthTitle>
+        <StyledIoseiAuthSubtitle>
+          {subtitle} {email}
+        </StyledIoseiAuthSubtitle>
+      </StyledIoseiAuthCopy>
+      {isError ? (
+        <>
+          <IoseiAuthPrimaryButton
             onClick={handleResendEmailVerificationToken(email)}
             disabled={isLoading}
+            loading={isLoading}
           >
-            {isLoading ? t`Sending...` : t`Resend email`}
-          </Button>
-          <StyledDot />
-          <Button variant="link" size="sm" onClick={handleChangeEmail}>
-            {t`Change email`}
-          </Button>
-        </StyledBottomLinks>
+            {t`Resend email`}
+          </IoseiAuthPrimaryButton>
+          <IoseiAuthSecondaryButton onClick={handleChangeEmail}>
+            {t`Try with another email`}
+          </IoseiAuthSecondaryButton>
+        </>
+      ) : (
+        <>
+          <IoseiAuthSecondaryButton onClick={handleOpenGmail}>
+            <IconGmail size={18} />
+            {t`Open Gmail`}
+          </IoseiAuthSecondaryButton>
+          <IoseiAuthSecondaryButton onClick={handleOpenOutlook}>
+            <IconMicrosoft size={18} />
+            {t`Open Outlook`}
+          </IoseiAuthSecondaryButton>
+          <StyledIoseiAuthCenteredLinkRow>
+            <IoseiAuthTextLink
+              onClick={handleResendEmailVerificationToken(email)}
+              disabled={isLoading}
+            >
+              {isLoading ? t`Sending...` : t`Resend email`}
+            </IoseiAuthTextLink>
+            <IoseiAuthTextLink onClick={handleChangeEmail}>
+              {t`Change email`}
+            </IoseiAuthTextLink>
+          </StyledIoseiAuthCenteredLinkRow>
+        </>
       )}
-    </StyledContainer>
+    </>
   );
 };

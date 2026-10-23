@@ -23,6 +23,7 @@ import { ApiRequestContextMiddleware } from 'src/engine/core-modules/usage/middl
 import { ApiAccessLogMiddleware } from 'src/engine/middlewares/api-access-log.middleware';
 import { CookieSessionCsrfMiddleware } from 'src/engine/middlewares/cookie-session-csrf.middleware';
 import { GraphQLHydrateRequestFromTokenMiddleware } from 'src/engine/middlewares/graphql-hydrate-request-from-token.middleware';
+import { GraphQLRefusePendingWorkspaceMemberMiddleware } from 'src/engine/middlewares/graphql-refuse-pending-workspace-member.middleware';
 import { GraphQLRefuseSuspendedWorkspaceMiddleware } from 'src/engine/middlewares/graphql-refuse-suspended-workspace.middleware';
 import { MiddlewareModule } from 'src/engine/middlewares/middleware.module';
 import { JwtModule } from 'src/engine/core-modules/jwt/jwt.module';
@@ -30,6 +31,7 @@ import { UserSessionModule } from 'src/engine/core-modules/user-session/user-ses
 import { RestCoreMiddleware } from 'src/engine/middlewares/rest-core.middleware';
 import { TwentyOrmModule } from 'src/engine/twenty-orm/twenty-orm.module';
 import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/workspace-cache-storage.module';
+import { WorkspaceMemberApprovedGuard } from 'src/engine/guards/workspace-member-approved.guard';
 import { WorkspaceNotSuspendedGuard } from 'src/engine/guards/workspace-not-suspended.guard';
 import { UnhandledExceptionFilter } from 'src/filters/unhandled-exception.filter';
 import { ModulesModule } from 'src/modules/modules.module';
@@ -80,6 +82,10 @@ const MIGRATED_REST_METHODS = [
       provide: APP_GUARD,
       useClass: WorkspaceNotSuspendedGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: WorkspaceMemberApprovedGuard,
+    },
   ],
 })
 export class AppModule {
@@ -110,6 +116,7 @@ export class AppModule {
         ApiRequestContextMiddleware,
         GraphQLHydrateRequestFromTokenMiddleware,
         GraphQLRefuseSuspendedWorkspaceMiddleware,
+        GraphQLRefusePendingWorkspaceMemberMiddleware,
         WorkspaceAuthContextMiddleware,
       )
       .forRoutes({ path: ApiPath.GraphQL, method: RequestMethod.ALL });

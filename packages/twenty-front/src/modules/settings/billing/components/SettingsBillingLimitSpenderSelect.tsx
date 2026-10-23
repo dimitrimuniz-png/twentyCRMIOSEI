@@ -13,14 +13,10 @@ import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/consta
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { useLingui } from '@lingui/react/macro';
-import { Link } from 'react-router-dom';
-import { SettingsPath } from 'twenty-shared/types';
-import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 import { Dropdown } from 'twenty-ui/components/navigation';
-import { IconArrowUp } from 'twenty-ui/icon';
 import { Avatar } from 'twenty-ui/primitives/data-display';
 import { ListItem } from 'twenty-ui/primitives/navigation';
-import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 const SPENDER_DROPDOWN_ID = 'usage-limit-spender';
@@ -127,8 +123,6 @@ export const SettingsBillingLimitSpenderSelect = ({
 
   const workspaceGroup = groups.find((group) => group.id === 'workspace');
   const otherGroups = groups.filter((group) => group.id !== 'workspace');
-  const isLockedByPlan =
-    !isIntraWorkspaceLimitEntitled && otherGroups.length > 0;
 
   return (
     <SettingsBillingLimitNestedSelect
@@ -179,28 +173,12 @@ export const SettingsBillingLimitSpenderSelect = ({
               <ListItem
                 key={group.id}
                 startIcon={<SelectOptionIcon Icon={group.Icon} />}
-                endIcon={<OrganizationAdornment iconOnly />}
               >
                 {t(group.label)}
               </ListItem>
             ),
           )}
         </Dropdown.Section>
-        {isLockedByPlan && (
-          <>
-            <Dropdown.Separator />
-            <Dropdown.Section>
-              <Dropdown.ActionItem
-                render={
-                  <Link to={getSettingsPath(SettingsPath.BillingPlans)} />
-                }
-                startIcon={<IconArrowUp />}
-              >
-                {t`Upgrade to Organization`}
-              </Dropdown.ActionItem>
-            </Dropdown.Section>
-          </>
-        )}
       </Dropdown.Page>
       {isIntraWorkspaceLimitEntitled &&
         otherGroups.map((group) => (

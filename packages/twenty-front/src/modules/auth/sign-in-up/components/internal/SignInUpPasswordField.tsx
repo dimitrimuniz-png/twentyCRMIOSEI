@@ -1,67 +1,45 @@
+import { IoseiAuthPasswordField } from '@/auth/components/iosei-auth/IoseiAuthPasswordField';
 import { type Form } from '@/auth/sign-in-up/hooks/useSignInUpForm';
 import { SignInUpMode } from '@/auth/types/SignInUpMode';
-import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { motion } from 'framer-motion';
 import { Controller, useFormContext } from 'react-hook-form';
-import { themeCssVariables } from 'twenty-ui/theme';
-
-const StyledFullWidthMotionDiv = styled(motion.div)`
-  width: 100%;
-`;
-
-const StyledInputContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[3]};
-`;
 
 export const SignInUpPasswordField = ({
   showErrors,
   signInUpMode,
+  autoFocus = true,
 }: {
   showErrors: boolean;
   signInUpMode: SignInUpMode;
+  autoFocus?: boolean;
 }) => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const form = useFormContext<Form>();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
 
   return (
-    <StyledFullWidthMotionDiv
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      transition={{
-        type: 'spring',
-        stiffness: 800,
-        damping: 35,
-      }}
-    >
-      <Controller
-        name="password"
-        control={form.control}
-        render={({
-          field: { onChange, onBlur, value },
-          fieldState: { error },
-        }) => (
-          <StyledInputContainer>
-            <SettingsTextInput
-              instanceId="sign-in-up-password"
-              autoFocus
-              value={value}
-              type="password"
-              placeholder={t`Password`}
-              onBlur={onBlur}
-              onChange={onChange}
-              error={showErrors ? error?.message : undefined}
-              hint={
-                signInUpMode === SignInUpMode.SignUp
-                  ? t`At least 8 characters long.`
-                  : undefined
-              }
-              fullWidth
-            />
-          </StyledInputContainer>
-        )}
-      />
-    </StyledFullWidthMotionDiv>
+    <Controller
+      name="password"
+      control={form.control}
+      render={({
+        field: { onChange, onBlur, value },
+        fieldState: { error },
+      }) => (
+        <IoseiAuthPasswordField
+          id="sign-in-up-password"
+          label={isPortuguese ? 'Senha' : t`Password`}
+          autoFocus={autoFocus}
+          autoComplete={
+            signInUpMode === SignInUpMode.SignUp
+              ? 'new-password'
+              : 'current-password'
+          }
+          value={value}
+          onBlur={onBlur}
+          onChange={onChange}
+          error={showErrors ? error?.message : undefined}
+        />
+      )}
+    />
   );
 };

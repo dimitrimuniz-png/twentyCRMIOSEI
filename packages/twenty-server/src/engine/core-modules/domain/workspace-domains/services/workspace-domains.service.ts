@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { isNonEmptyString } from '@sniptt/guards';
-import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
 import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
@@ -11,7 +11,6 @@ import { WorkspaceDomainConfig } from 'src/engine/core-modules/domain/workspace-
 import { PublicDomainEntity } from 'src/engine/core-modules/public-domain/public-domain.entity';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
-import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace/workspace.exception';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 
 @Injectable()
@@ -89,7 +88,11 @@ export class WorkspaceDomainsService {
         (workspace) => workspace.id === SEED_APPLE_WORKSPACE_ID,
       ) ?? workspaces[0];
 
-    assertIsDefinedOrThrow(foundWorkspace, WorkspaceNotFoundDefaultError);
+    // A fresh single-workspace install has no row yet. Callers decide whether
+    // that is an error; throwing here consumed the first user's verification token.
+    if (!isDefined(foundWorkspace)) {
+      return undefined;
+    }
 
     return foundWorkspace;
   }

@@ -170,4 +170,9 @@ export class UpdateWorkspaceInput {
   @IsBoolean()
   @IsOptional()
   isInternalMessagesImportEnabled?: boolean;
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  isMemberApprovalRequired?: boolean;
 }

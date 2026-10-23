@@ -4,6 +4,7 @@ export const WORKSPACE_FIELDS_NOT_UPDATABLE_BY_APPLICATIONS = {
   defaultRoleId: true,
   inviteHash: true,
   isPublicInviteLinkEnabled: true,
+  isMemberApprovalRequired: true,
   workspaceDiscoverability: true,
   allowImpersonation: true,
   isGoogleAuthEnabled: true,

@@ -79,9 +79,20 @@ export const useGetPublicWorkspaceDataByDomain = () => {
     }
   }, [error, redirectToDefaultDomain]);
 
+  const isWaitingForClientConfig = !clientConfigApiStatus.isSaved;
+  const isSkippedBecauseDefaultDomain =
+    isMultiWorkspaceEnabled && isDefaultDomain;
+  const isSkippedBecauseAlreadyLoaded = isDefined(workspacePublicData);
+  const isPublicWorkspaceDataSettled =
+    !isWaitingForClientConfig &&
+    (isSkippedBecauseDefaultDomain ||
+      isSkippedBecauseAlreadyLoaded ||
+      (!loading && (isDefined(data) || isDefined(error))));
+
   return {
     loading,
     data: data?.getPublicWorkspaceDataByDomain,
     error,
+    isPublicWorkspaceDataSettled,
   };
 };

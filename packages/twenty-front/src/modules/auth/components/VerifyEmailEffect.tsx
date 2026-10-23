@@ -2,6 +2,8 @@ import { verifyEmailRedirectPathState } from '@/auth/states/verifyEmailRedirectP
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useVerifyLogin } from '@/auth/hooks/useVerifyLogin';
 import { clientConfigApiStatusState } from '@/client-config/states/clientConfigApiStatusState';
+import { workspacePublicDataState } from '@/auth/states/workspacePublicDataState';
+import { useGetPublicWorkspaceDataByDomain } from '@/domain-manager/hooks/useGetPublicWorkspaceDataByDomain';
 import { useIsCurrentLocationOnAWorkspace } from '@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace';
 import { useRedirectToWorkspaceDomain } from '@/domain-manager/hooks/useRedirectToWorkspaceDomain';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
@@ -47,6 +49,8 @@ export const VerifyEmailEffect = ({ onError }: VerifyEmailEffectProps) => {
   const { redirectToWorkspaceDomain } = useRedirectToWorkspaceDomain();
   const { verifyLoginToken } = useVerifyLogin();
   const { isOnAWorkspace } = useIsCurrentLocationOnAWorkspace();
+  const workspacePublicData = useAtomStateValue(workspacePublicDataState);
+  const { isPublicWorkspaceDataSettled } = useGetPublicWorkspaceDataByDomain();
   const clientConfigApiStatus = useAtomStateValue(clientConfigApiStatusState);
 
   const { t } = useLingui();
@@ -68,7 +72,8 @@ export const VerifyEmailEffect = ({ onError }: VerifyEmailEffectProps) => {
       } satisfies ToastOptions;
 
       try {
-        if (!isOnAWorkspace) {
+        // Single-workspace mode reports "on a workspace" even before one exists.
+        if (!isOnAWorkspace || !isDefined(workspacePublicData)) {
           await verifyEmailAndGetWorkspaceAgnosticToken(
             emailVerificationToken,
             email,
@@ -119,7 +124,7 @@ export const VerifyEmailEffect = ({ onError }: VerifyEmailEffectProps) => {
       }
     };
 
-    if (!clientConfigApiStatus.isLoadedOnce) {
+    if (!clientConfigApiStatus.isLoadedOnce || !isPublicWorkspaceDataSettled) {
       return;
     }
 
@@ -127,7 +132,7 @@ export const VerifyEmailEffect = ({ onError }: VerifyEmailEffectProps) => {
 
     // Verify email only needs to run once at mount
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientConfigApiStatus.isLoadedOnce]);
+  }, [clientConfigApiStatus.isLoadedOnce, isPublicWorkspaceDataSettled]);
 
   return <></>;
 };

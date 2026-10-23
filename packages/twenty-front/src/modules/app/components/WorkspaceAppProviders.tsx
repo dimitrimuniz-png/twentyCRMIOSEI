@@ -22,6 +22,7 @@ import { ErrorMessageEffect } from '@/error-handler/components/ErrorMessageEffec
 import { PromiseRejectionEffect } from '@/error-handler/components/PromiseRejectionEffect';
 import { IsMinimalMetadataReadyEffect } from '@/metadata-store/effect-components/IsMinimalMetadataReadyEffect';
 import { MinimalMetadataLoadEffect } from '@/metadata-store/effect-components/MinimalMetadataLoadEffect';
+import { WorkspaceMemberApprovalGate } from '@/auth/components/WorkspaceMemberApprovalGate';
 import { UserMetadataProviderInitialEffect } from '@/metadata-store/effect-components/UserMetadataProviderInitialEffect';
 import { WORKFLOW_RUN_CORE_RECORD_REFERENCE_FIELDS } from '@/object-core/workflows/constants/WorkflowRunCoreRecordReferenceFields';
 import { ApolloCoreProvider } from '@/object-metadata/components/ApolloCoreProvider';
@@ -47,61 +48,65 @@ export const WorkspaceAppProviders = () => {
   return (
     <SharedAppProviders>
       <UserMetadataProviderInitialEffect />
-      <MinimalMetadataLoadEffect />
-      <IsMinimalMetadataReadyEffect />
-      <WorkspaceProviderEffect />
       <CaptchaProvider>
         <UserContextProvider>
           <AuthProvider>
-            <ApolloCoreProvider>
-              <ApolloAdminProvider>
-                <SSEProvider>
-                  <ApplicationsLoadEffect />
-                  <MyConnectedAccountsLoadEffect />
-                  <UserThemeProviderEffect />
-                  <UserUiScaleProviderEffect />
-                  <ContextStoreComponentInstanceContext.Provider
-                    value={{ instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID }}
-                  >
-                    <AppToaster />
-                    <ErrorMessageEffect />
-                    <AgentChatProvider>
-                      <DialogComponentInstanceContext.Provider
-                        value={{ instanceId: 'dialog-manager' }}
-                      >
-                        <DialogManager>
-                          <StrictMode>
-                            <PromiseRejectionEffect />
-                            <EndTrialAfterPaymentMethodGater />
-                            <GotoHotkeysEffectsProvider />
-                            <WorkspaceAppPageTitle />
-                            <PageFavicon />
-                            <CoreRecordReferenceFieldsContext.Provider
-                              value={WORKFLOW_RUN_CORE_RECORD_REFERENCE_FIELDS}
-                            >
-                              <RecordCreationFormProvider>
-                                <Outlet />
-                                <GlobalFilePreviewModal />
-                                <CommandMenuConfirmationModalManager />
-                                <CommandRunner />
-                              </RecordCreationFormProvider>
-                            </CoreRecordReferenceFieldsContext.Provider>
-                          </StrictMode>
-                        </DialogManager>
-                      </DialogComponentInstanceContext.Provider>
-                    </AgentChatProvider>
-                  </ContextStoreComponentInstanceContext.Provider>
-                  <SupportChatEffect />
-                  <InitializeQueryParamStateEffect />
-                  <TrackPageViewEffect />
-                  <RequestFreshCaptchaTokenEffect />
-                  <PageChangeEffect />
-                  <WelcomeOverlay />
-                  <CompanyEnrichmentOnboardingEffect />
-                  <SignOutOnOtherTabSignOutEffect />
-                </SSEProvider>
-              </ApolloAdminProvider>
-            </ApolloCoreProvider>
+            <WorkspaceMemberApprovalGate>
+              <MinimalMetadataLoadEffect />
+              <IsMinimalMetadataReadyEffect />
+              <WorkspaceProviderEffect />
+              <ApolloCoreProvider>
+                <ApolloAdminProvider>
+                  <SSEProvider>
+                    <ApplicationsLoadEffect />
+                    <MyConnectedAccountsLoadEffect />
+                    <UserThemeProviderEffect />
+                    <UserUiScaleProviderEffect />
+                    <ContextStoreComponentInstanceContext.Provider
+                      value={{ instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID }}
+                    >
+                      <AppToaster />
+                      <ErrorMessageEffect />
+                      <AgentChatProvider>
+                        <DialogComponentInstanceContext.Provider
+                          value={{ instanceId: 'dialog-manager' }}
+                        >
+                          <DialogManager>
+                            <StrictMode>
+                              <PromiseRejectionEffect />
+                              <EndTrialAfterPaymentMethodGater />
+                              <GotoHotkeysEffectsProvider />
+                              <WorkspaceAppPageTitle />
+                              <PageFavicon />
+                              <CoreRecordReferenceFieldsContext.Provider
+                                value={
+                                  WORKFLOW_RUN_CORE_RECORD_REFERENCE_FIELDS
+                                }
+                              >
+                                <RecordCreationFormProvider>
+                                  <Outlet />
+                                  <GlobalFilePreviewModal />
+                                  <CommandMenuConfirmationModalManager />
+                                  <CommandRunner />
+                                </RecordCreationFormProvider>
+                              </CoreRecordReferenceFieldsContext.Provider>
+                            </StrictMode>
+                          </DialogManager>
+                        </DialogComponentInstanceContext.Provider>
+                      </AgentChatProvider>
+                    </ContextStoreComponentInstanceContext.Provider>
+                    <SupportChatEffect />
+                    <InitializeQueryParamStateEffect />
+                    <TrackPageViewEffect />
+                    <RequestFreshCaptchaTokenEffect />
+                    <PageChangeEffect />
+                    <WelcomeOverlay />
+                    <CompanyEnrichmentOnboardingEffect />
+                    <SignOutOnOtherTabSignOutEffect />
+                  </SSEProvider>
+                </ApolloAdminProvider>
+              </ApolloCoreProvider>
+            </WorkspaceMemberApprovalGate>
           </AuthProvider>
         </UserContextProvider>
       </CaptchaProvider>

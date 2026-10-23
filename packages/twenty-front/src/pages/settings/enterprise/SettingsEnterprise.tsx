@@ -656,7 +656,7 @@ export const SettingsEnterprise = ({
           <Section.Root>
             <Section.Header
               title={t`Get Organization`}
-              description={t`Unlock premium features like SSO, row-level security, and audit logs.`}
+              description={t`Activate an Organization key on this server.`}
             />
             <Button
               startIcon={<IconKey />}

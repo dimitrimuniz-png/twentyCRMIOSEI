@@ -1,21 +1,14 @@
+import { IoseiAuthSecondaryButton } from '@/auth/components/iosei-auth/IoseiAuthSecondaryButton';
 import { useHasMultipleAuthMethods } from '@/auth/sign-in-up/hooks/useHasMultipleAuthMethods';
 import { useSignInWithMicrosoft } from '@/auth/sign-in-up/hooks/useSignInWithMicrosoft';
 import { lastAuthenticatedMethodState } from '@/auth/states/lastAuthenticatedMethodState';
-import {
-  SignInUpStep,
-  signInUpStepState,
-} from '@/auth/states/signInUpStepState';
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { type SocialSsoSignInUpActionType } from '@/auth/types/SocialSsoSignInUpActionType';
-import { useLingui } from '@lingui/react/macro';
-import { MainButton } from 'twenty-ui/components/input';
-import { IconMicrosoft } from 'twenty-ui/icon';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useLingui } from '@lingui/react/macro';
+import { IconMicrosoft } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
-import { useTheme } from 'twenty-ui/theme';
-import { SignInUpSeparator } from './SignInUpSeparator';
 
 export const SignInUpWithMicrosoft = ({
   action,
@@ -24,15 +17,13 @@ export const SignInUpWithMicrosoft = ({
   action: SocialSsoSignInUpActionType;
   isGlobalScope?: boolean;
 }) => {
-  const theme = useTheme();
-  const { t } = useLingui();
-
-  const signInUpStep = useAtomStateValue(signInUpStepState);
+  const { t, i18n } = useLingui();
   const [lastAuthenticatedMethod, setLastAuthenticatedMethod] = useAtomState(
     lastAuthenticatedMethodState,
   );
   const { signInWithMicrosoft } = useSignInWithMicrosoft();
   const hasMultipleAuthMethods = useHasMultipleAuthMethods();
+  const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
 
   const handleClick = () => {
     setLastAuthenticatedMethod(AuthenticatedMethod.MICROSOFT);
@@ -42,19 +33,14 @@ export const SignInUpWithMicrosoft = ({
   const isLastUsed = lastAuthenticatedMethod === AuthenticatedMethod.MICROSOFT;
 
   return (
-    <>
-      <StyledSsoButtonContainer>
-        <MainButton
-          startIcon={<IconMicrosoft size={theme.icon.size.md} />}
-          onClick={handleClick}
-          fullWidth
-          variant={signInUpStep === SignInUpStep.Init ? 'solid' : 'outline'}
-        >{t`Continue with Microsoft`}</MainButton>
-        {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
-          <LastUsedPill />
-        )}
-      </StyledSsoButtonContainer>
-      <SignInUpSeparator />
-    </>
+    <StyledSsoButtonContainer>
+      <IoseiAuthSecondaryButton onClick={handleClick}>
+        <IconMicrosoft size={18} />
+        {isPortuguese ? 'Entrar com a Microsoft' : t`Continue with Microsoft`}
+      </IoseiAuthSecondaryButton>
+      {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
+        <LastUsedPill />
+      )}
+    </StyledSsoButtonContainer>
   );
 };

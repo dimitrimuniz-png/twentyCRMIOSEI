@@ -7,7 +7,12 @@ import {
 
 import { isDefined } from 'twenty-shared/utils';
 
+import {
+  AuthException,
+  AuthExceptionCode,
+} from 'src/engine/core-modules/auth/auth.exception';
 import { AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
+import { isWorkspaceMemberApproved } from 'src/engine/core-modules/user-workspace/utils/is-workspace-member-approved.util';
 import { bindDataToRequestObject } from 'src/engine/utils/bind-data-to-request-object.util';
 import { WorkspaceCacheStorageService } from 'src/engine/workspace-cache-storage/workspace-cache-storage.service';
 
@@ -46,8 +51,22 @@ export class JwtAuthGuard implements CanActivate {
 
       bindDataToRequestObject(data, request, metadataVersion);
 
+      if (!isWorkspaceMemberApproved(request.userWorkspace)) {
+        throw new AuthException(
+          'Workspace member approval is required',
+          AuthExceptionCode.MEMBER_APPROVAL_REQUIRED,
+        );
+      }
+
       return true;
     } catch (error) {
+      if (
+        error instanceof AuthException &&
+        error.code === AuthExceptionCode.MEMBER_APPROVAL_REQUIRED
+      ) {
+        throw error;
+      }
+
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 

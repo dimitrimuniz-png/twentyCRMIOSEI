@@ -1,8 +1,17 @@
 import { BadRequestException, UseFilters, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Parent, Query, ResolveField } from '@nestjs/graphql';
+import {
+  Args,
+  Context,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+} from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import crypto from 'crypto';
+
+import { type Request } from 'express';
 
 import { msg } from '@lingui/core/macro';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -31,6 +40,7 @@ import { type FlatApplication } from 'src/engine/core-modules/application/types/
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { buildTwoFactorAuthenticationMethodSummary } from 'src/engine/core-modules/two-factor-authentication/utils/two-factor-authentication-method.presenter';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
+import { isWorkspaceMemberApproved } from 'src/engine/core-modules/user-workspace/utils/is-workspace-member-approved.util';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { DeletedWorkspaceMemberDTO } from 'src/engine/core-modules/user/dtos/deleted-workspace-member.dto';
 import { UpdateUserEmailInput } from 'src/engine/core-modules/user/dtos/update-user-email.input';
@@ -60,6 +70,7 @@ import { AuthIsUserSession } from 'src/engine/decorators/auth/auth-is-user-sessi
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspaceMemberId } from 'src/engine/decorators/auth/auth-workspace-member-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
+import { AllowPendingWorkspaceMember } from 'src/engine/decorators/auth/allow-pending-workspace-member.decorator';
 import { AllowSuspendedWorkspace } from 'src/engine/decorators/auth/allow-suspended-workspace.decorator';
 import { CustomPermissionGuard } from 'src/engine/guards/custom-permission.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
@@ -141,6 +152,7 @@ export class UserResolver {
     NoPermissionGuard,
   )
   @AllowSuspendedWorkspace()
+  @AllowPendingWorkspaceMember()
   async currentUser(
     @AuthUser() { id: userId }: AuthContextUser,
     @AuthWorkspace({ allowUndefined: true }) workspace: WorkspaceEntity,
@@ -291,8 +303,11 @@ export class UserResolver {
     @Parent() _user: UserEntity,
     @AuthWorkspace({ allowUndefined: true })
     workspace: WorkspaceEntity | undefined,
+    @Context() context: { req: Request },
   ): Promise<WorkspaceMemberDTO[]> {
-    if (!workspace) return [];
+    if (!workspace || !isWorkspaceMemberApproved(context.req.userWorkspace)) {
+      return [];
+    }
 
     const workspaceMemberEntities = await this.userService.loadWorkspaceMembers(
       workspace,
@@ -360,8 +375,11 @@ export class UserResolver {
     @Parent() _user: UserEntity,
     @AuthWorkspace({ allowUndefined: true })
     workspace: WorkspaceEntity | undefined,
+    @Context() context: { req: Request },
   ): Promise<DeletedWorkspaceMemberDTO[]> {
-    if (!workspace) return [];
+    if (!workspace || !isWorkspaceMemberApproved(context.req.userWorkspace)) {
+      return [];
+    }
 
     const workspaceMemberEntities =
       await this.userService.loadDeletedWorkspaceMembersOnly(workspace);

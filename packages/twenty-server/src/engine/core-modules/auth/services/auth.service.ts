@@ -233,6 +233,7 @@ export class AuthService {
       user,
       workspace,
       workspaceInvitation.roleId,
+      { isExplicitlyInvited: true },
     );
 
     return user;
@@ -259,6 +260,7 @@ export class AuthService {
       user,
       workspace,
       castAppTokenToWorkspaceInvitationUtil(invitation).roleId,
+      { isExplicitlyInvited: true },
     );
   }
 

@@ -108,13 +108,8 @@ export const EnterprisePlanModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const client = useApolloClient();
 
-  const benefits = [
-    t`SSO (SAML / OIDC)`,
-    t`Row-level security`,
-    t`Audit logs`,
-    t`Advanced Encryption`,
-    t`Custom AI Models`,
-  ];
+  // SSO, row-level security, and audit logs are not sold as key benefits here.
+  const benefits = [t`Advanced Encryption`, t`Custom AI Models`];
 
   const price = selectedInterval === 'monthly' ? MONTHLY_PRICE : YEARLY_PRICE;
   const priceUnit =

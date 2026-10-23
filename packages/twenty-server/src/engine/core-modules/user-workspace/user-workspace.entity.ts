@@ -20,6 +20,9 @@ import {
 } from 'typeorm';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
+import { ADD_WORKSPACE_MEMBER_APPROVAL_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-51/add-workspace-member-approval-upgrade-command-name.constant';
+import { WorkspaceMemberApprovalStatus } from 'src/engine/core-modules/user-workspace/enums/workspace-member-approval-status.enum';
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { TwoFactorAuthenticationMethodSummaryDTO } from 'src/engine/core-modules/two-factor-authentication/dto/two-factor-authentication-method.dto';
 import { TwoFactorAuthenticationMethodEntity } from 'src/engine/core-modules/two-factor-authentication/entities/two-factor-authentication-method.entity';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
@@ -68,6 +71,16 @@ export class UserWorkspaceEntity extends WorkspaceRelatedEntity {
   @Field(() => String, { nullable: false })
   @Column({ nullable: false, default: SOURCE_LOCALE, type: 'varchar' })
   locale: keyof typeof APP_LOCALES;
+
+  @Field(() => WorkspaceMemberApprovalStatus)
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_WORKSPACE_MEMBER_APPROVAL_UPGRADE_COMMAND_NAME,
+  })
+  @Column({
+    type: 'varchar',
+    default: WorkspaceMemberApprovalStatus.APPROVED,
+  })
+  approvalStatus: WorkspaceMemberApprovalStatus;
 
   @Field()
   @CreateDateColumn({ type: 'timestamptz' })
