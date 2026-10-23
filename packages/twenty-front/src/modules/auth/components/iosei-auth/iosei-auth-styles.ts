@@ -1,7 +1,6 @@
 /* oxlint-disable twenty/no-hardcoded-colors -- IOSEI auth chrome is shown before the workspace theme exists. */
 import './iosei-auth-fonts.css';
 
-import { css } from '@linaria/core';
 import { styled } from '@linaria/react';
 
 const ioseiTransition =
@@ -45,7 +44,7 @@ export const StyledIoseiAuthCard = styled.div`
   }
 `;
 
-const ioseiLogoFrame = css`
+export const StyledIoseiAuthLogoFrame = styled.div`
   background: transparent;
   border: 0;
   display: block;
@@ -60,13 +59,20 @@ const ioseiLogoFrame = css`
   }
 `;
 
-export const StyledIoseiAuthLogoFrame = styled.div`
-  ${ioseiLogoFrame}
-`;
-
 export const StyledIoseiAuthLogoButton = styled.button`
-  ${ioseiLogoFrame}
+  background: transparent;
+  border: 0;
   cursor: pointer;
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  width: 240px;
+
+  img {
+    display: block;
+    height: auto;
+    width: 100%;
+  }
 
   &:focus-visible {
     border-radius: 8px;
@@ -161,7 +167,7 @@ export const StyledIoseiAuthLabel = styled.label`
   margin-bottom: 8px;
 `;
 
-const ioseiControl = css`
+const ioseiControl = `
   background: #ffffff;
   border: 1.5px solid #d5d9e3;
   border-radius: 12px;
