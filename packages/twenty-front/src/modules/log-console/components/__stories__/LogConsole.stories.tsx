@@ -769,7 +769,7 @@ export const FullScreen: Story = {
   },
 };
 
-export const LockedTab: Story = {
+export const SecurityOpenWithoutEntitlement: Story = {
   beforeEach: () => {
     jotaiStore.set(currentWorkspaceState.atom, {
       ...WORKSPACE_WITH_LOGS_CONSOLE,
@@ -780,8 +780,14 @@ export const LockedTab: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await userEvent.click(await canvas.findByRole('tab', { name: 'Security' }));
-    await canvas.findByText('Upgrade to access audit logs');
+    await userEvent.click(
+      await canvas.findByRole('tab', { name: 'Security' }, { timeout: 5000 }),
+    );
+
+    expect(await canvas.findAllByText('Support team')).toHaveLength(3);
+    expect(
+      canvas.queryByText('Upgrade to access audit logs'),
+    ).not.toBeInTheDocument();
   },
 };
 

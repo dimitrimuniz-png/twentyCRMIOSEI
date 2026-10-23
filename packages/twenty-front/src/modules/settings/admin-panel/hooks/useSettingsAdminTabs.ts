@@ -1,12 +1,10 @@
 import { currentUserState } from '@/auth/states/currentUserState';
-import { billingState } from '@/client-config/states/billingState';
 import { SETTINGS_ADMIN_TABS } from '@/settings/admin-panel/constants/SettingsAdminTabs';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { t } from '@lingui/core/macro';
 import {
   IconApps,
   IconHeart,
-  IconKey,
   IconSettings2,
   IconSparkles,
   IconVariable,
@@ -14,12 +12,12 @@ import {
 
 export const useSettingsAdminTabs = () => {
   const currentUser = useAtomStateValue(currentUserState);
-  const billing = useAtomStateValue(billingState);
 
   const canAccessFullAdminPanel = currentUser?.canAccessFullAdminPanel;
   const canImpersonate = currentUser?.canImpersonate;
-  const isBillingEnabled = billing?.isBillingEnabled;
 
+  // The Organization tab is the enterprise-key upsell. SSO, row-level
+  // security, and audit logs in this fork do not depend on that key.
   return [
     {
       id: SETTINGS_ADMIN_TABS.GENERAL,
@@ -51,15 +49,5 @@ export const useSettingsAdminTabs = () => {
       Icon: IconHeart,
       disabled: !canAccessFullAdminPanel,
     },
-    ...(!isBillingEnabled
-      ? [
-          {
-            id: SETTINGS_ADMIN_TABS.ORGANIZATION,
-            title: t`Organization`,
-            Icon: IconKey,
-            disabled: !canAccessFullAdminPanel && !canImpersonate,
-          },
-        ]
-      : []),
   ];
 };

@@ -217,13 +217,14 @@ export const SETTINGS_BILLING_PLAN_COMPARISON_ROWS = [
     },
     type: 'feature',
   },
+  // SSO, row-level permissions, and audit logs ship in this fork without a key.
   {
     featureLabel: msg`Row-level permissions`,
     plans: {
       [BillingPlanKey.ENTERPRISE]: { kind: 'text', text: msg`Unlimited` },
       [BillingPlanKey.ORGANIZATION_V2]: { kind: 'text', text: msg`Unlimited` },
-      [BillingPlanKey.PRO]: { kind: 'excluded' },
-      [BillingPlanKey.PRO_V2]: { kind: 'excluded' },
+      [BillingPlanKey.PRO]: { kind: 'text', text: msg`Unlimited` },
+      [BillingPlanKey.PRO_V2]: { kind: 'text', text: msg`Unlimited` },
     },
     type: 'feature',
   },
@@ -232,8 +233,8 @@ export const SETTINGS_BILLING_PLAN_COMPARISON_ROWS = [
     plans: {
       [BillingPlanKey.ENTERPRISE]: { kind: 'included' },
       [BillingPlanKey.ORGANIZATION_V2]: { kind: 'included' },
-      [BillingPlanKey.PRO]: { kind: 'excluded' },
-      [BillingPlanKey.PRO_V2]: { kind: 'excluded' },
+      [BillingPlanKey.PRO]: { kind: 'included' },
+      [BillingPlanKey.PRO_V2]: { kind: 'included' },
     },
     type: 'feature',
   },
@@ -262,8 +263,8 @@ export const SETTINGS_BILLING_PLAN_COMPARISON_ROWS = [
     plans: {
       [BillingPlanKey.ENTERPRISE]: { kind: 'included' },
       [BillingPlanKey.ORGANIZATION_V2]: { kind: 'included' },
-      [BillingPlanKey.PRO]: { kind: 'excluded' },
-      [BillingPlanKey.PRO_V2]: { kind: 'excluded' },
+      [BillingPlanKey.PRO]: { kind: 'included' },
+      [BillingPlanKey.PRO_V2]: { kind: 'included' },
     },
     type: 'feature',
   },
@@ -278,8 +279,14 @@ export const SETTINGS_BILLING_PLAN_COMPARISON_ROWS = [
         kind: 'text',
         text: msg`Custom, up to 3 years`,
       },
-      [BillingPlanKey.PRO]: { kind: 'text', text: msg`2 hours` },
-      [BillingPlanKey.PRO_V2]: { kind: 'text', text: msg`2 hours` },
+      [BillingPlanKey.PRO]: {
+        kind: 'text',
+        text: msg`Custom, up to 3 years`,
+      },
+      [BillingPlanKey.PRO_V2]: {
+        kind: 'text',
+        text: msg`Custom, up to 3 years`,
+      },
     },
     type: 'feature',
   },
