@@ -1,9 +1,13 @@
+import { getOperandLabel } from '@/object-record/object-filter-dropdown/utils/getOperandLabel';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { mapRLSOperandToRecordFilterOperand } from '@/object-record/record-filter/utils/mapRLSOperandToRecordFilterOperand';
 import { settingsDraftRoleFamilyState } from '@/settings/roles/states/settingsDraftRoleFamilyState';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
+import { isNonEmptyString } from '@sniptt/guards';
+import { type RowLevelPermissionPredicateOperand as SharedRowLevelPermissionPredicateOperand } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { Section } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
@@ -54,6 +58,18 @@ const StyledToolbar = styled.div`
 `;
 
 const OPERANDS = Object.values(RowLevelPermissionPredicateOperand);
+
+const getRecordRuleOperandLabel = (
+  operand: RowLevelPermissionPredicateOperand,
+) => {
+  const label = getOperandLabel(
+    mapRLSOperandToRecordFilterOperand(
+      operand as SharedRowLevelPermissionPredicateOperand,
+    ),
+  );
+
+  return isNonEmptyString(label) ? label : operand;
+};
 
 const OPERANDS_WITHOUT_VALUE = new Set<RowLevelPermissionPredicateOperand>([
   RowLevelPermissionPredicateOperand.IS_EMPTY,
@@ -263,7 +279,7 @@ export const SettingsRolePermissionsObjectLevelRecordLevelSection = ({
               >
                 {OPERANDS.map((operand) => (
                   <option key={operand} value={operand}>
-                    {operand}
+                    {getRecordRuleOperandLabel(operand)}
                   </option>
                 ))}
               </StyledSelect>
