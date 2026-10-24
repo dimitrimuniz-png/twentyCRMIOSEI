@@ -13,10 +13,6 @@ import { type Response } from 'express';
 import { ApiPath, AppPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
-import {
-  AuthException,
-  AuthExceptionCode,
-} from 'src/engine/core-modules/auth/auth.exception';
 import { AuthRestApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-rest-api-exception.filter';
 import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
 import { OidcAuthGuard } from 'src/engine/core-modules/auth/guards/oidc-auth.guard';
@@ -24,6 +20,7 @@ import { SamlAuthGuard } from 'src/engine/core-modules/auth/guards/saml-auth.gua
 import { AuthService } from 'src/engine/core-modules/auth/services/auth.service';
 import { type SamlRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
 import { assertEmailDomainIsAllowed } from 'src/engine/core-modules/auth/utils/assert-email-domain-is-allowed.util';
+import { getSsoCallbackErrorCode } from 'src/engine/core-modules/auth/utils/get-sso-callback-error-code.util';
 import { LoginTokenService } from 'src/engine/core-modules/auth/token/services/login-token.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
@@ -173,18 +170,6 @@ export class SsoAuthController {
     );
   }
 }
-
-const getSsoCallbackErrorCode = (error: unknown): string => {
-  if (error instanceof AuthException) {
-    if (error.message === 'Email domain is not allowed') {
-      return 'EMAIL_DOMAIN_NOT_ALLOWED';
-    }
-
-    return error.code;
-  }
-
-  return AuthExceptionCode.SSO_AUTH_FAILED;
-};
 
 const escapeXml = (value: string): string =>
   value.replace(/[&<>"']/g, (character) => {
