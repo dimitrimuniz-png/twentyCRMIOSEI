@@ -3,6 +3,10 @@ import { dirname, resolve } from 'path';
 import { pathsToModuleNameMapper } from 'ts-jest';
 import { fileURLToPath } from 'url';
 
+// The reporter is only installed when CI is set. This import keeps the file
+// in the module graph so Knip still sees it when that branch is not taken.
+import './jest-failures-only-reporter.cjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

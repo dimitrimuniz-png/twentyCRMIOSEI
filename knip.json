@@ -112,8 +112,7 @@
         "src/modules/geo-map/graphql-query/*.{ts,tsx}",
         "vitest.config.ts",
         "lingui.config.ts",
-        "nyc.config.cjs",
-        "jest-failures-only-reporter.cjs"
+        "nyc.config.cjs"
       ],
       "graphql-codegen": [
         "codegen.cjs",
@@ -128,7 +127,6 @@
         "src/modules/settings/domains/states/customDomainRecordsState.ts",
         "src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/constants/RecordLevelPermissionPredicateFieldTypes.ts",
         "src/modules/settings/roles/role-permissions/object-level-permissions/record-level-permissions/contexts/RecordLevelPermissionVariablePickerContext.ts",
-        "src/modules/settings/security/hooks/useBuildServerUrl.ts",
         "src/modules/settings/security/utils/getColorBySsoIdentityProviderStatus.ts",
         "src/modules/settings/security/utils/guessSsoIdentityProviderIconByUrl.ts"
       ],

@@ -397,13 +397,6 @@ export const StyledIoseiAuthTextLink = styled.button`
   }
 `;
 
-export const StyledIoseiAuthForgotPasswordRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  width: 100%;
-`;
-
 export const StyledIoseiAuthOrDivider = styled.div`
   align-items: center;
   color: #7a8094;
