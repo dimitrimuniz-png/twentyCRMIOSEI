@@ -29,6 +29,7 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { isNonEmptyString } from '@sniptt/guards';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
 import { Avatar } from 'twenty-ui/primitives/data-display';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
@@ -249,7 +250,7 @@ export const SignInUpGlobalScopeForm = () => {
                   onClick={handleResetPassword(form.getValues('email'))}
                 >
                   {isPortuguese ? (
-                    'Esqueceu a senha?'
+                    doNotTranslate('Esqueceu a senha?')
                   ) : (
                     <Trans>Forgot your password?</Trans>
                   )}

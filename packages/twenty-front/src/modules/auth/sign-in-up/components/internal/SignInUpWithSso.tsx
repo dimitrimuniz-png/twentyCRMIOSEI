@@ -15,6 +15,7 @@ import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
 import { IconLock } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
@@ -37,7 +38,9 @@ export const SignInUpWithSso = ({
   const { redirectToSsoLoginPage } = useSso();
   const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
   const providers = identityProviders ?? workspaceAuthProviders?.sso ?? [];
-  const label = isPortuguese ? 'Entrar com SSO' : t`Single sign-on (SSO)`;
+  const label = isPortuguese
+    ? doNotTranslate('Entrar com SSO')
+    : t`Single sign-on (SSO)`;
 
   const signInWithSso = () => {
     setLastAuthenticatedMethod(AuthenticatedMethod.SSO);

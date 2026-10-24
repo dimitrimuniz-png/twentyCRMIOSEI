@@ -9,6 +9,7 @@ import { currentUserState } from '@/auth/states/currentUserState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconClock } from 'twenty-ui/icon';
 import { Loader } from 'twenty-ui/primitives/feedback';
 
@@ -25,9 +26,13 @@ export const WaitingForWorkspaceMemberApproval = ({
   const { signOut } = useAuth();
   const currentUser = useAtomStateValue(currentUserState);
   const isPortuguese = i18n.locale.toLowerCase().startsWith('pt');
-  const title = isPortuguese ? 'Aguardando aprovação' : t`Waiting for approval`;
+  const title = isPortuguese
+    ? doNotTranslate('Aguardando aprovação')
+    : t`Waiting for approval`;
   const explanation = isPortuguese
-    ? 'Sua conta foi criada, mas o acesso ao CRM precisa ser liberado por um administrador. Você receberá um e-mail assim que for aprovado.'
+    ? doNotTranslate(
+        'Sua conta foi criada, mas o acesso ao CRM precisa ser liberado por um administrador. Você receberá um e-mail assim que for aprovado.',
+      )
     : t`Your account was created, but access to the CRM still needs to be released by an administrator. You will receive an email once it is approved.`;
   const email = currentUser?.email;
 
@@ -49,7 +54,7 @@ export const WaitingForWorkspaceMemberApproval = ({
         <>
           <StyledIoseiAuthWaitCopy>{explanation}</StyledIoseiAuthWaitCopy>
           <IoseiAuthSecondaryButton onClick={() => void signOut()}>
-            {isPortuguese ? 'Sair' : t`Sign out`}
+            {isPortuguese ? doNotTranslate('Sair') : t`Sign out`}
           </IoseiAuthSecondaryButton>
         </>
       )}

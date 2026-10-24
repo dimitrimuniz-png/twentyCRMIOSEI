@@ -3,6 +3,7 @@ import { type Form } from '@/auth/sign-in-up/hooks/useSignInUpForm';
 import { SignInUpMode } from '@/auth/types/SignInUpMode';
 import { useLingui } from '@lingui/react/macro';
 import { Controller, useFormContext } from 'react-hook-form';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const SignInUpPasswordField = ({
   showErrors,
@@ -27,7 +28,7 @@ export const SignInUpPasswordField = ({
       }) => (
         <IoseiAuthPasswordField
           id="sign-in-up-password"
-          label={isPortuguese ? 'Senha' : t`Password`}
+          label={isPortuguese ? doNotTranslate('Senha') : t`Password`}
           autoFocus={autoFocus}
           autoComplete={
             signInUpMode === SignInUpMode.SignUp

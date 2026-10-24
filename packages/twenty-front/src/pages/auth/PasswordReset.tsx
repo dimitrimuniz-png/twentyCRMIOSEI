@@ -22,6 +22,7 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { AppPath } from 'twenty-shared/types';
 import { useToast } from 'twenty-ui/components/feedback';
 import { Loader } from 'twenty-ui/primitives/feedback';
@@ -189,7 +190,7 @@ export const PasswordReset = () => {
         <StyledIoseiAuthForm onSubmit={handleSubmit(onSubmit)}>
           <IoseiAuthTextField
             id="password-reset-email"
-            label={isPortuguese ? 'E-mail' : t`Email`}
+            label={isPortuguese ? doNotTranslate('E-mail') : t`Email`}
             value={email}
             onChange={() => undefined}
             disabled
@@ -203,7 +204,9 @@ export const PasswordReset = () => {
             }) => (
               <IoseiAuthPasswordField
                 id="password-reset-new-password"
-                label={isPortuguese ? 'Nova senha' : t`New Password`}
+                label={
+                  isPortuguese ? doNotTranslate('Nova senha') : t`New Password`
+                }
                 autoFocus
                 autoComplete="new-password"
                 value={value}

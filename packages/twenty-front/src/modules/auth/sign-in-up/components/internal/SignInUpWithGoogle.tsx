@@ -6,6 +6,7 @@ import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { type SocialSsoSignInUpActionType } from '@/auth/types/SocialSsoSignInUpActionType';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { useLingui } from '@lingui/react/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconGoogle } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
@@ -36,7 +37,9 @@ export const SignInUpWithGoogle = ({
     <StyledSsoButtonContainer>
       <IoseiAuthSecondaryButton onClick={handleClick}>
         <IconGoogle size={18} />
-        {isPortuguese ? 'Entrar com Google' : t`Continue with Google`}
+        {isPortuguese
+          ? doNotTranslate('Entrar com Google')
+          : t`Continue with Google`}
       </IoseiAuthSecondaryButton>
       {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
         <LastUsedPill />

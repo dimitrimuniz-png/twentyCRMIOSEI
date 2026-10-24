@@ -10,6 +10,7 @@ import {
 import { isNonEmptyString } from '@sniptt/guards';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconEye, IconEyeOff } from 'twenty-ui/icon';
 
 type IoseiAuthPasswordFieldProps = {
@@ -46,8 +47,12 @@ export const IoseiAuthPasswordField = ({
   const hintId = `${id}-hint`;
   const hasError = isNonEmptyString(error);
   const hasHint = isNonEmptyString(hint) && !hasError;
-  const showPasswordLabel = isPortuguese ? 'Mostrar senha' : t`Show password`;
-  const hidePasswordLabel = isPortuguese ? 'Ocultar senha' : t`Hide password`;
+  const showPasswordLabel = isPortuguese
+    ? doNotTranslate('Mostrar senha')
+    : t`Show password`;
+  const hidePasswordLabel = isPortuguese
+    ? doNotTranslate('Ocultar senha')
+    : t`Hide password`;
   const eyeLabel = isPasswordVisible ? hidePasswordLabel : showPasswordLabel;
 
   return (

@@ -6,6 +6,7 @@ import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { type SocialSsoSignInUpActionType } from '@/auth/types/SocialSsoSignInUpActionType';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { useLingui } from '@lingui/react/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconMicrosoft } from 'twenty-ui/icon';
 import { LastUsedPill } from './LastUsedPill';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
@@ -36,7 +37,9 @@ export const SignInUpWithMicrosoft = ({
     <StyledSsoButtonContainer>
       <IoseiAuthSecondaryButton onClick={handleClick}>
         <IconMicrosoft size={18} />
-        {isPortuguese ? 'Entrar com a Microsoft' : t`Continue with Microsoft`}
+        {isPortuguese
+          ? doNotTranslate('Entrar com a Microsoft')
+          : t`Continue with Microsoft`}
       </IoseiAuthSecondaryButton>
       {isLastUsed && (isGlobalScope || hasMultipleAuthMethods) && (
         <LastUsedPill />

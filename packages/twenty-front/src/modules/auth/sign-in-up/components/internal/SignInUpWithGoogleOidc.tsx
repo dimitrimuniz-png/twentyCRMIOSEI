@@ -8,6 +8,7 @@ import {
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
 import { IconGoogle } from 'twenty-ui/icon';
 import { StyledSsoButtonContainer } from './SignInUpSsoButtonStyles';
@@ -42,7 +43,9 @@ export const SignInUpWithGoogleOidc = ({
     <StyledSsoButtonContainer>
       <IoseiAuthSecondaryButton onClick={handleClick}>
         <IconGoogle size={18} />
-        {isPortuguese ? 'Entrar com Google' : t`Continue with Google`}
+        {isPortuguese
+          ? doNotTranslate('Entrar com Google')
+          : t`Continue with Google`}
       </IoseiAuthSecondaryButton>
     </StyledSsoButtonContainer>
   );

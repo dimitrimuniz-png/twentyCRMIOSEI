@@ -1,5 +1,6 @@
 import { StyledIoseiAuthOrDivider } from '@/auth/components/iosei-auth/iosei-auth-styles';
 import { useLingui } from '@lingui/react/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const IoseiAuthOrDivider = () => {
   const { t, i18n } = useLingui();
@@ -7,7 +8,7 @@ export const IoseiAuthOrDivider = () => {
 
   return (
     <StyledIoseiAuthOrDivider>
-      {isPortuguese ? 'ou' : t`or`}
+      {isPortuguese ? doNotTranslate('ou') : t`or`}
     </StyledIoseiAuthOrDivider>
   );
 };

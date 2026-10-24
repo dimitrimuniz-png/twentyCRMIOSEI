@@ -2,9 +2,11 @@
 import './iosei-auth-fonts.css';
 
 import { styled } from '@linaria/react';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
-const ioseiTransition =
-  'background-color 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, color 150ms ease-out';
+const ioseiTransition = doNotTranslate(
+  'background-color 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out, color 150ms ease-out',
+);
 
 export const StyledIoseiAuthPage = styled.div`
   align-items: center;
