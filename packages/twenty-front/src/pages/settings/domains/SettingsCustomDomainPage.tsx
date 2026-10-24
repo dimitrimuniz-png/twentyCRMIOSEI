@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Self-hosted fork: commercial module removed. This stub keeps AGPL imports compiling.
-type RemovedCommercial = any;
+// Commercial screen removed. false still renders nothing; a null return is
+// linted as an effect component and would force a rename of every importer.
+type SettingsCustomDomainPageProps = any;
 
-export const SettingsCustomDomainPage = (_props?: RemovedCommercial): null => null;
+export const SettingsCustomDomainPage = (
+  _props?: SettingsCustomDomainPageProps,
+) => false;
