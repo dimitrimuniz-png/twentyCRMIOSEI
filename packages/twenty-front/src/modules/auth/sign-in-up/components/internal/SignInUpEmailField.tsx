@@ -28,7 +28,7 @@ export const SignInUpEmailField = ({
       }) => (
         <IoseiAuthTextField
           id="sign-in-up-email"
-          label={isPortuguese ? 'E-mail' : t`Email`}
+          label={isPortuguese ? doNotTranslate('E-mail') : t`Email`}
           autoComplete="email"
           autoFocus={autoFocus}
           type="email"

@@ -24,6 +24,7 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { useLingui } from '@lingui/react/macro';
 import { type FormEvent, type ReactNode, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
 import { z } from 'zod';
 
@@ -61,7 +62,7 @@ export const SignInUpWithCredentials = ({
   const isSignUpBlockedByDDLLock =
     isDDLLocked && signInUpMode === SignInUpMode.SignUp;
 
-  const buttonTitle = isPortuguese ? 'Entrar' : t`Sign in`;
+  const buttonTitle = isPortuguese ? doNotTranslate('Entrar') : t`Sign in`;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -130,7 +131,9 @@ export const SignInUpWithCredentials = ({
             checked={keepSignedIn}
             onChange={(event) => setKeepSignedIn(event.target.checked)}
           />
-          {isPortuguese ? 'Manter-me conectado' : t`Keep me signed in`}
+          {isPortuguese
+            ? doNotTranslate('Manter-me conectado')
+            : t`Keep me signed in`}
         </StyledIoseiAuthRememberLabel>
         {beforeSubmit}
       </StyledIoseiAuthRememberRow>

@@ -1,13 +1,16 @@
 import { type I18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 const SSO_ERROR_COPY = {
   EMAIL_DOMAIN_NOT_ALLOWED: {
-    pt: 'Este domínio de e-mail não tem permissão para entrar.',
+    pt: doNotTranslate('Este domínio de e-mail não tem permissão para entrar.'),
     en: msg`This email domain is not allowed to sign in.`,
   },
   generic: {
-    pt: 'O login com SSO falhou. Tente de novo ou fale com um administrador.',
+    pt: doNotTranslate(
+      'O login com SSO falhou. Tente de novo ou fale com um administrador.',
+    ),
     en: msg`Single sign-on failed. Try again or contact an administrator.`,
   },
 } as const;

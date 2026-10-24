@@ -5,6 +5,7 @@ import { useWorkspaceFromInviteHash } from '@/auth/sign-in-up/hooks/useWorkspace
 import { SignInUpStep } from '@/auth/states/signInUpStepState';
 import { useLingui } from '@lingui/react/macro';
 import { type JSX } from 'react';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
 
 type SignInUpStandardContentProps = {
@@ -34,13 +35,13 @@ export const SignInUpStandardContent = ({
   const heading =
     isCredentialStep && !isInvite
       ? isPortuguese
-        ? 'Acesse sua conta'
+        ? doNotTranslate('Acesse sua conta')
         : t`Sign in to your account`
       : title;
   const subtitle =
     isCredentialStep && !isInvite
       ? isPortuguese
-        ? 'Use o e-mail corporativo da IOSEI'
+        ? doNotTranslate('Use o e-mail corporativo da IOSEI')
         : t`Use your IOSEI work email`
       : undefined;
 

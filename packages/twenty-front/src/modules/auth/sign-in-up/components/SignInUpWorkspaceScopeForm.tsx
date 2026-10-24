@@ -16,6 +16,7 @@ import { workspaceAuthProvidersState } from '@/workspace/states/workspaceAuthPro
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { FormProvider } from 'react-hook-form';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const SignInUpWorkspaceScopeForm = () => {
   const { i18n } = useLingui();
@@ -49,7 +50,7 @@ export const SignInUpWorkspaceScopeForm = () => {
   const forgotPasswordLink = (
     <IoseiAuthTextLink onClick={handleResetPassword(form.getValues('email'))}>
       {isPortuguese ? (
-        'Esqueceu a senha?'
+        doNotTranslate('Esqueceu a senha?')
       ) : (
         <Trans>Forgot your password?</Trans>
       )}

@@ -12,6 +12,7 @@ import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useState } from 'react';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDefined } from 'twenty-shared/utils';
 import { useToast } from 'twenty-ui/components/feedback';
 import { Section } from 'twenty-ui/components/layout';
@@ -222,7 +223,7 @@ export const SettingsPendingWorkspaceMembers = () => {
 
       enqueueToast({
         status: 'success',
-        children: text(t`Member approved.`, 'Membro aprovado.'),
+        children: text(t`Member approved.`, doNotTranslate('Membro aprovado.')),
       });
       await refetch();
     } catch (error) {
@@ -246,7 +247,7 @@ export const SettingsPendingWorkspaceMembers = () => {
 
       enqueueToast({
         status: 'success',
-        children: text(t`Access rejected.`, 'Acesso recusado.'),
+        children: text(t`Access rejected.`, doNotTranslate('Acesso recusado.')),
       });
       await refetch();
     } catch (error) {
@@ -259,10 +260,15 @@ export const SettingsPendingWorkspaceMembers = () => {
   return (
     <Section.Root>
       <Section.Header
-        title={text(t`Pending approval`, 'Aguardando aprovação')}
+        title={text(
+          t`Pending approval`,
+          doNotTranslate('Aguardando aprovação'),
+        )}
         description={text(
           t`New members stay without access until an administrator approves them.`,
-          'Novos membros ficam sem acesso até um administrador aprovar.',
+          doNotTranslate(
+            'Novos membros ficam sem acesso até um administrador aprovar.',
+          ),
         )}
       />
       {canManageMembers && (
@@ -271,11 +277,13 @@ export const SettingsPendingWorkspaceMembers = () => {
             Icon={IconUserPlus}
             title={text(
               t`Require approval for new members`,
-              'Exigir aprovação de novos membros',
+              doNotTranslate('Exigir aprovação de novos membros'),
             )}
             description={text(
               t`Personal invitations are approved immediately. People who join through SSO or an allowed domain stay pending.`,
-              'Convites pessoais entram aprovados. Quem entra por SSO ou domínio permitido fica pendente.',
+              doNotTranslate(
+                'Convites pessoais entram aprovados. Quem entra por SSO ou domínio permitido fica pendente.',
+              ),
             )}
             checked={isMemberApprovalRequired}
             disabled={loading && !isDefined(data)}
@@ -286,18 +294,20 @@ export const SettingsPendingWorkspaceMembers = () => {
       {pendingMembers.length === 0 ? (
         <StyledEmpty>
           {loading
-            ? text(t`Loading…`, 'Carregando…')
+            ? text(t`Loading…`, doNotTranslate('Carregando…'))
             : text(
                 t`No members waiting for approval.`,
-                'Nenhum membro aguardando aprovação.',
+                doNotTranslate('Nenhum membro aguardando aprovação.'),
               )}
         </StyledEmpty>
       ) : (
         <Table>
           <TableRow gridAutoColumns="1.2fr 1fr 180px 220px">
-            <TableHeader>{text(t`Name`, 'Nome')}</TableHeader>
-            <TableHeader>{text(t`Email`, 'E-mail')}</TableHeader>
-            <TableHeader>{text(t`Role`, 'Função')}</TableHeader>
+            <TableHeader>{text(t`Name`, doNotTranslate('Nome'))}</TableHeader>
+            <TableHeader>
+              {text(t`Email`, doNotTranslate('E-mail'))}
+            </TableHeader>
+            <TableHeader>{text(t`Role`, doNotTranslate('Função'))}</TableHeader>
             <TableHeader></TableHeader>
           </TableRow>
           <StyledTableRows>
@@ -367,7 +377,7 @@ export const SettingsPendingWorkspaceMembers = () => {
                           void handleApprove(member.userWorkspaceId);
                         }}
                       >
-                        {text(t`Approve`, 'Aprovar')}
+                        {text(t`Approve`, doNotTranslate('Aprovar'))}
                       </Button>
                       <Button
                         size="sm"
@@ -378,7 +388,7 @@ export const SettingsPendingWorkspaceMembers = () => {
                           void handleReject(member.userWorkspaceId);
                         }}
                       >
-                        {text(t`Reject`, 'Recusar')}
+                        {text(t`Reject`, doNotTranslate('Recusar'))}
                       </Button>
                     </StyledActions>
                   </TableCell>

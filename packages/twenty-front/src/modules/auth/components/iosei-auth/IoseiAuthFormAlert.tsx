@@ -3,7 +3,7 @@ import { authFormAlertState } from '@/auth/states/authFormAlertState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { isNonEmptyString } from '@sniptt/guards';
 
-export const IOSEI_AUTH_FORM_ALERT_ID = 'iosei-auth-form-alert';
+const IOSEI_AUTH_FORM_ALERT_ID = 'iosei-auth-form-alert';
 
 export const IoseiAuthFormAlert = () => {
   const authFormAlert = useAtomStateValue(authFormAlertState);
