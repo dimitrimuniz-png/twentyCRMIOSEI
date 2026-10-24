@@ -193,7 +193,7 @@ describe('useSaveDraftRoleToDB', () => {
     expect(onSuccess).toHaveBeenCalledWith(ROLE_ID);
   });
 
-  it('should not call onSuccess when the role creation returns no data', async () => {
+  it('rejects and skips onSuccess when role creation returns no data', async () => {
     const onSuccess = jest.fn();
 
     mockCreateRole.mockResolvedValue({ data: undefined });
@@ -206,9 +206,53 @@ describe('useSaveDraftRoleToDB', () => {
     });
 
     await act(async () => {
-      await result.current.saveDraftRoleToDB();
+      await expect(result.current.saveDraftRoleToDB()).rejects.toThrow(
+        'An error occurred.',
+      );
     });
 
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('rejects and skips later writes when a permission mutation returns an error', async () => {
+    const onSuccess = jest.fn();
+    const permissionError = new Error('The role could not be found.');
+
+    mockUpsertRowLevelPermissionPredicates.mockResolvedValue({
+      data: undefined,
+      error: permissionError,
+    });
+
+    const { result } = renderUseSaveDraftRoleToDB({
+      isCreateMode: true,
+      draftRole: {
+        ...PERSISTED_ROLE,
+        label: 'New role',
+        objectPermissions: [
+          {
+            objectMetadataId: OBJECT_METADATA_ID,
+            canReadObjectRecords: true,
+            canUpdateObjectRecords: false,
+            canSoftDeleteObjectRecords: false,
+            canDestroyObjectRecords: false,
+          },
+        ],
+        rowLevelPermissionPredicates: [buildPredicate()],
+        rowLevelPermissionPredicateGroups: [buildPredicateGroup()],
+      },
+      persistedRole: undefined,
+      onSuccess,
+    });
+
+    await act(async () => {
+      await expect(result.current.saveDraftRoleToDB()).rejects.toBe(
+        permissionError,
+      );
+    });
+
+    expect(mockCreateRole).toHaveBeenCalledTimes(1);
+    expect(mockOtherMutation).toHaveBeenCalled();
+    expect(mockUpsertRowLevelPermissionPredicates).toHaveBeenCalledTimes(1);
     expect(onSuccess).not.toHaveBeenCalled();
   });
 

@@ -2,12 +2,16 @@ import { type ErrorLike } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { type MessageDescriptor } from '@lingui/core';
 import { t } from '@lingui/core/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 import { type Nullable } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
+const visibleMessage = (message: string): string =>
+  isNonEmptyString(message) ? message : t`An error occurred.`;
+
 export const getErrorMessageFromApolloError = (error: ErrorLike): string => {
   if (!CombinedGraphQLErrors.is(error)) {
-    return error.message ?? t`An error occurred.`;
+    return visibleMessage(error.message ?? '');
   }
 
   const userFriendlyMessage = error.errors?.[0]?.extensions
@@ -21,5 +25,5 @@ export const getErrorMessageFromApolloError = (error: ErrorLike): string => {
     return t(userFriendlyMessage);
   }
 
-  return userFriendlyMessage;
+  return visibleMessage(userFriendlyMessage);
 };
