@@ -7,15 +7,17 @@ import { useQuery } from '@apollo/client/react';
 import { GetSsoIdentityProvidersDocument } from '~/generated-metadata/graphql';
 
 export const useSsoIdentityProviders = () => {
-  const setProviders = useSetAtomState(ssoIdentitiesProvidersState);
+  const setSsoIdentitiesProviders = useSetAtomState(
+    ssoIdentitiesProvidersState,
+  );
   const query = useQuery(GetSsoIdentityProvidersDocument);
   const providers = query.data?.getSSOIdentityProviders ?? [];
 
   useEffect(() => {
     if (query.data?.getSSOIdentityProviders) {
-      setProviders(query.data.getSSOIdentityProviders);
+      setSsoIdentitiesProviders(query.data.getSSOIdentityProviders);
     }
-  }, [query.data, setProviders]);
+  }, [query.data, setSsoIdentitiesProviders]);
 
   return { providers, loading: query.loading };
 };
